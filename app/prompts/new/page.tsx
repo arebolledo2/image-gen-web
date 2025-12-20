@@ -6,12 +6,11 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Loader2, Plus, X } from "lucide-react";
-import { AIAssistButton } from "@/components/agents/ai-assist-button";
+import { Badge } from "@/components/ui/badge";
+import { Loader2, Plus, X, Box, Palette, Compass } from "lucide-react";
 
-interface Style {
+interface Entity {
   id: string;
   name: string;
 }
@@ -19,81 +18,43 @@ interface Style {
 export default function NewPromptPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
-  const [styles, setStyles] = useState<Style[]>([]);
+  const [styles, setStyles] = useState<Entity[]>([]);
+  const [subjects, setSubjects] = useState<Entity[]>([]);
+  const [guidanceList, setGuidanceList] = useState<Entity[]>([]);
 
   const [name, setName] = useState("");
-  const [template, setTemplate] = useState("");
   const [styleId, setStyleId] = useState("");
-  const [tags, setTags] = useState<string[]>([""]);
+  const [subjectId, setSubjectId] = useState("");
+  const [selectedGuidanceIds, setSelectedGuidanceIds] = useState<string[]>([]);
 
   useEffect(() => {
-    fetchStyles();
+    fetchData();
   }, []);
 
-  const fetchStyles = async () => {
+  const fetchData = async () => {
     try {
-      const response = await fetch('/api/styles');
-      const data = await response.json();
-      setStyles(data.styles || []);
+      const [stylesRes, subjectsRes, guidanceRes] = await Promise.all([
+        fetch('/api/styles'),
+        fetch('/api/subjects'),
+        fetch('/api/guidance'),
+      ]);
+      const [stylesData, subjectsData, guidanceData] = await Promise.all([
+        stylesRes.json(),
+        subjectsRes.json(),
+        guidanceRes.json(),
+      ]);
+      setStyles(stylesData.styles || []);
+      setSubjects(subjectsData.subjects || []);
+      setGuidanceList(guidanceData.guidance || []);
     } catch (error) {
-      console.error('Error fetching styles:', error);
+      console.error('Error fetching data:', error);
     }
   };
 
-  const addTag = () => {
-    setTags([...tags, ""]);
-  };
-
-  const removeTag = (index: number) => {
-    setTags(tags.filter((_, i) => i !== index));
-  };
-
-  const updateTag = (index: number, value: string) => {
-    const updated = [...tags];
-    updated[index] = value;
-    setTags(updated);
-  };
-
-  const extractVariables = (text: string) => {
-    const regex = /\{(\w+)\}/g;
-    const matches = text.matchAll(regex);
-    const variables: Record<string, any> = {};
-
-    for (const match of matches) {
-      const varName = match[1];
-      if (!variables[varName]) {
-        variables[varName] = {
-          type: 'text',
-          required: true,
-          defaultValue: '',
-        };
-      }
-    }
-
-    return variables;
-  };
-
-  const handleAIGenerate = async (aiDescription: string) => {
-    const response = await fetch('/api/agents/create-prompt', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        assetType: 'sprite', // Could be made dynamic
-        styleId: styleId && styleId !== 'none' ? styleId : null,
-        description: aiDescription,
-      }),
-    });
-
-    if (!response.ok) {
-      throw new Error('Failed to generate prompt');
-    }
-
-    const { prompt } = await response.json();
-
-    // Populate form with AI-generated prompt
-    setName(prompt.name);
-    setTemplate(prompt.template);
-    setTags(prompt.tags || [""]);
+  const toggleGuidance = (id: string) => {
+    setSelectedGuidanceIds(prev => 
+      prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]
+    );
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -101,17 +62,14 @@ export default function NewPromptPage() {
     setLoading(true);
 
     try {
-      const variables = extractVariables(template);
-
       const response = await fetch('/api/prompts', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           name,
-          template,
-          variables,
-          styleId: styleId && styleId !== 'none' ? styleId : null,
-          tags: tags.filter(t => t.trim()),
+          styleId,
+          subjectId,
+          guidanceIds: selectedGuidanceIds,
         }),
       });
 
@@ -120,7 +78,7 @@ export default function NewPromptPage() {
       }
 
       const data = await response.json();
-      router.push(`/prompts/${data.prompt.id}`);
+      router.push(`/prompts`); // Redirect to list as detail page might need update too
     } catch (error) {
       console.error('Error creating prompt:', error);
       alert('Failed to create prompt');
@@ -129,51 +87,47 @@ export default function NewPromptPage() {
     }
   };
 
-  const detectedVariables = extractVariables(template);
-
   return (
     <div className="max-w-3xl mx-auto space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Create New Prompt</h1>
-          <p className="text-muted-foreground">
-            Build a reusable prompt template with variables
-          </p>
-        </div>
-        <AIAssistButton
-          onGenerate={handleAIGenerate}
-          title="AI Prompt Generator"
-          description="Describe the prompt template you want to create and AI will generate it for you."
-          placeholder="e.g., Create a 4x4 sprite sheet prompt for turrets with customizable subject and colors..."
-        />
+      <div>
+        <h1 className="text-3xl font-bold tracking-tight">Create New Prompt Preset</h1>
+        <p className="text-muted-foreground">
+          Construct a reusable prompt from building blocks.
+        </p>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-6">
         <Card>
           <CardHeader>
-            <CardTitle>Prompt Information</CardTitle>
-            <CardDescription>Basic details about this prompt template</CardDescription>
+            <CardTitle>Basic Information</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="name">Name *</Label>
+              <Label htmlFor="name">Preset Name *</Label>
               <Input
                 id="name"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                placeholder="e.g., 4x4 Sprite Sheet Template"
+                placeholder="e.g., Neon Enemy Spritesheet"
                 required
               />
             </div>
+          </CardContent>
+        </Card>
 
-            <div className="space-y-2">
-              <Label htmlFor="style">Associated Style</Label>
-              <Select value={styleId} onValueChange={setStyleId}>
+        <div className="grid md:grid-cols-2 gap-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-base">
+                <Palette className="h-4 w-4" /> Style *
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Select value={styleId} onValueChange={setStyleId} required>
                 <SelectTrigger>
-                  <SelectValue placeholder="Select a style (optional)" />
+                  <SelectValue placeholder="Select a style" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="none">None</SelectItem>
                   {styles.map((style) => (
                     <SelectItem key={style.id} value={style.id}>
                       {style.name}
@@ -181,91 +135,66 @@ export default function NewPromptPage() {
                   ))}
                 </SelectContent>
               </Select>
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Template</CardTitle>
-            <CardDescription>
-              Use {"{"}variable{"}"} syntax for dynamic values. Example: {"{"}subject{"}"}, {"{"}color{"}"}
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="template">Prompt Template *</Label>
-              <Textarea
-                id="template"
-                value={template}
-                onChange={(e) => setTemplate(e.target.value)}
-                placeholder="4x4 sprite sheet of {subject}, {style} style, {color} colors, magenta background"
-                rows={6}
-                required
-              />
-            </div>
-
-            {Object.keys(detectedVariables).length > 0 && (
-              <div className="space-y-2">
-                <Label>Detected Variables</Label>
-                <div className="flex flex-wrap gap-2">
-                  {Object.keys(detectedVariables).map((varName) => (
-                    <div
-                      key={varName}
-                      className="px-3 py-1 bg-primary/10 text-primary rounded-md text-sm font-mono"
-                    >
-                      {"{" + varName + "}"}
-                    </div>
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-base">
+                <Box className="h-4 w-4" /> Subject *
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Select value={subjectId} onValueChange={setSubjectId} required>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select a subject" />
+                </SelectTrigger>
+                <SelectContent>
+                  {subjects.map((subject) => (
+                    <SelectItem key={subject.id} value={subject.id}>
+                      {subject.name}
+                    </SelectItem>
                   ))}
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  These variables can be filled in when using this template
-                </p>
-              </div>
-            )}
-          </CardContent>
-        </Card>
+                </SelectContent>
+              </Select>
+            </CardContent>
+          </Card>
+        </div>
 
         <Card>
           <CardHeader>
-            <CardTitle>Tags</CardTitle>
-            <CardDescription>Organize your prompts with tags</CardDescription>
+            <CardTitle className="flex items-center gap-2 text-base">
+              <Compass className="h-4 w-4" /> Guidance
+            </CardTitle>
+            <CardDescription>Multi-select guidance items to refine the prompt</CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
-            {tags.map((tag, index) => (
-              <div key={index} className="flex gap-2">
-                <Input
-                  value={tag}
-                  onChange={(e) => updateTag(index, e.target.value)}
-                  placeholder="e.g., sprite, animation, turret"
-                />
-                {tags.length > 1 && (
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="icon"
-                    onClick={() => removeTag(index)}
-                  >
-                    <X className="h-4 w-4" />
-                  </Button>
-                )}
-              </div>
-            ))}
-            <Button type="button" variant="outline" onClick={addTag}>
-              <Plus className="mr-2 h-4 w-4" />
-              Add Tag
-            </Button>
+          <CardContent>
+            <div className="flex flex-wrap gap-2">
+              {guidanceList.map((guidance) => (
+                <Badge
+                  key={guidance.id}
+                  variant={selectedGuidanceIds.includes(guidance.id) ? "default" : "outline"}
+                  className="cursor-pointer py-1 px-3 text-sm"
+                  onClick={() => toggleGuidance(guidance.id)}
+                >
+                  {guidance.name}
+                </Badge>
+              ))}
+              {guidanceList.length === 0 && (
+                <p className="text-sm text-muted-foreground italic">No guidance items found. Create some in the Guidance section.</p>
+              )}
+            </div>
           </CardContent>
         </Card>
 
         <div className="flex gap-4">
           <Button
             type="submit"
-            disabled={loading || !name || !template}
+            disabled={loading || !name || !styleId || !subjectId}
             className="flex-1"
           >
             {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            Create Prompt
+            Create Prompt Preset
           </Button>
           <Button
             type="button"

@@ -225,3 +225,66 @@ Given a base prompt, create ${count} variations that:
 
   return experimental_output.variations;
 }
+
+/**
+ * Parameters for composing a constructed prompt
+ */
+export interface ComposePromptParams {
+  subject: {
+    name: string;
+    description?: string | null;
+  };
+  style: {
+    name: string;
+    description?: string | null;
+    palette: {
+      primary: string[];
+      accent: string[];
+    };
+    renderingCues: {
+      materials: string[];
+      effects: string[];
+    };
+  };
+  guidance: Array<{
+    name: string;
+    description: string;
+  }>;
+}
+
+/**
+ * AI Agent to compose a final image generation prompt from building blocks.
+ */
+export async function composeConstructedPromptAgent(params: ComposePromptParams): Promise<string> {
+  const { subject, style, guidance } = params;
+
+  const systemPrompt = `You are an expert at creating technical prompts for AI image generation, specifically for game assets.
+Your task is to take a high-level Subject, a Style, and multiple Guidance instructions and compose them into a single, cohesive, high-quality prompt.
+
+CRITICAL RULES:
+1. ALWAYS include "magenta background" for sprite transparency unless explicitly told otherwise.
+2. Be specific about view angle if implied by guidance or subject.
+3. Request consistent sizing for sprite sheets if "sprite sheet" is mentioned in guidance.
+4. Integrate the style's palette and rendering cues naturally.
+5. Ensure the result is a single string that will produce the best possible result in an image generator.
+
+STRUCTURE: [SUBJECT], [FEATURES], [COLORS], [STYLE], [VIEW], [ANIMATION], [OUTLINE], [BACKGROUND]`;
+
+  const userPrompt = `Compose a prompt with these components:
+Subject: ${subject.name} ${subject.description ? `(${subject.description})` : ''}
+Style: ${style.name}
+Style Details:
+- Palette: ${style.palette.primary.join(', ')}, ${style.palette.accent.join(', ')}
+- Materials: ${style.renderingCues.materials.join(', ')}
+- Effects: ${style.renderingCues.effects.join(', ')}
+Guidance:
+${guidance.map(g => `- ${g.name}: ${g.description}`).join('\n')}`;
+
+  const { text } = await generateText({
+    model: google('gemini-2.0-flash-exp'),
+    system: systemPrompt,
+    prompt: userPrompt,
+  });
+
+  return text.trim();
+}
