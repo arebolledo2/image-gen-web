@@ -1,65 +1,103 @@
-import Image from "next/image";
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { ImageIcon, Layers, Palette, FileText, Sparkles } from "lucide-react";
 
 export default function Home() {
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex min-h-screen w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
+    <div className="space-y-8">
+      <div className="text-center space-y-4">
+        <h1 className="text-4xl font-bold tracking-tight">
+          AI-Powered Sprite & Asset Generator
+        </h1>
+        <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
+          Generate game sprites and spritesheets with AI. Manage styles, create batches, and build your asset library.
+        </p>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <Card>
+          <CardHeader>
+            <ImageIcon className="h-8 w-8 mb-2 text-primary" />
+            <CardTitle>Gallery</CardTitle>
+            <CardDescription>
+              Browse all your generated images
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Link href="/gallery">
+              <Button className="w-full">View Gallery</Button>
+            </Link>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <Layers className="h-8 w-8 mb-2 text-primary" />
+            <CardTitle>Batches</CardTitle>
+            <CardDescription>
+              Create and manage generation batches
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Link href="/batches">
+              <Button className="w-full">Manage Batches</Button>
+            </Link>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <Palette className="h-8 w-8 mb-2 text-primary" />
+            <CardTitle>Styles</CardTitle>
+            <CardDescription>
+              Define and version your art styles
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Link href="/styles">
+              <Button className="w-full">Manage Styles</Button>
+            </Link>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <FileText className="h-8 w-8 mb-2 text-primary" />
+            <CardTitle>Prompts</CardTitle>
+            <CardDescription>
+              Build reusable prompt templates
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Link href="/prompts">
+              <Button className="w-full">Manage Prompts</Button>
+            </Link>
+          </CardContent>
+        </Card>
+      </div>
+
+      <Card className="bg-gradient-to-r from-primary/10 to-primary/5 border-primary/20">
+        <CardHeader>
+          <div className="flex items-center gap-2">
+            <Sparkles className="h-6 w-6 text-primary" />
+            <CardTitle>AI Assistance</CardTitle>
+          </div>
+          <CardDescription>
+            Use AI agents to create styles, generate prompts, and get suggestions
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <p className="text-sm text-muted-foreground">
+            Our AI agents powered by Gemini Flash 3.0 can help you create professional styles,
+            generate optimized prompts, and suggest variations for your assets.
           </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
+        </CardContent>
+      </Card>
+
+      <div className="text-center text-sm text-muted-foreground">
+        <p>Powered by Gemini 2.5 Flash Image Preview</p>
+      </div>
     </div>
   );
 }
