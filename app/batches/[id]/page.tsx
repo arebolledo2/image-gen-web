@@ -12,6 +12,7 @@ interface Batch {
   name: string;
   description: string | null;
   status: string;
+  provider: 'gemini' | 'comfyui';
   createdAt: string;
   completedAt: string | null;
   defaults: any;
@@ -150,6 +151,12 @@ export default function BatchDetailPage() {
             <CardTitle>Details</CardTitle>
           </CardHeader>
           <CardContent className="space-y-2 text-sm">
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Provider:</span>
+              <span className="font-medium">
+                {batch.provider === 'gemini' ? '⚡ Google Gemini' : '🎨 ComfyUI'}
+              </span>
+            </div>
             <div className="flex justify-between">
               <span className="text-muted-foreground">Created:</span>
               <span>{new Date(batch.createdAt).toLocaleString()}</span>

@@ -42,6 +42,7 @@ export default function NewBatchPage() {
 
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
+  const [provider, setProvider] = useState<'gemini' | 'comfyui'>('gemini');
   const [defaultCount, setDefaultCount] = useState(1);
   
   // Selection mode: 'preset' or 'construct'
@@ -172,6 +173,7 @@ export default function NewBatchPage() {
         body: JSON.stringify({
           name,
           description,
+          provider,
           defaults: {
             count: defaultCount,
           },
@@ -401,6 +403,19 @@ export default function NewBatchPage() {
                     placeholder="Optional description..."
                     rows={2}
                   />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="provider">Generation Provider</Label>
+                  <Select value={provider} onValueChange={(value: 'gemini' | 'comfyui') => setProvider(value)}>
+                    <SelectTrigger id="provider">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="gemini">⚡ Google Gemini (Fast)</SelectItem>
+                      <SelectItem value="comfyui">🎨 ComfyUI (Advanced)</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
 
                 <div className="space-y-2">

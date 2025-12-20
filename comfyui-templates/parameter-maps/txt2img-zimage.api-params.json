@@ -1,0 +1,98 @@
+{
+  "prompt": {
+    "nodeId": 28,
+    "inputName": "wildcard_text",
+    "type": "string",
+    "description": "The generation prompt"
+  },
+  "prompt_populated": {
+    "nodeId": 28,
+    "inputName": "populated_text",
+    "type": "string",
+    "description": "The generation prompt (populated copy)"
+  },
+  "negative_prompt": {
+    "nodeId": 7,
+    "inputName": "text",
+    "type": "string",
+    "description": "Negative prompt"
+  },
+  "width": {
+    "nodeId": 13,
+    "inputName": "width",
+    "type": "integer",
+    "description": "Image width"
+  },
+  "height": {
+    "nodeId": 13,
+    "inputName": "height",
+    "type": "integer",
+    "description": "Image height"
+  },
+  "batch_size": {
+    "nodeId": 13,
+    "inputName": "batch_size",
+    "type": "integer",
+    "description": "Number of images to generate"
+  },
+  "seed": {
+    "nodeId": 3,
+    "inputName": "seed",
+    "type": "integer",
+    "description": "Random seed (-1 for random)"
+  },
+  "steps": {
+    "nodeId": 3,
+    "inputName": "steps",
+    "type": "integer",
+    "description": "Sampling steps"
+  },
+  "cfg": {
+    "nodeId": 3,
+    "inputName": "cfg",
+    "type": "float",
+    "description": "CFG scale"
+  },
+  "sampler": {
+    "nodeId": 3,
+    "inputName": "sampler_name",
+    "type": "string",
+    "description": "Sampler name"
+  },
+  "scheduler": {
+    "nodeId": 3,
+    "inputName": "scheduler",
+    "type": "string",
+    "description": "Scheduler name"
+  },
+  "denoise": {
+    "nodeId": 3,
+    "inputName": "denoise",
+    "type": "float",
+    "description": "Denoise strength (1.0 for txt2img)"
+  },
+  "model": {
+    "nodeId": 16,
+    "inputName": "unet_name",
+    "type": "string",
+    "description": "Model checkpoint name"
+  },
+  "vae": {
+    "nodeId": 17,
+    "inputName": "vae_name",
+    "type": "string",
+    "description": "VAE model name"
+  },
+  "clip": {
+    "nodeId": 18,
+    "inputName": "clip_name",
+    "type": "string",
+    "description": "CLIP model name"
+  },
+  "output_prefix": {
+    "nodeId": 9,
+    "inputName": "filename_prefix",
+    "type": "string",
+    "description": "Output filename prefix"
+  }
+}

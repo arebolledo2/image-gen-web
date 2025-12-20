@@ -1,5 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { executeBatch } from '@/lib/ai/image-generation';
+import { db } from '@/lib/db';
+import { batches } from '@/lib/db/schema';
+import { eq } from 'drizzle-orm';
+import { queueBatchExecution } from '@/lib/queue/batch-queue';
+
+export const runtime = 'nodejs';
 
 // POST /api/batches/[id]/execute - Execute a batch
 export async function POST(
@@ -9,15 +14,42 @@ export async function POST(
   try {
     const { id } = await params;
 
-    // Execute batch in background (for now, synchronously)
-    // In production, you'd want to use a job queue
-    await executeBatch(id);
+    // Get batch with prompts
+    const batch = await db.query.batches.findFirst({
+      where: eq(batches.id, id),
+      with: {
+        batchPrompts: {
+          orderBy: (batchPrompts, { asc }) => [asc(batchPrompts.order)],
+        },
+      },
+    });
 
-    return NextResponse.json({ success: true, message: 'Batch execution started' });
+    if (!batch) {
+      return NextResponse.json({ error: 'Batch not found' }, { status: 404 });
+    }
+
+    // Update status to queued
+    await db.update(batches)
+      .set({ status: 'queued' })
+      .where(eq(batches.id, id));
+
+    // Queue jobs
+    const result = await queueBatchExecution(batch);
+
+    return NextResponse.json({
+      success: true,
+      message: `Batch queued with ${result.jobsQueued} jobs`,
+      batchId: id,
+    });
+
   } catch (error) {
-    console.error('Error executing batch:', error);
+    console.error('Error queueing batch:', error);
+    console.error('Error stack:', error instanceof Error ? error.stack : 'No stack trace');
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Failed to execute batch' },
+      {
+        error: error instanceof Error ? error.message : 'Failed to queue batch',
+        details: error instanceof Error ? error.stack : String(error)
+      },
       { status: 500 }
     );
   }

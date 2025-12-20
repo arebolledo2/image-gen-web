@@ -12,6 +12,7 @@ interface Batch {
   name: string;
   description: string | null;
   status: string;
+  provider: 'gemini' | 'comfyui';
   createdAt: string;
   batchPrompts: any[];
 }
@@ -108,6 +109,9 @@ export default function BatchesPage() {
                       </Link>
                       <Badge className={getStatusColor(batch.status)}>
                         {batch.status}
+                      </Badge>
+                      <Badge variant="outline">
+                        {batch.provider === 'gemini' ? '⚡ Gemini' : '🎨 ComfyUI'}
                       </Badge>
                     </CardTitle>
                     {batch.description && (

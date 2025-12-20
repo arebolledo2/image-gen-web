@@ -16,7 +16,7 @@ interface Image {
     batch: {
       id: string;
       name: string;
-    };
+    } | null;
   };
 }
 
@@ -112,12 +112,18 @@ export default function GalleryPage() {
                     <p className="text-xs font-medium truncate">
                       {image.fileName}
                     </p>
-                    <Link
-                      href={`/batches/${image.generation.batch.id}`}
-                      className="text-xs text-muted-foreground hover:underline truncate block"
-                    >
-                      {image.generation.batch.name}
-                    </Link>
+                    {image.generation.batch ? (
+                      <Link
+                        href={`/batches/${image.generation.batch.id}`}
+                        className="text-xs text-muted-foreground hover:underline truncate block"
+                      >
+                        {image.generation.batch.name}
+                      </Link>
+                    ) : (
+                      <p className="text-xs text-muted-foreground truncate">
+                        No batch
+                      </p>
+                    )}
                     <p className="text-xs text-muted-foreground">
                       {new Date(image.createdAt).toLocaleDateString()}
                     </p>

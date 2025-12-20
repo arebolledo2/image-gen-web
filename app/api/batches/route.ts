@@ -27,7 +27,7 @@ export async function GET() {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { name, description, defaults, prompts } = body;
+    const { name, description, provider, defaults, prompts } = body;
 
     // Validate required fields
     if (!name) {
@@ -48,6 +48,7 @@ export async function POST(request: NextRequest) {
     const [batch] = await db.insert(batches).values({
       name,
       description,
+      provider: provider || 'gemini',
       status: 'draft',
       defaults: defaults || {},
     }).returning();

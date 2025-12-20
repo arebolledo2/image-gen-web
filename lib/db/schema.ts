@@ -4,6 +4,7 @@ import { relations } from 'drizzle-orm';
 // Enums
 export const batchStatusEnum = pgEnum('batch_status', ['draft', 'queued', 'running', 'completed', 'failed']);
 export const generationStatusEnum = pgEnum('generation_status', ['pending', 'running', 'success', 'failed']);
+export const providerEnum = pgEnum('provider', ['gemini', 'comfyui']);
 
 // Styles table
 export const styles = pgTable('styles', {
@@ -69,6 +70,7 @@ export const batches = pgTable('batches', {
   name: text('name').notNull(),
   description: text('description'),
   status: batchStatusEnum('status').default('draft').notNull(),
+  provider: providerEnum('provider').default('gemini').notNull(),
   defaults: json('defaults').$type<{
     aspectRatio?: string;
     imageSize?: string;
