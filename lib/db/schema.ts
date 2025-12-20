@@ -130,8 +130,11 @@ export const stylesRelations = relations(styles, ({ one, many }) => ({
   parentStyle: one(styles, {
     fields: [styles.parentStyleId],
     references: [styles.id],
+    relationName: 'styleLineage',
   }),
-  childStyles: many(styles),
+  childStyles: many(styles, {
+    relationName: 'styleLineage',
+  }),
   prompts: many(prompts),
 }));
 
