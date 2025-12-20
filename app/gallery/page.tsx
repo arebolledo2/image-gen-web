@@ -81,7 +81,7 @@ export default function GalleryPage() {
               <Card key={image.id} className="overflow-hidden group">
                 <div className="aspect-square bg-muted relative">
                   <img
-                    src={`/${image.filePath}`}
+                    src={`/api/images/${image.id}/file`}
                     alt={image.fileName}
                     className="w-full h-full object-cover"
                     onError={(e) => {
@@ -92,7 +92,7 @@ export default function GalleryPage() {
                     <Button
                       size="sm"
                       variant="secondary"
-                      onClick={() => window.open(`/${image.filePath}`, '_blank')}
+                      onClick={() => window.open(`/api/images/${image.id}/file`, '_blank')}
                     >
                       View
                     </Button>
@@ -101,7 +101,7 @@ export default function GalleryPage() {
                       variant="secondary"
                       asChild
                     >
-                      <a href={`/${image.filePath}`} download={image.fileName}>
+                      <a href={`/api/images/${image.id}/file`} download={image.fileName}>
                         <Download className="h-4 w-4" />
                       </a>
                     </Button>
