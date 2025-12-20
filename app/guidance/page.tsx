@@ -71,7 +71,7 @@ export default function GuidancePage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="max-w-5xl mx-auto space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Guidance</h1>
@@ -106,6 +106,7 @@ export default function GuidancePage() {
                   placeholder="e.g., 4x4 Sprite Sheet"
                   required
                 />
+                <p className="text-[10px] text-muted-foreground italic">AI uses this to identify the specific instruction</p>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="description">Description</Label>
@@ -116,6 +117,7 @@ export default function GuidancePage() {
                   placeholder="e.g., 4x4 grid of 16 frames, magenta background, consistent size..."
                   required
                 />
+                <p className="text-[10px] text-muted-foreground italic">AI uses this description to implement technical details of the instruction</p>
               </div>
               <div className="flex justify-end gap-2">
                 <Button type="button" variant="outline" onClick={() => setShowNewForm(false)}>

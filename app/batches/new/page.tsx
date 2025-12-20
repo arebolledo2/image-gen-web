@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Plus, X, Palette, Box, Compass, Sparkles } from "lucide-react";
+import { Loader2, Plus, X, Palette, Box, Compass, Sparkles, Wand2 } from "lucide-react";
 
 interface Entity {
   id: string;
@@ -57,6 +57,7 @@ export default function NewBatchPage() {
   
   // Preview and final prompts
   const [composing, setComposing] = useState(false);
+  const [previewPrompt, setPreviewPrompt] = useState("");
   const [prompts, setPrompts] = useState<BatchPrompt[]>([]);
 
   useEffect(() => {
@@ -94,26 +95,42 @@ export default function NewBatchPage() {
     );
   };
 
-  const handleCompose = async () => {
+  const [metadataLoading, setMetadataLoading] = useState(false);
+  const handleGenerateMetadata = async () => {
+    if (prompts.length === 0) return;
+    
+    setMetadataLoading(true);
+    try {
+      const combinedPrompt = prompts.map(p => p.promptText).join('\n');
+      const response = await fetch('/api/agents/create-batch-metadata', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ promptText: combinedPrompt }),
+      });
+
+      if (!response.ok) throw new Error('Failed to generate metadata');
+      const data = await response.json();
+      setName(data.name);
+      setDescription(data.description);
+    } catch (error) {
+      console.error('Error generating metadata:', error);
+      alert('Failed to generate metadata');
+    } finally {
+      setMetadataLoading(false);
+    }
+  };
+
+  const handleConstructPreview = async () => {
     if (mode === 'preset') {
       const preset = presets.find(p => p.id === selectedPresetId);
       if (preset) {
-        setPrompts([{ promptText: preset.promptText, promptId: preset.id }]);
+        setPreviewPrompt(preset.promptText);
       }
     } else {
       if (!styleId || !subjectId) return;
       setComposing(true);
       try {
-        // We call the same logic as prompt creation but without saving the preset
-        // For simplicity, we'll reuse the POST /api/prompts but we might want a 
-        // /api/agents/compose-prompt endpoint later.
-        // For now, let's just use the construction data and let the backend handle it during batch POST.
-        // BUT, user wants to see it/add multiple.
-        
-        // Actually, the simplest is to let the user select a preset they already created, 
-        // OR construct one here. If they construct here, we'll just treat it as a one-off.
-        
-        const response = await fetch('/api/agents/compose-prompt', { // We'll create this endpoint
+        const response = await fetch('/api/agents/compose-prompt', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -123,13 +140,21 @@ export default function NewBatchPage() {
             })
         });
         const data = await response.json();
-        setPrompts([...prompts, { promptText: data.promptText }]);
+        setPreviewPrompt(data.promptText);
       } catch (error) {
         console.error('Error composing prompt:', error);
       } finally {
         setComposing(false);
       }
     }
+  };
+
+  const addToBatch = () => {
+    if (!previewPrompt) return;
+    
+    const promptId = mode === 'preset' ? selectedPresetId : undefined;
+    setPrompts([...prompts, { promptText: previewPrompt, promptId }]);
+    setPreviewPrompt("");
   };
 
   const removePrompt = (index: number) => {
@@ -177,7 +202,7 @@ export default function NewBatchPage() {
   }
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6 pb-12">
+    <div className="max-w-5xl mx-auto space-y-6 pb-12">
       <div>
         <h1 className="text-3xl font-bold tracking-tight">Create New Batch</h1>
         <p className="text-muted-foreground">
@@ -186,68 +211,29 @@ export default function NewBatchPage() {
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-6">
+        {/* Step 1: Prompt Selection/Construction */}
         <Card>
           <CardHeader>
-            <CardTitle>Batch Information</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="name">Batch Name *</Label>
-              <Input
-                id="name"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="e.g., Arctic Exploration Sprites"
-                required
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="description">Description</Label>
-              <Textarea
-                id="description"
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                placeholder="Optional description..."
-                rows={2}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="count">Images per Prompt</Label>
-              <Input
-                id="count"
-                type="number"
-                min="1"
-                max="10"
-                value={defaultCount}
-                onChange={(e) => setDefaultCount(parseInt(e.target.value))}
-                className="w-32"
-              />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Prompt Construction</CardTitle>
-            <CardDescription>Select a preset or build a new prompt</CardDescription>
+            <CardTitle>1. Select or Construct Prompt</CardTitle>
+            <CardDescription>Select a preset or build a new prompt building blocks</CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
-            <div className="flex gap-4 p-1 bg-muted rounded-lg w-fit">
+            <div className="flex gap-1 p-1 bg-muted rounded-lg w-fit">
               <Button 
                 type="button"
-                variant={mode === 'preset' ? "secondary" : "ghost"}
+                variant={mode === 'preset' ? "default" : "ghost"}
                 size="sm"
                 onClick={() => setMode('preset')}
+                className={mode === 'preset' ? "bg-background text-foreground shadow-sm hover:bg-background" : ""}
               >
                 Use Preset
               </Button>
               <Button 
                 type="button"
-                variant={mode === 'construct' ? "secondary" : "ghost"}
+                variant={mode === 'construct' ? "default" : "ghost"}
                 size="sm"
                 onClick={() => setMode('construct')}
+                className={mode === 'construct' ? "bg-background text-foreground shadow-sm hover:bg-background" : ""}
               >
                 Construct New
               </Button>
@@ -290,12 +276,14 @@ export default function NewBatchPage() {
                   <div className="space-y-2">
                     <Label className="flex items-center gap-2"><Box className="h-4 w-4"/> Subject</Label>
                     <Select value={subjectId} onValueChange={setSubjectId}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select subject..." />
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder="Select subject..." className="truncate" />
                       </SelectTrigger>
-                      <SelectContent>
+                      <SelectContent className="max-w-[calc(100vw-4rem)] md:max-w-[400px]">
                         {subjects.map((s) => (
-                          <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+                          <SelectItem key={s.id} value={s.id} className="whitespace-normal">
+                            {s.name}
+                          </SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
@@ -323,59 +311,133 @@ export default function NewBatchPage() {
             <Button 
                 type="button" 
                 className="w-full" 
-                onClick={handleCompose}
+                onClick={handleConstructPreview}
                 disabled={composing || (mode === 'preset' && !selectedPresetId) || (mode === 'construct' && (!styleId || !subjectId))}
             >
-              {composing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />}
-              {mode === 'preset' ? "Add Preset to Batch" : "Construct & Add to Batch"}
+              {composing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Wand2 className="mr-2 h-4 w-4" />}
+              {mode === 'preset' ? "Preview Preset" : "Construct Preview"}
             </Button>
           </CardContent>
         </Card>
 
-        {prompts.length > 0 && (
-          <Card>
+        {/* Step 2: Preview and Add to Batch */}
+        {previewPrompt && (
+          <Card className="border-primary/50 bg-primary/5">
             <CardHeader>
-              <CardTitle>Selected Prompts ({prompts.length})</CardTitle>
+              <CardTitle className="text-sm font-medium">2. Preview Constructed Prompt</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              {prompts.map((p, index) => (
-                <div key={index} className="flex gap-4 p-3 border rounded-lg relative group">
-                  <div className="flex-1 text-sm text-muted-foreground italic">
-                    {p.promptText}
-                  </div>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8 text-destructive"
-                    onClick={() => removePrompt(index)}
-                  >
-                    <X className="h-4 w-4" />
-                  </Button>
-                </div>
-              ))}
+              <div className="p-3 bg-background border rounded-lg text-sm italic text-muted-foreground">
+                {previewPrompt}
+              </div>
+              <Button type="button" onClick={addToBatch} className="w-full">
+                <Plus className="mr-2 h-4 w-4" /> Add to Batch
+              </Button>
             </CardContent>
           </Card>
         )}
 
-        <div className="flex gap-4">
-          <Button
-            type="submit"
-            disabled={loading || !name || prompts.length === 0}
-            className="flex-1 h-12 text-lg"
-          >
-            {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            Create Batch & Start Generations
-          </Button>
-          <Button
-            type="button"
-            variant="outline"
-            className="h-12"
-            onClick={() => router.back()}
-          >
-            Cancel
-          </Button>
-        </div>
+        {/* Step 3: Batch Selection and Metadata */}
+        {prompts.length > 0 && (
+          <div className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>3. Selected Prompts ({prompts.length})</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {prompts.map((p, index) => (
+                  <div key={index} className="flex gap-4 p-3 border rounded-lg relative group">
+                    <div className="flex-1 text-sm text-muted-foreground italic">
+                      {p.promptText}
+                    </div>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 text-destructive"
+                      onClick={() => removePrompt(index)}
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0">
+                <div>
+                  <CardTitle>Batch Information</CardTitle>
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={handleGenerateMetadata}
+                  disabled={metadataLoading}
+                >
+                  {metadataLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />}
+                  AI Assist
+                </Button>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="name">Batch Name *</Label>
+                  <Input
+                    id="name"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    placeholder="e.g., Arctic Exploration Sprites"
+                    required
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="description">Description</Label>
+                  <Textarea
+                    id="description"
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
+                    placeholder="Optional description..."
+                    rows={2}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="count">Images per Prompt</Label>
+                  <Input
+                    id="count"
+                    type="number"
+                    min="1"
+                    max="10"
+                    value={defaultCount}
+                    onChange={(e) => setDefaultCount(parseInt(e.target.value))}
+                    className="w-32"
+                  />
+                </div>
+              </CardContent>
+            </Card>
+
+            <div className="flex gap-4">
+              <Button
+                type="submit"
+                disabled={loading || !name}
+                className="flex-1 h-12 text-lg"
+              >
+                {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                Create Batch & Start Generations
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                className="h-12"
+                onClick={() => router.back()}
+              >
+                Cancel
+              </Button>
+            </div>
+          </div>
+        )}
       </form>
     </div>
   );

@@ -88,7 +88,7 @@ export default function NewPromptPage() {
   };
 
   return (
-    <div className="max-w-3xl mx-auto space-y-6">
+    <div className="max-w-5xl mx-auto space-y-6">
       <div>
         <h1 className="text-3xl font-bold tracking-tight">Create New Prompt Preset</h1>
         <p className="text-muted-foreground">
@@ -135,6 +135,7 @@ export default function NewPromptPage() {
                   ))}
                 </SelectContent>
               </Select>
+              <p className="text-[10px] text-muted-foreground italic mt-2">AI uses the style name, colors, and cues</p>
             </CardContent>
           </Card>
 
@@ -146,17 +147,18 @@ export default function NewPromptPage() {
             </CardHeader>
             <CardContent>
               <Select value={subjectId} onValueChange={setSubjectId} required>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select a subject" />
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Select a subject" className="truncate" />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="max-w-[calc(100vw-4rem)] md:max-w-[400px]">
                   {subjects.map((subject) => (
-                    <SelectItem key={subject.id} value={subject.id}>
+                    <SelectItem key={subject.id} value={subject.id} className="whitespace-normal">
                       {subject.name}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
+              <p className="text-[10px] text-muted-foreground italic mt-2">AI uses both subject name and description</p>
             </CardContent>
           </Card>
         </div>
@@ -180,10 +182,12 @@ export default function NewPromptPage() {
                   {guidance.name}
                 </Badge>
               ))}
-              {guidanceList.length === 0 && (
-                <p className="text-sm text-muted-foreground italic">No guidance items found. Create some in the Guidance section.</p>
-              )}
             </div>
+            {guidanceList.length === 0 ? (
+                <p className="text-sm text-muted-foreground italic mt-2">No guidance items found. Create some in the Guidance section.</p>
+            ) : (
+                <p className="text-[10px] text-muted-foreground italic mt-2">AI uses guidance descriptions to refine the result</p>
+            )}
           </CardContent>
         </Card>
 

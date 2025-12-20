@@ -71,7 +71,7 @@ export default function SubjectsPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="max-w-5xl mx-auto space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Subjects</h1>
@@ -106,6 +106,7 @@ export default function SubjectsPage() {
                   placeholder="e.g., Spider Tank"
                   required
                 />
+                <p className="text-[10px] text-muted-foreground italic">AI uses this as the primary subject name</p>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="description">Description (Optional)</Label>
@@ -115,6 +116,7 @@ export default function SubjectsPage() {
                   onChange={(e) => setNewDescription(e.target.value)}
                   placeholder="Brief description of the subject..."
                 />
+                <p className="text-[10px] text-muted-foreground italic">AI uses this to add specific details and features to the subject</p>
               </div>
               <div className="flex justify-end gap-2">
                 <Button type="button" variant="outline" onClick={() => setShowNewForm(false)}>

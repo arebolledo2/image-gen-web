@@ -129,7 +129,7 @@ export default function NewStylePage() {
   };
 
   return (
-    <div className="max-w-3xl mx-auto space-y-6">
+    <div className="max-w-5xl mx-auto space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Create New Style</h1>
@@ -161,6 +161,7 @@ export default function NewStylePage() {
                 placeholder="e.g., Neon Synth"
                 required
               />
+              <p className="text-[10px] text-muted-foreground italic">AI uses the style name to set the overall artistic direction</p>
             </div>
 
             <div className="space-y-2">
@@ -172,6 +173,7 @@ export default function NewStylePage() {
                 placeholder="Describe this style..."
                 rows={3}
               />
+              <p className="text-[10px] text-muted-foreground italic">AI uses this description when generating palette and cues using the AI Style Generator above</p>
             </div>
           </CardContent>
         </Card>

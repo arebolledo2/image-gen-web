@@ -3,6 +3,8 @@ import {
   createStyleAgent,
   createPromptAgent,
   suggestPromptVariations,
+  composeConstructedPromptAgent,
+  createBatchMetadataAgent,
 } from '../agents';
 
 // Mock the AI SDK
@@ -276,6 +278,146 @@ describe('suggestPromptVariations', () => {
     expect(generateText).toHaveBeenCalledWith(
       expect.objectContaining({
         prompt: expect.stringContaining(basePrompt),
+      })
+    );
+  });
+});
+
+describe('composeConstructedPromptAgent', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('should compose a prompt from all components', async () => {
+    const mockComposedPrompt = 'Robot Turret, metal armor, cyan and blue colors, futuristic style, top-down view, magenta background';
+    
+    vi.mocked(generateText).mockResolvedValue({
+      text: mockComposedPrompt,
+      finishReason: 'stop',
+      usage: { promptTokens: 0, completionTokens: 0 },
+    } as any);
+
+    const params = {
+      subject: { name: 'Robot Turret', description: 'Heavy defense' },
+      style: {
+        name: 'Futuristic',
+        description: 'Sleek and modern',
+        palette: {
+          primary: ['#00FFFF', '#0000FF'],
+          accent: ['#FFFFFF'],
+        },
+        renderingCues: {
+          materials: ['metal armor'],
+          effects: ['glow'],
+        },
+      },
+      guidance: [
+        { name: 'View', description: 'top-down' },
+        { name: 'Transparency', description: 'magenta background' },
+      ],
+    };
+
+    const result = await composeConstructedPromptAgent(params);
+
+    expect(result).toBe(mockComposedPrompt);
+    expect(generateText).toHaveBeenCalledWith(
+      expect.objectContaining({
+        prompt: expect.stringContaining('Subject: Robot Turret (Heavy defense)'),
+      })
+    );
+    expect(generateText).toHaveBeenCalledWith(
+      expect.objectContaining({
+        prompt: expect.stringContaining('Style: Futuristic'),
+      })
+    );
+    expect(generateText).toHaveBeenCalledWith(
+      expect.objectContaining({
+        prompt: expect.stringContaining('Palette: #00FFFF, #0000FF, #FFFFFF'),
+      })
+    );
+    expect(generateText).toHaveBeenCalledWith(
+      expect.objectContaining({
+        prompt: expect.stringContaining('Materials: metal armor'),
+      })
+    );
+    expect(generateText).toHaveBeenCalledWith(
+      expect.objectContaining({
+        prompt: expect.stringContaining('Effects: glow'),
+      })
+    );
+    expect(generateText).toHaveBeenCalledWith(
+      expect.objectContaining({
+        prompt: expect.stringContaining('- View: top-down'),
+      })
+    );
+  });
+
+  it('should include magenta background requirement in system prompt', async () => {
+    vi.mocked(generateText).mockResolvedValue({
+      text: 'test prompt',
+      finishReason: 'stop',
+      usage: { promptTokens: 0, completionTokens: 0 },
+    } as any);
+
+    await composeConstructedPromptAgent({
+      subject: { name: 'test' },
+      style: {
+        name: 'test',
+        palette: { primary: [], accent: [] },
+        renderingCues: { materials: [], effects: [] },
+      },
+      guidance: [],
+    });
+
+    expect(generateText).toHaveBeenCalledWith(
+      expect.objectContaining({
+        system: expect.stringContaining('magenta background'),
+      })
+    );
+  });
+});
+
+describe('createBatchMetadataAgent', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('should generate batch metadata based on prompt text', async () => {
+    const mockMetadata = {
+      name: 'Arctic Expedition Turrets',
+      description: 'A collection of turrets designed for cold environments.',
+    };
+
+    vi.mocked(generateText).mockResolvedValue({
+      experimental_output: mockMetadata,
+      text: '',
+      finishReason: 'stop',
+      usage: { promptTokens: 0, completionTokens: 0 },
+    } as any);
+
+    const result = await createBatchMetadataAgent('snowy turret in the arctic');
+
+    expect(result).toEqual(mockMetadata);
+    expect(generateText).toHaveBeenCalledWith(
+      expect.objectContaining({
+        prompt: expect.stringContaining('snowy turret in the arctic'),
+      })
+    );
+  });
+
+  it('should include naming guidelines in system prompt', async () => {
+    vi.mocked(generateText).mockResolvedValue({
+      experimental_output: { name: 'Test', description: 'Test' },
+      text: '',
+      finishReason: 'stop',
+      usage: { promptTokens: 0, completionTokens: 0 },
+    } as any);
+
+    await createBatchMetadataAgent('test');
+
+    expect(generateText).toHaveBeenCalledWith(
+      expect.objectContaining({
+        system: expect.stringContaining('catchy, professional name'),
       })
     );
   });
