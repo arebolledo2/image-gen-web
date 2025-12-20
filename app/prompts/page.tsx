@@ -1,24 +1,124 @@
-import { Card, CardContent } from "@/components/ui/card";
+"use client";
+
+import { useEffect, useState } from "react";
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Plus, Loader2, FileText } from "lucide-react";
+
+interface Prompt {
+  id: string;
+  name: string;
+  template: string;
+  tags: string[];
+  createdAt: string;
+  style: {
+    name: string;
+  } | null;
+}
 
 export default function PromptsPage() {
+  const [prompts, setPrompts] = useState<Prompt[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchPrompts();
+  }, []);
+
+  const fetchPrompts = async () => {
+    try {
+      const response = await fetch('/api/prompts');
+      const data = await response.json();
+      setPrompts(data.prompts || []);
+    } catch (error) {
+      console.error('Error fetching prompts:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Prompts</h1>
-        <p className="text-muted-foreground">
-          Manage your prompt templates
-        </p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Prompts</h1>
+          <p className="text-muted-foreground">
+            Manage your prompt templates
+          </p>
+        </div>
+        <Link href="/prompts/new">
+          <Button>
+            <Plus className="mr-2 h-4 w-4" />
+            New Prompt
+          </Button>
+        </Link>
       </div>
 
-      <Card>
-        <CardContent className="pt-6">
-          <div className="text-center py-12">
-            <p className="text-muted-foreground">
-              Prompt template management coming in Phase 3!
-            </p>
+      {prompts.length === 0 ? (
+        <Card>
+          <CardContent className="pt-6">
+            <div className="text-center py-12">
+              <p className="text-muted-foreground mb-4">
+                No prompts yet. Create your first prompt template!
+              </p>
+              <Link href="/prompts/new">
+                <Button>
+                  <Plus className="mr-2 h-4 w-4" />
+                  Create First Prompt
+                </Button>
+              </Link>
+            </div>
           </CardContent>
-        </CardContent>
-      </Card>
+        </Card>
+      ) : (
+        <div className="grid gap-4">
+          {prompts.map((prompt) => (
+            <Card key={prompt.id} className="hover:shadow-md transition-shadow">
+              <CardHeader>
+                <div className="flex items-start justify-between">
+                  <div className="space-y-1 flex-1">
+                    <CardTitle className="flex items-center gap-2">
+                      <FileText className="h-5 w-5" />
+                      <Link
+                        href={`/prompts/${prompt.id}`}
+                        className="hover:underline"
+                      >
+                        {prompt.name}
+                      </Link>
+                    </CardTitle>
+                    <CardDescription className="line-clamp-2">
+                      {prompt.template}
+                    </CardDescription>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="flex items-center gap-2 flex-wrap">
+                  {prompt.style && (
+                    <Badge variant="outline">
+                      {prompt.style.name}
+                    </Badge>
+                  )}
+                  {prompt.tags.map((tag) => (
+                    <Badge key={tag} variant="secondary">
+                      {tag}
+                    </Badge>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
