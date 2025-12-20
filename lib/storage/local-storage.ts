@@ -3,6 +3,11 @@ import path from 'path';
 
 const OUTPUT_DIR = process.env.OUTPUT_DIR || '../image-gen/outputs';
 
+/**
+ * Ensure a directory exists, creating it recursively if needed.
+ *
+ * @param dirPath - Absolute path to directory
+ */
 export async function ensureDirectoryExists(dirPath: string) {
   try {
     await fs.access(dirPath);
@@ -11,6 +16,26 @@ export async function ensureDirectoryExists(dirPath: string) {
   }
 }
 
+/**
+ * Save an image file to local storage with organized directory structure.
+ *
+ * Files are saved to: `{OUTPUT_DIR}/batches/{batchId}/{generationId}_{timestamp}.{ext}`
+ *
+ * @param file - File object with uint8Array data and mediaType
+ * @param batchId - ID of the batch (used for directory organization)
+ * @param generationId - ID of the generation (used in filename)
+ * @returns Promise resolving to relative file path from project root
+ *
+ * @example
+ * ```typescript
+ * const path = await saveImage(
+ *   { uint8Array: imageData, mediaType: 'image/png' },
+ *   'batch-123',
+ *   'gen-456'
+ * );
+ * // Returns: "../image-gen/outputs/batches/batch-123/gen-456_1234567890.png"
+ * ```
+ */
 export async function saveImage(
   file: { uint8Array: Uint8Array; mediaType: string },
   batchId: string,
@@ -33,6 +58,12 @@ export async function saveImage(
   return path.relative(process.cwd(), filePath);
 }
 
+/**
+ * Read an image file from storage.
+ *
+ * @param filePath - Absolute or relative path to image file
+ * @returns Promise resolving to file buffer
+ */
 export async function readImage(filePath: string): Promise<Buffer> {
   const absolutePath = path.isAbsolute(filePath)
     ? filePath
@@ -41,6 +72,11 @@ export async function readImage(filePath: string): Promise<Buffer> {
   return await fs.readFile(absolutePath);
 }
 
+/**
+ * Delete an image file from storage.
+ *
+ * @param filePath - Absolute or relative path to image file
+ */
 export async function deleteImage(filePath: string): Promise<void> {
   const absolutePath = path.isAbsolute(filePath)
     ? filePath
@@ -49,6 +85,12 @@ export async function deleteImage(filePath: string): Promise<void> {
   await fs.unlink(absolutePath);
 }
 
+/**
+ * Get file statistics for an image.
+ *
+ * @param filePath - Absolute or relative path to image file
+ * @returns Promise resolving to file stats (size, timestamps)
+ */
 export async function getImageStats(filePath: string) {
   const absolutePath = path.isAbsolute(filePath)
     ? filePath

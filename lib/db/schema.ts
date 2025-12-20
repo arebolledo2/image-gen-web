@@ -26,21 +26,41 @@ export const styles = pgTable('styles', {
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });
 
-// Prompts table
+// Subjects table (New)
+export const subjects = pgTable('subjects', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  name: text('name').notNull(),
+  description: text('description'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+
+// Guidance table (New)
+export const guidance = pgTable('guidance', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  name: text('name').notNull(),
+  description: text('description').notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+
+// Prompts table (Refactored)
 export const prompts = pgTable('prompts', {
   id: uuid('id').defaultRandom().primaryKey(),
   name: text('name').notNull(),
-  template: text('template').notNull(),
-  variables: json('variables').$type<Record<string, {
-    type: 'text' | 'select' | 'number';
-    required: boolean;
-    defaultValue?: string | number;
-    options?: string[];
-  }>>(),
-  styleId: uuid('style_id'),
-  tags: text('tags').array(),
+  styleId: uuid('style_id').notNull(),
+  subjectId: uuid('subject_id').notNull(),
+  promptText: text('prompt_text'), // Cached AI constructed text
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+
+// Prompt Guidance (Join table)
+export const promptGuidance = pgTable('prompt_guidance', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  promptId: uuid('prompt_id').notNull(),
+  guidanceId: uuid('guidance_id').notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
 });
 
 // Batches table
@@ -113,12 +133,36 @@ export const stylesRelations = relations(styles, ({ one, many }) => ({
   prompts: many(prompts),
 }));
 
+export const subjectsRelations = relations(subjects, ({ many }) => ({
+  prompts: many(prompts),
+}));
+
+export const guidanceRelations = relations(guidance, ({ many }) => ({
+  promptGuidance: many(promptGuidance),
+}));
+
 export const promptsRelations = relations(prompts, ({ one, many }) => ({
   style: one(styles, {
     fields: [prompts.styleId],
     references: [styles.id],
   }),
+  subject: one(subjects, {
+    fields: [prompts.subjectId],
+    references: [subjects.id],
+  }),
+  promptGuidance: many(promptGuidance),
   batchPrompts: many(batchPrompts),
+}));
+
+export const promptGuidanceRelations = relations(promptGuidance, ({ one }) => ({
+  prompt: one(prompts, {
+    fields: [promptGuidance.promptId],
+    references: [prompts.id],
+  }),
+  guidance: one(guidance, {
+    fields: [promptGuidance.guidanceId],
+    references: [guidance.id],
+  }),
 }));
 
 export const batchesRelations = relations(batches, ({ many }) => ({
@@ -160,8 +204,14 @@ export const imagesRelations = relations(images, ({ one }) => ({
 // Type exports
 export type Style = typeof styles.$inferSelect;
 export type NewStyle = typeof styles.$inferInsert;
+export type Subject = typeof subjects.$inferSelect;
+export type NewSubject = typeof subjects.$inferInsert;
+export type Guidance = typeof guidance.$inferSelect;
+export type NewGuidance = typeof guidance.$inferInsert;
 export type Prompt = typeof prompts.$inferSelect;
 export type NewPrompt = typeof prompts.$inferInsert;
+export type PromptGuidance = typeof promptGuidance.$inferSelect;
+export type NewPromptGuidance = typeof promptGuidance.$inferInsert;
 export type Batch = typeof batches.$inferSelect;
 export type NewBatch = typeof batches.$inferInsert;
 export type BatchPrompt = typeof batchPrompts.$inferSelect;

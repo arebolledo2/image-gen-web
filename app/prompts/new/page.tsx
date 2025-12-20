@@ -79,7 +79,7 @@ export default function NewPromptPage() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         assetType: 'sprite', // Could be made dynamic
-        styleId: styleId || null,
+        styleId: styleId && styleId !== 'none' ? styleId : null,
         description: aiDescription,
       }),
     });
@@ -110,7 +110,7 @@ export default function NewPromptPage() {
           name,
           template,
           variables,
-          styleId: styleId || null,
+          styleId: styleId && styleId !== 'none' ? styleId : null,
           tags: tags.filter(t => t.trim()),
         }),
       });
@@ -173,7 +173,7 @@ export default function NewPromptPage() {
                   <SelectValue placeholder="Select a style (optional)" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">None</SelectItem>
+                  <SelectItem value="none">None</SelectItem>
                   {styles.map((style) => (
                     <SelectItem key={style.id} value={style.id}>
                       {style.name}

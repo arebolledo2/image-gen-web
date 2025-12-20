@@ -18,8 +18,33 @@ const styleSchema = z.object({
   }),
 });
 
+/**
+ * Style suggestion returned by the AI agent
+ */
 export type StyleSuggestion = z.infer<typeof styleSchema>;
 
+/**
+ * Create a complete style definition using AI based on a text description.
+ *
+ * The agent generates:
+ * - Color palette with valid hex codes (#RRGGBB format)
+ * - Material descriptions (e.g., "glossy metal", "matte plastic")
+ * - Visual effects (e.g., "soft bloom", "emissive seams")
+ * - Surface finish description
+ *
+ * All generated colors are validated to be proper hex format.
+ *
+ * @param description - Natural language description of desired style (e.g., "futuristic neon cyberpunk")
+ * @returns Promise resolving to validated style definition with palette and rendering cues
+ * @throws Error if AI generation fails or returns invalid data
+ *
+ * @example
+ * ```typescript
+ * const style = await createStyleAgent("retro 8-bit pixel art");
+ * console.log(style.palette.primary); // ["#FF0000", "#00FF00"]
+ * console.log(style.renderingCues.materials); // ["pixelated", "chunky"]
+ * ```
+ */
 export async function createStyleAgent(description: string): Promise<StyleSuggestion> {
   const systemPrompt = `You are a style designer for game sprites and assets.
 Create a complete style definition including palette and rendering cues based on the user's description.
@@ -69,14 +94,51 @@ const promptSchema = z.object({
   tags: z.array(z.string()),
 });
 
+/**
+ * Prompt suggestion returned by the AI agent
+ */
 export type PromptSuggestion = z.infer<typeof promptSchema>;
 
-export async function createPromptAgent(params: {
+/**
+ * Parameters for creating a prompt template
+ */
+export interface CreatePromptAgentParams {
+  /** Type of game asset (e.g., "turret", "enemy", "power-up") */
   assetType: string;
+  /** Optional name of style to apply */
   styleName?: string;
+  /** Optional keywords from the style (e.g., ["chrome", "glowing"]) */
   styleKeywords?: string[];
+  /** Optional additional description of desired output */
   description?: string;
-}): Promise<PromptSuggestion> {
+}
+
+/**
+ * Create a prompt template for AI image generation using an AI agent.
+ *
+ * The agent follows best practices for game sprite generation:
+ * - Always includes "magenta background" for sprite transparency
+ * - Specifies view angle (top-down, side view, etc.)
+ * - Incorporates style keywords when provided
+ * - Requests consistent sizing for sprite sheets
+ *
+ * @param params - Configuration for prompt creation
+ * @returns Promise resolving to prompt template with name and tags
+ * @throws Error if AI generation fails
+ *
+ * @example
+ * ```typescript
+ * const prompt = await createPromptAgent({
+ *   assetType: "turret",
+ *   styleName: "Neon Synth",
+ *   styleKeywords: ["chrome", "glowing"],
+ *   description: "rotating animation"
+ * });
+ * console.log(prompt.template);
+ * // "4x4 sprite sheet of robot turret, neon synth style, chrome glowing, rotating..."
+ * ```
+ */
+export async function createPromptAgent(params: CreatePromptAgentParams): Promise<PromptSuggestion> {
   const { assetType, styleName, styleKeywords, description } = params;
 
   const systemPrompt = `You are an expert at creating prompts for AI image generation.
@@ -113,6 +175,32 @@ ${description ? `Description: ${description}` : ''}`;
   return experimental_output;
 }
 
+/**
+ * Generate variations of a base prompt while maintaining core elements.
+ *
+ * Variations will:
+ * - Keep the same subject and general style
+ * - Vary specific features, colors, or viewing angles
+ * - Always maintain "magenta background" for sprite compatibility
+ * - Be suitable for creating diverse but cohesive sprite sets
+ *
+ * @param basePrompt - The original prompt to create variations from
+ * @param count - Number of variations to generate (default: 3)
+ * @returns Promise resolving to array of prompt variations
+ * @throws Error if AI generation fails
+ *
+ * @example
+ * ```typescript
+ * const variations = await suggestPromptVariations(
+ *   "Red robot turret, top-down view, magenta background",
+ *   3
+ * );
+ * // Returns variations like:
+ * // - "Blue robot turret, top-down view, magenta background"
+ * // - "Red robot turret, angled view, magenta background"
+ * // - "Red robot turret with spikes, top-down view, magenta background"
+ * ```
+ */
 export async function suggestPromptVariations(
   basePrompt: string,
   count: number = 3

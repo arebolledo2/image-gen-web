@@ -5,13 +5,44 @@ import { generations, images, batches } from '@/lib/db/schema';
 import { eq, and } from 'drizzle-orm';
 import { saveImage } from '@/lib/storage/local-storage';
 
+/**
+ * Options for generating a single image
+ */
 export interface ImageGenerationOptions {
+  /** The text prompt to generate the image from */
   prompt: string;
+  /** ID of the batch this generation belongs to */
   batchId: string;
+  /** ID of the specific batch prompt being executed */
   batchPromptId: string;
+  /** Run number for this prompt (when count > 1) */
   runNumber: number;
 }
 
+/**
+ * Generate a single image using Google Gemini API and save it to local storage.
+ *
+ * This function:
+ * 1. Creates a generation record in the database with 'running' status
+ * 2. Calls the Gemini 2.5 Flash Image Preview model
+ * 3. Saves generated images to local storage
+ * 4. Updates the generation record with success/failure status
+ *
+ * @param options - Configuration for image generation
+ * @returns Promise resolving to generation record and saved image records
+ * @throws Error if image generation fails or no images are returned
+ *
+ * @example
+ * ```typescript
+ * const result = await generateImage({
+ *   prompt: "Robot turret, neon style, magenta background",
+ *   batchId: "batch-123",
+ *   batchPromptId: "bp-456",
+ *   runNumber: 1
+ * });
+ * console.log(`Generated ${result.images.length} images`);
+ * ```
+ */
 export async function generateImage(options: ImageGenerationOptions) {
   const { prompt, batchId, batchPromptId, runNumber } = options;
 
@@ -91,6 +122,30 @@ export async function generateImage(options: ImageGenerationOptions) {
   }
 }
 
+/**
+ * Execute all prompts in a batch sequentially.
+ *
+ * This function:
+ * 1. Updates batch status to 'running'
+ * 2. Fetches batch with all associated prompts
+ * 3. For each prompt, generates images based on count settings
+ * 4. Updates batch status to 'completed' or 'failed'
+ *
+ * The count setting determines how many times each prompt is executed:
+ * - Uses batchPrompt.overrides.count if set
+ * - Falls back to batch.defaults.count
+ * - Defaults to 1 if neither is set
+ *
+ * @param batchId - ID of the batch to execute
+ * @returns Promise resolving to success indicator
+ * @throws Error if batch not found or generation fails
+ *
+ * @example
+ * ```typescript
+ * await executeBatch("batch-123");
+ * // All prompts in batch-123 have been processed
+ * ```
+ */
 export async function executeBatch(batchId: string) {
   // Update batch status to running
   await db.update(batches)
