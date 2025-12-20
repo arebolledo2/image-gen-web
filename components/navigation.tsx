@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { Sparkles } from "lucide-react";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 const navItems = [
   { href: "/", label: "Dashboard" },
@@ -46,8 +47,11 @@ export function Navigation() {
             </div>
           </div>
 
-          <div className="text-sm text-muted-foreground">
-            AI-Powered Sprite Generator
+          <div className="flex items-center gap-4">
+            <div className="text-sm text-muted-foreground">
+              AI-Powered Sprite Generator
+            </div>
+            <ThemeToggle />
           </div>
         </div>
       </div>
