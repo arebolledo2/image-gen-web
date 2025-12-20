@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Loader2, Plus, X } from "lucide-react";
+import { AIAssistButton } from "@/components/agents/ai-assist-button";
 
 interface Style {
   id: string;
@@ -72,6 +73,29 @@ export default function NewPromptPage() {
     return variables;
   };
 
+  const handleAIGenerate = async (aiDescription: string) => {
+    const response = await fetch('/api/agents/create-prompt', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        assetType: 'sprite', // Could be made dynamic
+        styleId: styleId || null,
+        description: aiDescription,
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to generate prompt');
+    }
+
+    const { prompt } = await response.json();
+
+    // Populate form with AI-generated prompt
+    setName(prompt.name);
+    setTemplate(prompt.template);
+    setTags(prompt.tags || [""]);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -109,11 +133,19 @@ export default function NewPromptPage() {
 
   return (
     <div className="max-w-3xl mx-auto space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Create New Prompt</h1>
-        <p className="text-muted-foreground">
-          Build a reusable prompt template with variables
-        </p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Create New Prompt</h1>
+          <p className="text-muted-foreground">
+            Build a reusable prompt template with variables
+          </p>
+        </div>
+        <AIAssistButton
+          onGenerate={handleAIGenerate}
+          title="AI Prompt Generator"
+          description="Describe the prompt template you want to create and AI will generate it for you."
+          placeholder="e.g., Create a 4x4 sprite sheet prompt for turrets with customizable subject and colors..."
+        />
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-6">

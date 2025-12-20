@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Loader2, Plus, X } from "lucide-react";
+import { AIAssistButton } from "@/components/agents/ai-assist-button";
 
 export default function NewStylePage() {
   const router = useRouter();
@@ -65,6 +66,30 @@ export default function NewStylePage() {
     setter(updated);
   };
 
+  const handleAIGenerate = async (aiDescription: string) => {
+    const response = await fetch('/api/agents/create-style', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ description: aiDescription }),
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to generate style');
+    }
+
+    const { style } = await response.json();
+
+    // Populate form with AI-generated style
+    setName(style.name);
+    setDescription(style.description || '');
+    setPrimaryColors(style.palette.primary);
+    setAccentColors(style.palette.accent);
+    setBackgroundColor(style.palette.background);
+    setMaterials(style.renderingCues.materials);
+    setEffects(style.renderingCues.effects);
+    setFinish(style.renderingCues.finish);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -105,11 +130,19 @@ export default function NewStylePage() {
 
   return (
     <div className="max-w-3xl mx-auto space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Create New Style</h1>
-        <p className="text-muted-foreground">
-          Define a new art style with palette and rendering cues
-        </p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Create New Style</h1>
+          <p className="text-muted-foreground">
+            Define a new art style with palette and rendering cues
+          </p>
+        </div>
+        <AIAssistButton
+          onGenerate={handleAIGenerate}
+          title="AI Style Generator"
+          description="Describe the style you want to create and AI will generate a complete style definition for you."
+          placeholder="e.g., A cyberpunk neon aesthetic with chrome metals and electric colors, or a ceramic toybox style with pastel colors..."
+        />
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-6">
