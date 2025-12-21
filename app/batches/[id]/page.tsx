@@ -160,7 +160,12 @@ export default function BatchDetailPage() {
     }
   };
 
-  const makeTransparent = async (e: React.MouseEvent | React.KeyboardEvent, image: GalleryImage) => {
+  const makeTransparent = async (
+    e: React.MouseEvent | React.KeyboardEvent, 
+    image: GalleryImage,
+    samplePoint?: { x: number, y: number },
+    forceOriginal?: boolean
+  ) => {
     e.stopPropagation();
     if (processingTransparency[image.id]) return;
 
@@ -173,7 +178,7 @@ export default function BatchDetailPage() {
       const response = await fetch(`/api/images/${image.id}/transparent`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ tolerance, mode }),
+        body: JSON.stringify({ tolerance, mode, samplePoint, forceOriginal }),
       });
 
       if (!response.ok) {

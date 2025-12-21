@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { 
   Loader2, 
   Download, 
@@ -8,7 +8,8 @@ import {
   ChevronRight, 
   Heart, 
   Sparkles, 
-  Layers 
+  Layers,
+  Pipette
 } from "lucide-react";
 import {
   Dialog,
@@ -47,7 +48,12 @@ interface ImageGalleryModalProps {
   onClose: () => void;
   onNavigate: (index: number) => void;
   onToggleFavorite: (e: React.MouseEvent, image: GalleryImage) => Promise<void>;
-  onMakeTransparent: (e: React.MouseEvent | React.KeyboardEvent, image: GalleryImage) => Promise<void>;
+  onMakeTransparent: (
+    e: React.MouseEvent | React.KeyboardEvent, 
+    image: GalleryImage, 
+    samplePoint?: { x: number, y: number },
+    forceOriginal?: boolean
+  ) => Promise<void>;
   onToggleTransparencyView: (e: React.MouseEvent, imageId: string) => void;
   showTransparent: Record<string, boolean>;
   processingTransparency: Record<string, boolean>;
@@ -75,6 +81,7 @@ export function ImageGalleryModal({
   imageVersions,
 }: ImageGalleryModalProps) {
   const lastScrollTime = useRef(0);
+  const [isSampling, setIsSampling] = useState(false);
 
   const navigateImage = useCallback((direction: 'next' | 'prev') => {
     if (selectedIndex === null) return;
@@ -113,6 +120,40 @@ export function ImageGalleryModal({
 
   const currentImage = selectedIndex !== null ? images[selectedIndex] : null;
 
+  const handleImageClick = (e: React.MouseEvent<HTMLImageElement>) => {
+    if (currentImage && isSampling) {
+      const rect = e.currentTarget.getBoundingClientRect();
+      
+      // Calculate position within the rendered image element
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
+
+      // The image might be scaled via object-contain. 
+      // We need to find the actual image dimensions and its position within the box.
+      const renderedWidth = rect.width;
+      const renderedHeight = rect.height;
+      const naturalWidth = e.currentTarget.naturalWidth;
+      const naturalHeight = e.currentTarget.naturalHeight;
+
+      const scale = Math.min(renderedWidth / naturalWidth, renderedHeight / naturalHeight);
+      
+      const actualRenderedWidth = naturalWidth * scale;
+      const actualRenderedHeight = naturalHeight * scale;
+
+      const offsetX = (renderedWidth - actualRenderedWidth) / 2;
+      const offsetY = (renderedHeight - actualRenderedHeight) / 2;
+
+      // Coordinates relative to the actual image pixels
+      const imageX = Math.floor((x - offsetX) / scale);
+      const imageY = Math.floor((y - offsetY) / scale);
+
+      // Check if click is within image bounds
+      if (imageX >= 0 && imageX < naturalWidth && imageY >= 0 && imageY < naturalHeight) {
+        onMakeTransparent(e, currentImage, { x: imageX, y: imageY });
+      }
+    }
+  };
+
   return (
     <Dialog 
       open={selectedIndex !== null} 
@@ -133,7 +174,8 @@ export function ImageGalleryModal({
               <img
                 src={`/api/images/${currentImage.id}/file${showTransparent[currentImage.id] ? `?version=transparent&t=${imageVersions[currentImage.id] || ''}` : ''}`}
                 alt={currentImage.fileName}
-                className={`max-w-full max-h-full w-auto h-auto object-contain transition-transform duration-200 ${showTransparent[currentImage.id] ? 'bg-[url("https://www.transparenttextures.com/patterns/checkerboard.png")]' : ''}`}
+                className={`max-w-full max-h-full w-auto h-auto object-contain transition-transform duration-200 ${isSampling ? 'cursor-crosshair' : ''} ${showTransparent[currentImage.id] ? 'bg-[url("https://www.transparenttextures.com/patterns/checkerboard.png")]' : ''}`}
+                onClick={handleImageClick}
               />
               
               {/* Navigation Arrows */}
@@ -187,15 +229,25 @@ export function ImageGalleryModal({
                     variant="ghost"
                     size="icon"
                     className={`h-12 w-12 rounded-full bg-black/20 hover:bg-black/40 text-white ${processingTransparency[currentImage.id] ? 'animate-pulse' : ''}`}
-                    onClick={(e) => onMakeTransparent(e, currentImage)}
+                    onClick={(e) => onMakeTransparent(e, currentImage, undefined, true)}
                     disabled={processingTransparency[currentImage.id]}
-                    title={currentImage.transparentFilePath ? "Redo Transparency" : "Make Transparent"}
+                    title={currentImage.transparentFilePath ? "Redo from Original (Corners)" : "Make Transparent (Corners)"}
                   >
                     {processingTransparency[currentImage.id] ? (
                       <Loader2 className="h-8 w-8 animate-spin" />
                     ) : (
                       <Sparkles className="h-8 w-8" />
                     )}
+                  </Button>
+
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className={`h-12 w-12 rounded-full bg-black/20 hover:bg-black/40 ${isSampling ? 'text-blue-400 bg-black/40' : 'text-white'}`}
+                    onClick={() => setIsSampling(!isSampling)}
+                    title="Toggle Color Picker"
+                  >
+                    <Pipette className="h-8 w-8" />
                   </Button>
 
                   <Button

@@ -15,6 +15,8 @@ export async function POST(
     const body = await request.json();
     const tolerance = body.tolerance ?? 30;
     const mode = body.mode ?? 'global'; // 'global' or 'flood'
+    const samplePoint = body.samplePoint as { x: number, y: number } | undefined;
+    const forceOriginal = body.forceOriginal === true;
 
     const imageRecord = await db.query.images.findFirst({
       where: eq(images.id, id),
@@ -24,9 +26,12 @@ export async function POST(
       return NextResponse.json({ error: 'Image not found' }, { status: 404 });
     }
 
-    const absolutePath = path.isAbsolute(imageRecord.filePath)
-      ? imageRecord.filePath
-      : path.join(process.cwd(), imageRecord.filePath);
+    // Decide which file to load: original or already transparent one
+    const filePathToLoad = (!forceOriginal && imageRecord.transparentFilePath) || imageRecord.filePath;
+
+    const absolutePath = path.isAbsolute(filePathToLoad)
+      ? filePathToLoad
+      : path.join(process.cwd(), filePathToLoad);
 
     const image = await (Jimp as any).read(absolutePath);
     const width = image.bitmap.width;
@@ -42,17 +47,29 @@ export async function POST(
       };
     };
 
-    // Get corner pixels to detect background color
-    const corners = [
-      intToRGBA(image.getPixelColor(0, 0)),
-      intToRGBA(image.getPixelColor(width - 1, 0)),
-      intToRGBA(image.getPixelColor(0, height - 1)),
-      intToRGBA(image.getPixelColor(width - 1, height - 1))
-    ];
+    // Get target color
+    let targetR: number;
+    let targetG: number;
+    let targetB: number;
 
-    const avgR = Math.round(corners.reduce((sum, p) => sum + p.r, 0) / 4);
-    const avgG = Math.round(corners.reduce((sum, p) => sum + p.g, 0) / 4);
-    const avgB = Math.round(corners.reduce((sum, p) => sum + p.b, 0) / 4);
+    if (samplePoint) {
+      const color = intToRGBA(image.getPixelColor(samplePoint.x, samplePoint.y));
+      targetR = color.r;
+      targetG = color.g;
+      targetB = color.b;
+    } else {
+      // Get corner pixels to detect background color
+      const corners = [
+        intToRGBA(image.getPixelColor(0, 0)),
+        intToRGBA(image.getPixelColor(width - 1, 0)),
+        intToRGBA(image.getPixelColor(0, height - 1)),
+        intToRGBA(image.getPixelColor(width - 1, height - 1))
+      ];
+
+      targetR = Math.round(corners.reduce((sum, p) => sum + p.r, 0) / 4);
+      targetG = Math.round(corners.reduce((sum, p) => sum + p.g, 0) / 4);
+      targetB = Math.round(corners.reduce((sum, p) => sum + p.b, 0) / 4);
+    }
 
     if (mode === 'flood') {
       // Flood fill approach
@@ -75,9 +92,9 @@ export async function POST(
         // Process current pixel
         const color = intToRGBA(image.getPixelColor(x, y));
         const isMatch = 
-          Math.abs(color.r - avgR) <= tolerance &&
-          Math.abs(color.g - avgG) <= tolerance &&
-          Math.abs(color.b - avgB) <= tolerance;
+          Math.abs(color.r - targetR) <= tolerance &&
+          Math.abs(color.g - targetG) <= tolerance &&
+          Math.abs(color.b - targetB) <= tolerance;
 
         if (isMatch) {
           // Make transparent by setting alpha to 0 (last 8 bits)
@@ -108,9 +125,9 @@ export async function POST(
         const b = this.bitmap.data[idx + 2];
 
         const isMatch = 
-          Math.abs(r - avgR) <= tolerance &&
-          Math.abs(g - avgG) <= tolerance &&
-          Math.abs(b - avgB) <= tolerance;
+          Math.abs(r - targetR) <= tolerance &&
+          Math.abs(g - targetG) <= tolerance &&
+          Math.abs(b - targetB) <= tolerance;
 
         if (isMatch) {
           this.bitmap.data[idx + 3] = 0; // Alpha
