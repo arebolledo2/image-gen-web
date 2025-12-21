@@ -12,12 +12,12 @@ interface Style {
   name: string;
   version: number;
   description: string | null;
-  palette: {
+  palette: string[] | {
     primary: string[];
     accent: string[];
     background: string;
   };
-  renderingCues: {
+  renderingCues: string[] | {
     materials: string[];
     effects: string[];
     finish: string;
@@ -132,46 +132,65 @@ export default function StyleDetailPage({ params }: { params: Promise<{ id: stri
             <CardDescription>Primary, accent, and background colors</CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
-            <div>
-              <h4 className="text-sm font-medium mb-3">Primary Colors</h4>
-              <div className="flex flex-wrap gap-2">
-                {style.palette.primary.map((color, i) => (
-                  <div key={i} className="flex flex-col items-center gap-1">
+            {Array.isArray(style.palette) ? (
+              <div>
+                <h4 className="text-sm font-medium mb-3">Colors</h4>
+                <div className="flex flex-wrap gap-2">
+                  {style.palette.map((color, i) => (
+                    <div key={i} className="flex flex-col items-center gap-1">
+                      <div
+                        className="w-12 h-12 rounded-md border shadow-sm"
+                        style={{ backgroundColor: color }}
+                      />
+                      <span className="text-[10px] font-mono">{color}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <>
+                <div>
+                  <h4 className="text-sm font-medium mb-3">Primary Colors</h4>
+                  <div className="flex flex-wrap gap-2">
+                    {style.palette.primary.map((color, i) => (
+                      <div key={i} className="flex flex-col items-center gap-1">
+                        <div
+                          className="w-12 h-12 rounded-md border shadow-sm"
+                          style={{ backgroundColor: color }}
+                        />
+                        <span className="text-[10px] font-mono">{color}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <h4 className="text-sm font-medium mb-3">Accent Colors</h4>
+                  <div className="flex flex-wrap gap-2">
+                    {style.palette.accent.map((color, i) => (
+                      <div key={i} className="flex flex-col items-center gap-1">
+                        <div
+                          className="w-12 h-12 rounded-md border shadow-sm"
+                          style={{ backgroundColor: color }}
+                        />
+                        <span className="text-[10px] font-mono">{color}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <h4 className="text-sm font-medium mb-3">Background</h4>
+                  <div className="flex flex-col items-start gap-1">
                     <div
                       className="w-12 h-12 rounded-md border shadow-sm"
-                      style={{ backgroundColor: color }}
+                      style={{ backgroundColor: style.palette.background }}
                     />
-                    <span className="text-[10px] font-mono">{color}</span>
+                    <span className="text-[10px] font-mono">{style.palette.background}</span>
                   </div>
-                ))}
-              </div>
-            </div>
-
-            <div>
-              <h4 className="text-sm font-medium mb-3">Accent Colors</h4>
-              <div className="flex flex-wrap gap-2">
-                {style.palette.accent.map((color, i) => (
-                  <div key={i} className="flex flex-col items-center gap-1">
-                    <div
-                      className="w-12 h-12 rounded-md border shadow-sm"
-                      style={{ backgroundColor: color }}
-                    />
-                    <span className="text-[10px] font-mono">{color}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <div>
-              <h4 className="text-sm font-medium mb-3">Background</h4>
-              <div className="flex flex-col items-start gap-1">
-                <div
-                  className="w-12 h-12 rounded-md border shadow-sm"
-                  style={{ backgroundColor: style.palette.background }}
-                />
-                <span className="text-[10px] font-mono">{style.palette.background}</span>
-              </div>
-            </div>
+                </div>
+              </>
+            )}
           </CardContent>
         </Card>
 
@@ -181,32 +200,47 @@ export default function StyleDetailPage({ params }: { params: Promise<{ id: stri
             <CardDescription>Materials, effects, and finish</CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
-            <div>
-              <h4 className="text-sm font-medium mb-3">Materials</h4>
-              <div className="flex flex-wrap gap-2">
-                {style.renderingCues.materials.map((material) => (
-                  <Badge key={material} variant="secondary">
-                    {material}
-                  </Badge>
-                ))}
+            {Array.isArray(style.renderingCues) ? (
+              <div>
+                <h4 className="text-sm font-medium mb-3">Rendering Cues</h4>
+                <div className="flex flex-wrap gap-2">
+                  {style.renderingCues.map((cue) => (
+                    <Badge key={cue} variant="secondary">
+                      {cue}
+                    </Badge>
+                  ))}
+                </div>
               </div>
-            </div>
+            ) : (
+              <>
+                <div>
+                  <h4 className="text-sm font-medium mb-3">Materials</h4>
+                  <div className="flex flex-wrap gap-2">
+                    {style.renderingCues.materials.map((material) => (
+                      <Badge key={material} variant="secondary">
+                        {material}
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
 
-            <div>
-              <h4 className="text-sm font-medium mb-3">Effects</h4>
-              <div className="flex flex-wrap gap-2">
-                {style.renderingCues.effects.map((effect) => (
-                  <Badge key={effect} variant="outline">
-                    {effect}
-                  </Badge>
-                ))}
-              </div>
-            </div>
+                <div>
+                  <h4 className="text-sm font-medium mb-3">Effects</h4>
+                  <div className="flex flex-wrap gap-2">
+                    {style.renderingCues.effects.map((effect) => (
+                      <Badge key={effect} variant="outline">
+                        {effect}
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
 
-            <div>
-              <h4 className="text-sm font-medium mb-3">Finish</h4>
-              <Badge>{style.renderingCues.finish}</Badge>
-            </div>
+                <div>
+                  <h4 className="text-sm font-medium mb-3">Finish</h4>
+                  <Badge>{style.renderingCues.finish}</Badge>
+                </div>
+              </>
+            )}
           </CardContent>
         </Card>
       </div>

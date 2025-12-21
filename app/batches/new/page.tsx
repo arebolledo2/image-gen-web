@@ -43,7 +43,7 @@ export default function NewBatchPage() {
 
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
-  const [provider, setProvider] = useState<'gemini' | 'comfyui'>('gemini');
+  const [provider, setProvider] = useState<'gemini' | 'gemini3' | 'comfyui'>('gemini');
   const [defaultCount, setDefaultCount] = useState(1);
   const [resolution, setResolution] = useState<string>(DEFAULT_RESOLUTION);
   
@@ -410,12 +410,13 @@ export default function NewBatchPage() {
 
                 <div className="space-y-2">
                   <Label htmlFor="provider">Generation Provider</Label>
-                  <Select value={provider} onValueChange={(value: 'gemini' | 'comfyui') => setProvider(value)}>
+                  <Select value={provider} onValueChange={(value: 'gemini' | 'gemini3' | 'comfyui') => setProvider(value)}>
                     <SelectTrigger id="provider">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="gemini">⚡ Google Gemini (Fast)</SelectItem>
+                      <SelectItem value="gemini">⚡ Google Gemini 2.5 (Fast)</SelectItem>
+                      <SelectItem value="gemini3">✨ Google Gemini 3 Pro (New)</SelectItem>
                       <SelectItem value="comfyui">🎨 ComfyUI (Advanced)</SelectItem>
                     </SelectContent>
                   </Select>

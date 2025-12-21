@@ -12,12 +12,12 @@ interface Style {
   name: string;
   version: number;
   description: string | null;
-  palette: {
+  palette: string[] | {
     primary: string[];
     accent: string[];
     background: string;
   };
-  renderingCues: {
+  renderingCues: string[] | {
     materials: string[];
     effects: string[];
     finish: string;
@@ -115,30 +115,51 @@ export default function StylesPage() {
                 <div>
                   <h4 className="text-sm font-medium mb-2">Palette</h4>
                   <div className="flex gap-1">
-                    {style.palette.primary.slice(0, 3).map((color, i) => (
-                      <div
-                        key={i}
-                        className="w-8 h-8 rounded border"
-                        style={{ backgroundColor: color }}
-                        title={color}
-                      />
-                    ))}
-                    {style.palette.accent.slice(0, 2).map((color, i) => (
-                      <div
-                        key={i}
-                        className="w-8 h-8 rounded border"
-                        style={{ backgroundColor: color }}
-                        title={color}
-                      />
-                    ))}
+                    {Array.isArray(style.palette) ? (
+                      style.palette.slice(0, 5).map((color, i) => (
+                        <div
+                          key={i}
+                          className="w-8 h-8 rounded border"
+                          style={{ backgroundColor: color }}
+                          title={color}
+                        />
+                      ))
+                    ) : (
+                      <>
+                        {style.palette.primary.slice(0, 3).map((color, i) => (
+                          <div
+                            key={i}
+                            className="w-8 h-8 rounded border"
+                            style={{ backgroundColor: color }}
+                            title={color}
+                          />
+                        ))}
+                        {style.palette.accent.slice(0, 2).map((color, i) => (
+                          <div
+                            key={i}
+                            className="w-8 h-8 rounded border"
+                            style={{ backgroundColor: color }}
+                            title={color}
+                          />
+                        ))}
+                      </>
+                    )}
                   </div>
                 </div>
                 <div className="flex flex-wrap gap-1">
-                  {style.renderingCues.materials.slice(0, 2).map((material) => (
-                    <Badge key={material} variant="secondary" className="text-xs">
-                      {material}
-                    </Badge>
-                  ))}
+                  {Array.isArray(style.renderingCues) ? (
+                    style.renderingCues.slice(0, 3).map((cue) => (
+                      <Badge key={cue} variant="secondary" className="text-xs">
+                        {cue}
+                      </Badge>
+                    ))
+                  ) : (
+                    style.renderingCues.materials.slice(0, 2).map((material) => (
+                      <Badge key={material} variant="secondary" className="text-xs">
+                        {material}
+                      </Badge>
+                    ))
+                  )}
                 </div>
               </CardContent>
             </Card>

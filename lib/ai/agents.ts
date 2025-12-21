@@ -237,11 +237,11 @@ export interface ComposePromptParams {
   style: {
     name: string;
     description?: string | null;
-    palette: {
+    palette: string[] | {
       primary: string[];
       accent: string[];
     };
-    renderingCues: {
+    renderingCues: string[] | {
       materials: string[];
       effects: string[];
     };
@@ -270,13 +270,25 @@ CRITICAL RULES:
 
 STRUCTURE: [SUBJECT], [FEATURES], [COLORS], [STYLE], [VIEW], [ANIMATION], [OUTLINE], [BACKGROUND]`;
 
+  const paletteText = Array.isArray(style.palette) 
+    ? style.palette.join(', ')
+    : `${style.palette.primary.join(', ')}, ${style.palette.accent.join(', ')}`;
+
+  const materialsText = Array.isArray(style.renderingCues)
+    ? style.renderingCues.join(', ')
+    : style.renderingCues.materials.join(', ');
+
+  const effectsText = Array.isArray(style.renderingCues)
+    ? '' // When it's a flat array, cues are mixed together in materialsText
+    : style.renderingCues.effects.join(', ');
+
   const userPrompt = `Compose a prompt with these components:
 Subject: ${subject.name} ${subject.description ? `(${subject.description})` : ''}
 Style: ${style.name}
 Style Details:
-- Palette: ${style.palette.primary.join(', ')}, ${style.palette.accent.join(', ')}
-- Materials: ${style.renderingCues.materials.join(', ')}
-- Effects: ${style.renderingCues.effects.join(', ')}
+- Palette: ${paletteText}
+- Materials: ${materialsText}
+${effectsText ? `- Effects: ${effectsText}` : ''}
 Guidance:
 ${guidance.map(g => `- ${g.name}: ${g.description}`).join('\n')}`;
 

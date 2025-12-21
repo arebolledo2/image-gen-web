@@ -20,7 +20,7 @@ export interface GenerationResult {
 }
 
 export interface ImageProvider {
-  name: 'gemini' | 'comfyui';
+  name: 'gemini' | 'gemini3' | 'comfyui';
   testConnection(): Promise<boolean>;
   generateImage(options: GenerationOptions): Promise<GenerationResult>;
 }
