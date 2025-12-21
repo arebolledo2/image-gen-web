@@ -62,7 +62,8 @@ export async function POST(request: NextRequest) {
     const promptText = await composeConstructedPromptAgent({
         subject: {
             name: subject.name,
-            description: subject.description
+            description: subject.description,
+            isTransparent: subject.isTransparent
         },
         style: {
             name: style.name,

@@ -17,6 +17,10 @@ interface Entity {
   name: string;
 }
 
+interface SubjectEntity extends Entity {
+  isTransparent: boolean;
+}
+
 interface PromptPreset {
   id: string;
   name: string;
@@ -37,7 +41,7 @@ export default function NewBatchPage() {
   const [dataLoading, setDataLoading] = useState(true);
   
   const [styles, setStyles] = useState<Entity[]>([]);
-  const [subjects, setSubjects] = useState<Entity[]>([]);
+  const [subjects, setSubjects] = useState<SubjectEntity[]>([]);
   const [guidanceList, setGuidanceList] = useState<Entity[]>([]);
   const [presets, setPresets] = useState<PromptPreset[]>([]);
 
@@ -307,10 +311,11 @@ export default function NewBatchPage() {
                         <Badge
                           key={s.id}
                           variant={selectedSubjectIds.includes(s.id) ? "default" : "outline"}
-                          className="cursor-pointer transition-colors"
+                          className={`cursor-pointer transition-colors ${s.isTransparent && !selectedSubjectIds.includes(s.id) ? "border-pink-200 text-pink-600" : ""}`}
                           onClick={() => toggleSubject(s.id)}
                         >
                           {s.name}
+                          {s.isTransparent && <span className="ml-1 text-[8px] opacity-70">★</span>}
                         </Badge>
                       ))}
                     </div>

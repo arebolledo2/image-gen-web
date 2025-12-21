@@ -7,7 +7,7 @@ import { eq } from 'drizzle-orm';
 // POST /api/agents/create-prompt - AI agent to create a prompt template
 export async function POST(request: NextRequest) {
   try {
-    const { assetType, styleId, description } = await request.json();
+    const { assetType, styleId, description, isTransparent } = await request.json();
 
     if (!assetType) {
       return NextResponse.json(
@@ -41,6 +41,7 @@ export async function POST(request: NextRequest) {
       styleName,
       styleKeywords,
       description,
+      isTransparent: isTransparent !== undefined ? isTransparent : true,
     });
 
     return NextResponse.json({ prompt });

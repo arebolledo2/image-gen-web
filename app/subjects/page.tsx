@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Switch } from "@/components/ui/switch";
 import { Plus, Loader2, Box, X, Sparkles } from "lucide-react";
 
 interface Subject {
@@ -16,6 +17,7 @@ interface Subject {
   name: string;
   version: number;
   description: string | null;
+  isTransparent: boolean;
   createdAt: string;
 }
 
@@ -26,6 +28,7 @@ export default function SubjectsPage() {
   const [showNewForm, setShowNewForm] = useState(false);
   const [newName, setNewName] = useState("");
   const [newDescription, setNewDescription] = useState("");
+  const [isTransparent, setIsTransparent] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
 
@@ -52,11 +55,16 @@ export default function SubjectsPage() {
       const response = await fetch('/api/subjects', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: newName, description: newDescription }),
+        body: JSON.stringify({ 
+          name: newName, 
+          description: newDescription,
+          isTransparent 
+        }),
       });
       if (response.ok) {
         setNewName("");
         setNewDescription("");
+        setIsTransparent(true);
         setShowNewForm(false);
         fetchSubjects();
       }
@@ -166,6 +174,19 @@ export default function SubjectsPage() {
                 />
                 <p className="text-[10px] text-muted-foreground italic">AI uses this to add specific details and features to the subject</p>
               </div>
+              <div className="flex items-center space-x-2 py-2">
+                <Switch
+                  id="isTransparent"
+                  checked={isTransparent}
+                  onCheckedChange={setIsTransparent}
+                />
+                <div className="space-y-0.5">
+                  <Label htmlFor="isTransparent">Transparent Background</Label>
+                  <p className="text-[10px] text-muted-foreground">
+                    ALWAYS include magenta background for sprite transparency
+                  </p>
+                </div>
+              </div>
               <div className="flex justify-end gap-2">
                 <Button type="button" variant="outline" onClick={() => setShowNewForm(false)}>
                   Cancel
@@ -209,6 +230,11 @@ export default function SubjectsPage() {
                       <Box className="h-5 w-5" />
                       {subject.name}
                       <Badge variant="outline">v{subject.version}</Badge>
+                      {subject.isTransparent && (
+                        <Badge variant="secondary" className="bg-pink-500/10 text-pink-600 border-pink-200">
+                          Transparent
+                        </Badge>
+                      )}
                     </CardTitle>
                     {subject.description && (
                       <CardDescription>

@@ -127,13 +127,15 @@ export interface CreatePromptAgentParams {
   styleKeywords?: string[];
   /** Optional additional description of desired output */
   description?: string;
+  /** Whether the asset should have a transparent background (magenta) */
+  isTransparent?: boolean;
 }
 
 /**
  * Create a prompt template for AI image generation using an AI agent.
  *
  * The agent follows best practices for game sprite generation:
- * - Always includes "solid bright magenta background #FF00FF single tone with no gradients" for sprite transparency
+ * - Conditionally includes "solid bright magenta background #FF00FF single tone with no gradients" for sprite transparency
  * - Specifies view angle (top-down, side view, etc.)
  * - Incorporates style keywords when provided
  * - Requests consistent sizing for sprite sheets
@@ -148,14 +150,19 @@ export interface CreatePromptAgentParams {
  *   assetType: "turret",
  *   styleName: "Neon Synth",
  *   styleKeywords: ["chrome", "glowing"],
- *   description: "rotating animation"
+ *   description: "rotating animation",
+ *   isTransparent: true
  * });
  * console.log(prompt.template);
  * // "4x4 sprite sheet of robot turret, neon synth style, chrome glowing, rotating..."
  * ```
  */
 export async function createPromptAgent(params: CreatePromptAgentParams): Promise<PromptSuggestion> {
-  const { assetType, styleName, styleKeywords, description } = params;
+  const { assetType, styleName, styleKeywords, description, isTransparent = true } = params;
+
+  const backgroundInstruction = isTransparent 
+    ? 'ALWAYS include "solid bright magenta background #FF00FF single tone with no gradients" for sprite transparency'
+    : 'Include a background description that fits the subject and style, but DO NOT use a magenta background.';
 
   const systemPrompt = `You are an expert at creating prompts for AI image generation.
 Create prompts for game sprites following this template structure:
@@ -163,7 +170,7 @@ Create prompts for game sprites following this template structure:
 [SUBJECT], [FEATURES], [COLORS], [STYLE], [VIEW], [ANIMATION], [OUTLINE], [BACKGROUND]
 
 CRITICAL RULES:
-1. ALWAYS include "solid bright magenta background #FF00FF single tone with no gradients" for sprite transparency
+1. ${backgroundInstruction}
 2. Be specific about view angle (top-down, side view, etc.)
 3. Include style keywords if provided
 4. Request consistent sizing for sprite sheets
@@ -197,11 +204,12 @@ ${description ? `Description: ${description}` : ''}`;
  * Variations will:
  * - Keep the same subject and general style
  * - Vary specific features, colors, or viewing angles
- * - Always maintain "solid bright magenta background #FF00FF single tone with no gradients" for sprite compatibility
+ * - Conditionally maintain "solid bright magenta background #FF00FF single tone with no gradients" for sprite compatibility
  * - Be suitable for creating diverse but cohesive sprite sets
  *
  * @param basePrompt - The original prompt to create variations from
  * @param count - Number of variations to generate (default: 3)
+ * @param isTransparent - Whether the variations should have a transparent background (magenta)
  * @returns Promise resolving to array of prompt variations
  * @throws Error if AI generation fails
  *
@@ -209,7 +217,8 @@ ${description ? `Description: ${description}` : ''}`;
  * ```typescript
  * const variations = await suggestPromptVariations(
  *   "Red robot turret, top-down view, solid bright magenta background (#FF00FF) single tone with no gradients",
- *   3
+ *   3,
+ *   true
  * );
  * // Returns variations like:
  * // - "Blue robot turret, top-down view, solid bright magenta background (#FF00FF) single tone with no gradients"
@@ -219,13 +228,18 @@ ${description ? `Description: ${description}` : ''}`;
  */
 export async function suggestPromptVariations(
   basePrompt: string,
-  count: number = 3
+  count: number = 3,
+  isTransparent: boolean = true
 ): Promise<string[]> {
+  const backgroundInstruction = isTransparent
+    ? 'Keep "solid bright magenta background #FF00FF single tone with no gradients" for transparency'
+    : 'Ensure the background is consistent with the base prompt but DO NOT use a magenta background.';
+
   const systemPrompt = `You are an expert at creating variations of prompts for AI image generation.
 Given a base prompt, create ${count} variations that:
 1. Maintain the core subject and style
 2. Vary specific features, colors, or angles
-3. Keep "solid bright magenta background #FF00FF single tone with no gradients" for transparency
+3. ${backgroundInstruction}
 4. Are suitable for generating diverse sprite variations`;
 
   const { experimental_output } = await generateText({
@@ -249,6 +263,7 @@ export interface ComposePromptParams {
   subject: {
     name: string;
     description?: string | null;
+    isTransparent?: boolean;
   };
   style: {
     name: string;
@@ -280,11 +295,15 @@ export interface ComposePromptParams {
 export async function composeConstructedPromptAgent(params: ComposePromptParams): Promise<string> {
   const { subject, style, guidance } = params;
 
+  const backgroundInstruction = subject.isTransparent !== false
+    ? 'ALWAYS include "solid bright magenta background #FF00FF single tone with no gradients" for sprite transparency unless explicitly told otherwise.'
+    : 'Include a background description that fits the subject and style, but DO NOT use a magenta background.';
+
   const systemPrompt = `You are an expert at creating technical prompts for AI image generation, specifically for game assets.
 Your task is to take a high-level Subject, a Style, and multiple Guidance instructions and compose them into a single, cohesive, high-quality prompt.
 
 CRITICAL RULES:
-1. ALWAYS include "solid bright magenta background #FF00FF single tone with no gradients" for sprite transparency unless explicitly told otherwise.
+1. ${backgroundInstruction}
 2. Be specific about view angle if implied by guidance or subject.
 3. Request consistent sizing for sprite sheets if "sprite sheet" is mentioned in guidance.
 4. Integrate the style's palette and rendering cues naturally.

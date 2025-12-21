@@ -8,12 +8,15 @@ import { Badge } from "@/components/ui/badge";
 import { Loader2, ArrowLeft, Trash2, Copy, Box, ChevronRight, Pencil, Save, X } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 
 interface Subject {
   id: string;
   name: string;
   version: number;
   description: string | null;
+  isTransparent: boolean;
   createdAt: string;
   parentSubject?: {
     id: string;
@@ -37,6 +40,7 @@ export default function SubjectDetailPage({ params }: { params: Promise<{ id: st
   const [saving, setSaving] = useState(false);
   const [editName, setEditName] = useState("");
   const [editDescription, setEditDescription] = useState("");
+  const [editIsTransparent, setEditIsTransparent] = useState(true);
 
   useEffect(() => {
     fetchSubject();
@@ -52,6 +56,7 @@ export default function SubjectDetailPage({ params }: { params: Promise<{ id: st
       setSubject(data.subject);
       setEditName(data.subject.name);
       setEditDescription(data.subject.description || "");
+      setEditIsTransparent(data.subject.isTransparent);
     } catch (error) {
       console.error("Error fetching subject:", error);
       alert("Failed to load subject");
@@ -115,6 +120,7 @@ export default function SubjectDetailPage({ params }: { params: Promise<{ id: st
         body: JSON.stringify({
           name: editName,
           description: editDescription,
+          isTransparent: editIsTransparent,
         }),
       });
 
@@ -136,6 +142,7 @@ export default function SubjectDetailPage({ params }: { params: Promise<{ id: st
   const handleCancelEdit = () => {
     setEditName(subject?.name || "");
     setEditDescription(subject?.description || "");
+    setEditIsTransparent(subject?.isTransparent ?? true);
     setEditing(false);
   };
 
@@ -161,6 +168,11 @@ export default function SubjectDetailPage({ params }: { params: Promise<{ id: st
           <div className="flex items-center gap-2">
             <h1 className="text-3xl font-bold tracking-tight">{subject.name}</h1>
             <Badge variant="outline">v{subject.version}</Badge>
+            {subject.isTransparent && (
+              <Badge variant="secondary" className="bg-pink-500/10 text-pink-600 border-pink-200">
+                Transparent
+              </Badge>
+            )}
           </div>
           <p className="text-muted-foreground">
             Created {new Date(subject.createdAt).toLocaleDateString()}
@@ -232,6 +244,19 @@ export default function SubjectDetailPage({ params }: { params: Promise<{ id: st
                   placeholder="Subject description"
                   rows={4}
                 />
+              </div>
+              <div className="flex items-center space-x-2 py-2">
+                <Switch
+                  id="editIsTransparent"
+                  checked={editIsTransparent}
+                  onCheckedChange={setEditIsTransparent}
+                />
+                <div className="space-y-0.5">
+                  <Label htmlFor="editIsTransparent">Transparent Background</Label>
+                  <p className="text-[10px] text-muted-foreground">
+                    ALWAYS include magenta background for sprite transparency
+                  </p>
+                </div>
               </div>
             </>
           ) : (

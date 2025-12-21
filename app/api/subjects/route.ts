@@ -24,7 +24,7 @@ export async function GET() {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { name, description } = body;
+    const { name, description, isTransparent } = body;
 
     if (!name) {
       return NextResponse.json(
@@ -36,6 +36,7 @@ export async function POST(request: NextRequest) {
     const [subject] = await db.insert(subjects).values({
       name,
       description,
+      isTransparent: isTransparent !== undefined ? isTransparent : true,
     }).returning();
 
     return NextResponse.json({ subject }, { status: 201 });

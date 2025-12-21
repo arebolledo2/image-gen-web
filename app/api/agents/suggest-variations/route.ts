@@ -4,7 +4,7 @@ import { suggestPromptVariations } from '@/lib/ai/agents';
 // POST /api/agents/suggest-variations - AI agent to suggest prompt variations
 export async function POST(request: NextRequest) {
   try {
-    const { basePrompt, count = 3 } = await request.json();
+    const { basePrompt, count = 3, isTransparent } = await request.json();
 
     if (!basePrompt) {
       return NextResponse.json(
@@ -13,7 +13,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const variations = await suggestPromptVariations(basePrompt, count);
+    const variations = await suggestPromptVariations(basePrompt, count, isTransparent !== undefined ? isTransparent : true);
 
     return NextResponse.json({ variations });
   } catch (error) {

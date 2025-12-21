@@ -44,12 +44,13 @@ export async function PATCH(
   try {
     const { id } = await params;
     const body = await request.json();
-    const { name, description } = body;
+    const { name, description, isTransparent } = body;
 
     // Build update object with only provided fields
     const updateData: any = {};
     if (name !== undefined) updateData.name = name;
     if (description !== undefined) updateData.description = description;
+    if (isTransparent !== undefined) updateData.isTransparent = isTransparent;
 
     const [updatedSubject] = await db
       .update(subjects)

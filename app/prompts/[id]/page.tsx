@@ -19,6 +19,11 @@ interface Prompt {
     id: string;
     name: string;
   } | null;
+  subject: {
+    id: string;
+    name: string;
+    isTransparent: boolean;
+  } | null;
 }
 
 export default function PromptDetailPage({ params }: { params: { id: string } }) {
@@ -83,6 +88,7 @@ export default function PromptDetailPage({ params }: { params: { id: string } })
         body: JSON.stringify({
           basePrompt: prompt!.template,
           context,
+          isTransparent: prompt?.subject?.isTransparent ?? true,
         }),
       });
 

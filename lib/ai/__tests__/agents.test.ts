@@ -178,7 +178,7 @@ describe('createPromptAgent', () => {
     );
   });
 
-  it('should include magenta background in system prompt', async () => {
+  it('should include magenta background in system prompt when isTransparent is true', async () => {
     vi.mocked(generateText).mockResolvedValue({
       experimental_output: { name: 'Test', template: 'test', tags: [] },
       text: '',
@@ -186,11 +186,33 @@ describe('createPromptAgent', () => {
       usage: { promptTokens: 0, completionTokens: 0 },
     } as any);
 
-    await createPromptAgent({ assetType: 'test' });
+    await createPromptAgent({ assetType: 'test', isTransparent: true });
 
     expect(generateText).toHaveBeenCalledWith(
       expect.objectContaining({
         system: expect.stringContaining('solid bright magenta background #FF00FF single tone with no gradients'),
+      })
+    );
+  });
+
+  it('should NOT include magenta background in system prompt when isTransparent is false', async () => {
+    vi.mocked(generateText).mockResolvedValue({
+      experimental_output: { name: 'Test', template: 'test', tags: [] },
+      text: '',
+      finishReason: 'stop',
+      usage: { promptTokens: 0, completionTokens: 0 },
+    } as any);
+
+    await createPromptAgent({ assetType: 'test', isTransparent: false });
+
+    expect(generateText).toHaveBeenCalledWith(
+      expect.objectContaining({
+        system: expect.stringContaining('DO NOT use a magenta background'),
+      })
+    );
+    expect(generateText).not.toHaveBeenCalledWith(
+      expect.objectContaining({
+        system: expect.stringContaining('ALWAYS include "solid bright magenta background #FF00FF single tone with no gradients"'),
       })
     );
   });
@@ -255,7 +277,7 @@ describe('suggestPromptVariations', () => {
     );
   });
 
-  it('should maintain magenta background requirement', async () => {
+  it('should maintain magenta background requirement when isTransparent is true', async () => {
     vi.mocked(generateText).mockResolvedValue({
       experimental_output: { variations: ['var1', 'var2'] },
       text: '',
@@ -263,11 +285,28 @@ describe('suggestPromptVariations', () => {
       usage: { promptTokens: 0, completionTokens: 0 },
     } as any);
 
-    await suggestPromptVariations('test prompt', 2);
+    await suggestPromptVariations('test prompt', 2, true);
 
     expect(generateText).toHaveBeenCalledWith(
       expect.objectContaining({
-        system: expect.stringContaining('solid bright magenta background #FF00FF single tone with no gradients'),
+        system: expect.stringContaining('Keep "solid bright magenta background #FF00FF single tone with no gradients" for transparency'),
+      })
+    );
+  });
+
+  it('should NOT maintain magenta background requirement when isTransparent is false', async () => {
+    vi.mocked(generateText).mockResolvedValue({
+      experimental_output: { variations: ['var1', 'var2'] },
+      text: '',
+      finishReason: 'stop',
+      usage: { promptTokens: 0, completionTokens: 0 },
+    } as any);
+
+    await suggestPromptVariations('test prompt', 2, false);
+
+    expect(generateText).toHaveBeenCalledWith(
+      expect.objectContaining({
+        system: expect.stringContaining('DO NOT use a magenta background'),
       })
     );
   });
@@ -360,7 +399,7 @@ describe('composeConstructedPromptAgent', () => {
     );
   });
 
-  it('should include magenta background requirement in system prompt', async () => {
+  it('should include magenta background requirement in system prompt when isTransparent is true', async () => {
     vi.mocked(generateText).mockResolvedValue({
       text: 'test prompt',
       finishReason: 'stop',
@@ -368,7 +407,7 @@ describe('composeConstructedPromptAgent', () => {
     } as any);
 
     await composeConstructedPromptAgent({
-      subject: { name: 'test' },
+      subject: { name: 'test', isTransparent: true },
       style: {
         name: 'test',
         palette: { primary: [], accent: [] },
@@ -380,6 +419,30 @@ describe('composeConstructedPromptAgent', () => {
     expect(generateText).toHaveBeenCalledWith(
       expect.objectContaining({
         system: expect.stringContaining('solid bright magenta background #FF00FF single tone with no gradients'),
+      })
+    );
+  });
+
+  it('should NOT include magenta background requirement in system prompt when isTransparent is false', async () => {
+    vi.mocked(generateText).mockResolvedValue({
+      text: 'test prompt',
+      finishReason: 'stop',
+      usage: { promptTokens: 0, completionTokens: 0 },
+    } as any);
+
+    await composeConstructedPromptAgent({
+      subject: { name: 'test', isTransparent: false },
+      style: {
+        name: 'test',
+        palette: { primary: [], accent: [] },
+        renderingCues: { materials: [], effects: [] },
+      },
+      guidance: [],
+    });
+
+    expect(generateText).toHaveBeenCalledWith(
+      expect.objectContaining({
+        system: expect.stringContaining('DO NOT use a magenta background'),
       })
     );
   });

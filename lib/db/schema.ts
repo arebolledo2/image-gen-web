@@ -34,6 +34,7 @@ export const subjects = pgTable('subjects', {
   version: integer('version').notNull().default(1),
   parentSubjectId: uuid('parent_subject_id'),
   description: text('description'),
+  isTransparent: boolean('is_transparent').default(true).notNull(),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });
