@@ -55,12 +55,12 @@ export default function NewBatchPage() {
   
   // For 'construct' mode
   const [styleId, setStyleId] = useState("");
-  const [subjectId, setSubjectId] = useState("");
+  const [selectedSubjectIds, setSelectedSubjectIds] = useState<string[]>([]);
   const [selectedGuidanceIds, setSelectedGuidanceIds] = useState<string[]>([]);
   
   // Preview and final prompts
   const [composing, setComposing] = useState(false);
-  const [previewPrompt, setPreviewPrompt] = useState("");
+  const [previewPrompts, setPreviewPrompts] = useState<{ subjectName: string; promptText: string; promptId?: string }[]>([]);
   const [prompts, setPrompts] = useState<BatchPrompt[]>([]);
 
   useEffect(() => {
@@ -98,6 +98,12 @@ export default function NewBatchPage() {
     );
   };
 
+  const toggleSubject = (id: string) => {
+    setSelectedSubjectIds(prev =>
+      prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]
+    );
+  };
+
   const [metadataLoading, setMetadataLoading] = useState(false);
   const handleGenerateMetadata = async () => {
     if (prompts.length === 0) return;
@@ -127,37 +133,53 @@ export default function NewBatchPage() {
     if (mode === 'preset') {
       const preset = presets.find(p => p.id === selectedPresetId);
       if (preset) {
-        setPreviewPrompt(preset.promptText);
+        setPreviewPrompts([{ subjectName: 'Preset', promptText: preset.promptText, promptId: preset.id }]);
       }
     } else {
-      if (!styleId || !subjectId) return;
+      if (!styleId || selectedSubjectIds.length === 0) return;
       setComposing(true);
       try {
-        const response = await fetch('/api/agents/compose-prompt', {
+        const promises = selectedSubjectIds.map(async (subId) => {
+          const subject = subjects.find(s => s.id === subId);
+          const response = await fetch('/api/agents/compose-prompt', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-                styleId,
-                subjectId,
-                guidanceIds: selectedGuidanceIds
+              styleId,
+              subjectId: subId,
+              guidanceIds: selectedGuidanceIds
             })
+          });
+          const data = await response.json();
+          return {
+            subjectName: subject?.name || 'Unknown',
+            promptText: data.promptText
+          };
         });
-        const data = await response.json();
-        setPreviewPrompt(data.promptText);
+
+        const results = await Promise.all(promises);
+        setPreviewPrompts(results);
       } catch (error) {
-        console.error('Error composing prompt:', error);
+        console.error('Error composing prompts:', error);
       } finally {
         setComposing(false);
       }
     }
   };
 
-  const addToBatch = () => {
-    if (!previewPrompt) return;
-    
-    const promptId = mode === 'preset' ? selectedPresetId : undefined;
-    setPrompts([...prompts, { promptText: previewPrompt, promptId }]);
-    setPreviewPrompt("");
+  const addToBatch = (index?: number) => {
+    if (index !== undefined) {
+      const preview = previewPrompts[index];
+      setPrompts([...prompts, { promptText: preview.promptText, promptId: preview.promptId }]);
+      setPreviewPrompts(prev => prev.filter((_, i) => i !== index));
+    } else {
+      const newPrompts = previewPrompts.map(p => ({
+        promptText: p.promptText,
+        promptId: p.promptId
+      }));
+      setPrompts([...prompts, ...newPrompts]);
+      setPreviewPrompts([]);
+    }
   };
 
   const removePrompt = (index: number) => {
@@ -279,19 +301,19 @@ export default function NewBatchPage() {
                     </Select>
                   </div>
                   <div className="space-y-2">
-                    <Label className="flex items-center gap-2"><Box className="h-4 w-4"/> Subject</Label>
-                    <Select value={subjectId} onValueChange={setSubjectId}>
-                      <SelectTrigger className="w-full">
-                        <SelectValue placeholder="Select subject..." className="truncate" />
-                      </SelectTrigger>
-                      <SelectContent className="max-w-[calc(100vw-4rem)] md:max-w-[400px]">
-                        {subjects.map((s) => (
-                          <SelectItem key={s.id} value={s.id} className="whitespace-normal">
-                            {s.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <Label className="flex items-center gap-2"><Box className="h-4 w-4"/> Subjects</Label>
+                    <div className="flex flex-wrap gap-2 p-2 border rounded-md min-h-[42px] max-h-[200px] overflow-y-auto">
+                      {subjects.map((s) => (
+                        <Badge
+                          key={s.id}
+                          variant={selectedSubjectIds.includes(s.id) ? "default" : "outline"}
+                          className="cursor-pointer transition-colors"
+                          onClick={() => toggleSubject(s.id)}
+                        >
+                          {s.name}
+                        </Badge>
+                      ))}
+                    </div>
                   </div>
                 </div>
 
@@ -317,27 +339,60 @@ export default function NewBatchPage() {
                 type="button" 
                 className="w-full" 
                 onClick={handleConstructPreview}
-                disabled={composing || (mode === 'preset' && !selectedPresetId) || (mode === 'construct' && (!styleId || !subjectId))}
+                disabled={composing || (mode === 'preset' && !selectedPresetId) || (mode === 'construct' && (!styleId || selectedSubjectIds.length === 0))}
             >
               {composing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Wand2 className="mr-2 h-4 w-4" />}
-              {mode === 'preset' ? "Preview Preset" : "Construct Preview"}
+              {mode === 'preset' ? "Preview Preset" : `Construct Previews (${selectedSubjectIds.length})`}
             </Button>
           </CardContent>
         </Card>
 
         {/* Step 2: Preview and Add to Batch */}
-        {previewPrompt && (
+        {previewPrompts.length > 0 && (
           <Card className="border-primary/50 bg-primary/5">
-            <CardHeader>
-              <CardTitle className="text-sm font-medium">2. Preview Constructed Prompt</CardTitle>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0">
+              <CardTitle className="text-sm font-medium">2. Preview Constructed Prompts ({previewPrompts.length})</CardTitle>
+              <Button type="button" size="sm" onClick={() => addToBatch()} className="h-8">
+                <Plus className="mr-2 h-4 w-4" /> Add All to Batch
+              </Button>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="p-3 bg-background border rounded-lg text-sm italic text-muted-foreground">
-                {previewPrompt}
+              <div className="space-y-3">
+                {previewPrompts.map((p, index) => (
+                  <div key={index} className="flex gap-4 p-3 bg-background border rounded-lg group">
+                    <div className="flex-1">
+                      <div className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-1">
+                        {p.subjectName}
+                      </div>
+                      <div className="text-sm italic text-muted-foreground">
+                        {p.promptText}
+                      </div>
+                    </div>
+                    <div className="flex flex-col gap-2">
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-primary"
+                        onClick={() => addToBatch(index)}
+                      >
+                        <Plus className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-destructive"
+                        onClick={() => {
+                          setPreviewPrompts(prev => prev.filter((_, i) => i !== index));
+                        }}
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                ))}
               </div>
-              <Button type="button" onClick={addToBatch} className="w-full">
-                <Plus className="mr-2 h-4 w-4" /> Add to Batch
-              </Button>
             </CardContent>
           </Card>
         )}

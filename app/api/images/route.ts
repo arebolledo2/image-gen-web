@@ -11,7 +11,48 @@ export async function GET(request: NextRequest) {
     const limit = parseInt(searchParams.get('limit') || '20');
     const offset = parseInt(searchParams.get('offset') || '0');
 
-    let query = db.query.images.findMany({
+    // Need to use relations correctly with filtering
+    // If batchId is provided, we need to join or filter via generation
+    
+    let whereClause = undefined;
+    if (batchId) {
+      // For findMany with 'with', it's easier to use the core db.select if we need complex filtering
+      // but let's see if we can do it with findMany first by checking the schema
+      // Actually, image has a generationId, but the batchId is on the generation table.
+      // Drizzle findMany 'where' can only access the main table's columns easily.
+      
+      // Let's use the core builder for more control if batchId is present
+      const results = await db.query.images.findMany({
+        where: batchId ? (images, { exists }) => exists(
+          db.select()
+            .from(require('@/lib/db/schema').generations)
+            .where(
+              and(
+                eq(require('@/lib/db/schema').generations.id, images.generationId),
+                eq(require('@/lib/db/schema').generations.batchId, batchId)
+              )
+            )
+        ) : undefined,
+        orderBy: [desc(images.createdAt)],
+        limit,
+        offset,
+        with: {
+          generation: {
+            with: {
+              batch: true,
+            },
+          },
+        },
+      });
+
+      return NextResponse.json({
+        images: results,
+        total: results.length, // Note: this is total in THIS page
+        hasMore: results.length === limit,
+      });
+    }
+
+    const results = await db.query.images.findMany({
       orderBy: [desc(images.createdAt)],
       limit,
       offset,
@@ -24,20 +65,10 @@ export async function GET(request: NextRequest) {
       },
     });
 
-    const allImages = await query;
-
-    // Filter by batchId if provided
-    let filteredImages = allImages;
-    if (batchId) {
-      filteredImages = allImages.filter(
-        (img) => img.generation.batchId === batchId
-      );
-    }
-
     return NextResponse.json({
-      images: filteredImages,
-      total: filteredImages.length,
-      hasMore: filteredImages.length === limit,
+      images: results,
+      total: results.length,
+      hasMore: results.length === limit,
     });
   } catch (error) {
     console.error('Error fetching images:', error);
