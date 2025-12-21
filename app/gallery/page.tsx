@@ -44,6 +44,7 @@ export default function GalleryPage() {
   const [showTransparent, setShowTransparent] = useState<Record<string, boolean>>({});
   const [processingTransparency, setProcessingTransparency] = useState<Record<string, boolean>>({});
   const [transparencyTolerance, setTransparencyTolerance] = useState<Record<string, number>>({});
+  const [transparencyMode, setTransparencyMode] = useState<Record<string, 'global' | 'flood'>>({});
   const [imageVersions, setImageVersions] = useState<Record<string, number>>({});
 
   // Modal state
@@ -112,6 +113,7 @@ export default function GalleryPage() {
     if (processingTransparency[image.id]) return;
 
     const tolerance = transparencyTolerance[image.id] ?? 30;
+    const mode = transparencyMode[image.id] ?? 'global';
 
     setProcessingTransparency(prev => ({ ...prev, [image.id]: true }));
 
@@ -119,7 +121,7 @@ export default function GalleryPage() {
       const response = await fetch(`/api/images/${image.id}/transparent`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ tolerance }),
+        body: JSON.stringify({ tolerance, mode }),
       });
 
       if (!response.ok) {
@@ -472,19 +474,32 @@ export default function GalleryPage() {
                         )}
                       </div>
                       
-                      <div className="w-full md:w-64 space-y-2 pointer-events-auto">
-                        <div className="flex justify-between items-center">
-                          <Label htmlFor="tolerance-slider" className="text-white text-xs">Transparency Tolerance: {transparencyTolerance[images[selectedImageIndex].id] ?? 30}</Label>
+                      <div className="w-full md:w-64 space-y-4 pointer-events-auto bg-black/40 p-3 rounded-lg border border-white/10">
+                        <div className="flex items-center justify-between">
+                          <Label htmlFor="transparency-mode" className="text-white text-xs cursor-pointer">
+                            {transparencyMode[images[selectedImageIndex].id] === 'flood' ? 'Flood-fill' : 'Global'} Mode
+                          </Label>
+                          <Switch
+                            id="transparency-mode"
+                            checked={transparencyMode[images[selectedImageIndex].id] === 'flood'}
+                            onCheckedChange={(checked) => setTransparencyMode(prev => ({ ...prev, [images[selectedImageIndex].id]: checked ? 'flood' : 'global' }))}
+                          />
                         </div>
-                        <Slider
-                          id="tolerance-slider"
-                          min={0}
-                          max={255}
-                          step={1}
-                          value={[transparencyTolerance[images[selectedImageIndex].id] ?? 30]}
-                          onValueChange={(vals) => setTransparencyTolerance(prev => ({ ...prev, [images[selectedImageIndex].id]: vals[0] }))}
-                          className="w-full"
-                        />
+
+                        <div className="space-y-2">
+                          <div className="flex justify-between items-center">
+                            <Label htmlFor="tolerance-slider" className="text-white text-xs">Tolerance: {transparencyTolerance[images[selectedImageIndex].id] ?? 30}</Label>
+                          </div>
+                          <Slider
+                            id="tolerance-slider"
+                            min={0}
+                            max={255}
+                            step={1}
+                            value={[transparencyTolerance[images[selectedImageIndex].id] ?? 30]}
+                            onValueChange={(vals) => setTransparencyTolerance(prev => ({ ...prev, [images[selectedImageIndex].id]: vals[0] }))}
+                            className="w-full"
+                          />
+                        </div>
                       </div>
                     </div>
                   </>
