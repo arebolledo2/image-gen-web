@@ -189,24 +189,43 @@ export default function BatchDetailPage() {
   };
 
   const makeTransparent = async (
-    e: React.MouseEvent | React.KeyboardEvent, 
+    e: React.MouseEvent | React.KeyboardEvent,
     image: GalleryImage,
     samplePoint?: { x: number, y: number },
     forceOriginal?: boolean
   ) => {
+    console.log('🚨🚨🚨 makeTransparent CALLED!');
+    console.log('🎯 samplePoint:', samplePoint);
+    console.log('🔧 forceOriginal:', forceOriginal);
+    console.log('📊 image.id:', image.id);
+
     e.stopPropagation();
-    if (processingTransparency[image.id]) return;
+    if (processingTransparency[image.id]) {
+      console.log('Already processing, returning early');
+      return;
+    }
 
     const tolerance = transparencyTolerance[image.id] ?? 30;
     const mode = transparencyMode[image.id] ?? 'global';
 
+    console.log('makeTransparent called with:', {
+      imageId: image.id,
+      samplePoint,
+      forceOriginal,
+      tolerance,
+      mode
+    });
+
     setProcessingTransparency(prev => ({ ...prev, [image.id]: true }));
 
     try {
+      const bodyData = { tolerance, mode, samplePoint, forceOriginal };
+      console.log('Sending to API:', bodyData);
+
       const response = await fetch(`/api/images/${image.id}/transparent`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ tolerance, mode, samplePoint, forceOriginal }),
+        body: JSON.stringify(bodyData),
       });
 
       if (!response.ok) {
@@ -214,11 +233,21 @@ export default function BatchDetailPage() {
       }
 
       const data = await response.json();
-      
+
+      // Handle the case where user clicked on transparent pixel
+      if (data.alreadyTransparent) {
+        alert(data.message || 'The selected pixel is already transparent. Please click on a visible area.');
+        return; // Early exit, don't update state
+      }
+
+      if (!data.success) {
+        throw new Error(data.message || 'Failed to make image transparent');
+      }
+
       // Update image in list with the new transparentFilePath
-      setImages(prev => prev.map(img => 
-        img.id === image.id 
-          ? { ...img, transparentFilePath: data.transparentFilePath } 
+      setImages(prev => prev.map(img =>
+        img.id === image.id
+          ? { ...img, transparentFilePath: data.transparentFilePath }
           : img
       ));
 

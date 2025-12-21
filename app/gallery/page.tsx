@@ -105,7 +105,12 @@ export default function GalleryPage() {
     }
   };
 
-  const makeTransparent = async (e: React.MouseEvent | React.KeyboardEvent, image: GalleryImage) => {
+  const makeTransparent = async (
+    e: React.MouseEvent | React.KeyboardEvent,
+    image: GalleryImage,
+    samplePoint?: { x: number, y: number },
+    forceOriginal?: boolean
+  ) => {
     e.stopPropagation();
     if (processingTransparency[image.id]) return;
 
@@ -118,7 +123,7 @@ export default function GalleryPage() {
       const response = await fetch(`/api/images/${image.id}/transparent`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ tolerance, mode }),
+        body: JSON.stringify({ tolerance, mode, samplePoint, forceOriginal }),
       });
 
       if (!response.ok) {
@@ -126,11 +131,21 @@ export default function GalleryPage() {
       }
 
       const data = await response.json();
-      
+
+      // Handle the case where user clicked on transparent pixel
+      if (data.alreadyTransparent) {
+        alert(data.message || 'The selected pixel is already transparent. Please click on a visible area.');
+        return; // Early exit, don't update state
+      }
+
+      if (!data.success) {
+        throw new Error(data.message || 'Failed to make image transparent');
+      }
+
       // Update image in list with the new transparentFilePath
-      setImages(prev => prev.map(img => 
-        img.id === image.id 
-          ? { ...img, transparentFilePath: data.transparentFilePath } 
+      setImages(prev => prev.map(img =>
+        img.id === image.id
+          ? { ...img, transparentFilePath: data.transparentFilePath }
           : img
       ));
 
