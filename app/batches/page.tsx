@@ -5,7 +5,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Loader2 } from "lucide-react";
+import { Plus, Loader2, ImageIcon } from "lucide-react";
 
 interface Batch {
   id: string;
@@ -15,6 +15,12 @@ interface Batch {
   provider: 'gemini' | 'comfyui';
   createdAt: string;
   batchPrompts: any[];
+  generations: {
+    images: {
+      id: string;
+      fileName: string;
+    }[];
+  }[];
 }
 
 export default function BatchesPage() {
@@ -61,7 +67,7 @@ export default function BatchesPage() {
   }
 
   return (
-    <div className="max-w-5xl mx-auto space-y-6">
+    <div className="max-w-7xl mx-auto space-y-6 px-4">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Batches</h1>
@@ -94,43 +100,74 @@ export default function BatchesPage() {
           </CardContent>
         </Card>
       ) : (
-        <div className="grid gap-4">
-          {batches.map((batch) => (
-            <Card key={batch.id} className="hover:shadow-md transition-shadow">
-              <CardHeader>
-                <div className="flex items-start justify-between">
-                  <div className="space-y-1">
-                    <CardTitle className="flex items-center gap-2">
-                      <Link
-                        href={`/batches/${batch.id}`}
-                        className="hover:underline"
-                      >
-                        {batch.name}
-                      </Link>
-                      <Badge className={getStatusColor(batch.status)}>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {batches.map((batch) => {
+            const previewImages = batch.generations
+              ?.flatMap(gen => gen.images)
+              .slice(0, 3) || [];
+
+            return (
+              <Card key={batch.id} className="hover:shadow-md transition-shadow overflow-hidden flex flex-col">
+                <Link href={`/batches/${batch.id}`} className="block">
+                  <div className="aspect-[16/9] bg-muted relative flex border-b">
+                    {previewImages.length > 0 ? (
+                      <div className="flex w-full h-full">
+                        {previewImages.map((img, i) => (
+                          <div 
+                            key={img.id} 
+                            className="relative flex-1 border-r last:border-r-0 overflow-hidden"
+                          >
+                            <img
+                              src={`/api/images/${img.id}/file`}
+                              alt={img.fileName}
+                              className="w-full h-full object-cover"
+                            />
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="flex items-center justify-center w-full h-full text-muted-foreground">
+                        <ImageIcon className="h-10 w-10 opacity-20" />
+                      </div>
+                    )}
+                    <div className="absolute top-2 right-2 flex gap-2">
+                       <Badge className={`${getStatusColor(batch.status)} text-white border-0`}>
                         {batch.status}
                       </Badge>
-                      <Badge variant="outline">
-                        {batch.provider === 'gemini' ? '⚡ Gemini' : '🎨 ComfyUI'}
-                      </Badge>
-                    </CardTitle>
-                    {batch.description && (
-                      <CardDescription>{batch.description}</CardDescription>
-                    )}
+                    </div>
                   </div>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                  <span>{batch.batchPrompts?.length || 0} prompts</span>
-                  <span>•</span>
-                  <span>
-                    Created {new Date(batch.createdAt).toLocaleDateString()}
-                  </span>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+                </Link>
+                <CardHeader className="p-4 space-y-1">
+                  <div className="flex items-center justify-between gap-2">
+                    <CardTitle className="text-lg truncate">
+                      <Link href={`/batches/${batch.id}`} className="hover:underline">
+                        {batch.name}
+                      </Link>
+                    </CardTitle>
+                    <Badge variant="outline" className="shrink-0">
+                      {batch.provider === 'gemini' ? '⚡ Gemini' : '🎨 ComfyUI'}
+                    </Badge>
+                  </div>
+                  {batch.description && (
+                    <CardDescription className="line-clamp-2 min-h-[2.5rem]">
+                      {batch.description}
+                    </CardDescription>
+                  )}
+                </CardHeader>
+                <CardContent className="p-4 pt-0 mt-auto">
+                  <div className="flex items-center justify-between text-sm text-muted-foreground">
+                    <div className="flex items-center gap-2">
+                      <span className="font-medium text-foreground">{batch.batchPrompts?.length || 0}</span>
+                      <span>prompts</span>
+                    </div>
+                    <span>
+                      {new Date(batch.createdAt).toLocaleDateString()}
+                    </span>
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })}
         </div>
       )}
     </div>

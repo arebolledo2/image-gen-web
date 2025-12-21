@@ -10,6 +10,14 @@ export async function GET() {
       orderBy: [desc(batches.createdAt)],
       with: {
         batchPrompts: true,
+        generations: {
+          with: {
+            images: {
+              limit: 3,
+            },
+          },
+          limit: 3, // Get a few generations to ensure we find images
+        },
       },
     });
 

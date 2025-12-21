@@ -9,7 +9,9 @@ import {
   Heart, 
   Sparkles, 
   Layers,
-  Pipette
+  Pipette,
+  Copy,
+  Check
 } from "lucide-react";
 import {
   Dialog,
@@ -82,6 +84,7 @@ export function ImageGalleryModal({
 }: ImageGalleryModalProps) {
   const lastScrollTime = useRef(0);
   const [isSampling, setIsSampling] = useState(false);
+  const [copied, setCopied] = useState(false);
 
   const navigateImage = useCallback((direction: 'next' | 'prev') => {
     if (selectedIndex === null) return;
@@ -119,6 +122,26 @@ export function ImageGalleryModal({
   }, [selectedIndex, navigateImage, onClose]);
 
   const currentImage = selectedIndex !== null ? images[selectedIndex] : null;
+
+  const handleCopyFileName = async () => {
+    if (!currentImage) return;
+
+    const isTransparent = showTransparent[currentImage.id];
+    const pathToCopy = (isTransparent && currentImage.transparentFilePath) 
+      ? currentImage.transparentFilePath 
+      : currentImage.filePath;
+
+    // Extract filename from path
+    const fileName = pathToCopy.split(/[\\/]/).pop() || pathToCopy;
+
+    try {
+      await navigator.clipboard.writeText(fileName);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch (err) {
+      console.error('Failed to copy text: ', err);
+    }
+  };
 
   const handleImageClick = (e: React.MouseEvent<HTMLImageElement>) => {
     if (currentImage && isSampling) {
@@ -248,6 +271,20 @@ export function ImageGalleryModal({
                     title="Toggle Color Picker"
                   >
                     <Pipette className="h-8 w-8" />
+                  </Button>
+
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className={`h-12 w-12 rounded-full bg-black/20 hover:bg-black/40 ${copied ? 'text-green-500' : 'text-white'}`}
+                    onClick={handleCopyFileName}
+                    title="Copy Filename"
+                  >
+                    {copied ? (
+                      <Check className="h-8 w-8" />
+                    ) : (
+                      <Copy className="h-8 w-8" />
+                    )}
                   </Button>
 
                   <Button

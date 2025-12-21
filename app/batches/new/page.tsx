@@ -190,6 +190,10 @@ export default function NewBatchPage() {
     setPrompts(prompts.filter((_, i) => i !== index));
   };
 
+  const handleEditPreview = (index: number, newText: string) => {
+    setPreviewPrompts(prev => prev.map((p, i) => i === index ? { ...p, promptText: newText } : p));
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -365,13 +369,16 @@ export default function NewBatchPage() {
               <div className="space-y-3">
                 {previewPrompts.map((p, index) => (
                   <div key={index} className="flex gap-4 p-3 bg-background border rounded-lg group">
-                    <div className="flex-1">
-                      <div className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-1">
+                    <div className="flex-1 space-y-2">
+                      <div className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
                         {p.subjectName}
                       </div>
-                      <div className="text-sm italic text-muted-foreground">
-                        {p.promptText}
-                      </div>
+                      <Textarea
+                        value={p.promptText}
+                        onChange={(e) => handleEditPreview(index, e.target.value)}
+                        className="text-sm italic text-muted-foreground min-h-[80px] bg-muted/30"
+                        placeholder="Edit prompt..."
+                      />
                     </div>
                     <div className="flex flex-col gap-2">
                       <Button
