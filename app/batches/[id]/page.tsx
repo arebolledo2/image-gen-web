@@ -5,7 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Play, Trash2, ArrowLeft, Download, ChevronLeft, ChevronRight } from "lucide-react";
+import { Loader2, Play, Trash2, ArrowLeft, Download, ChevronLeft, ChevronRight, Heart } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -31,6 +31,7 @@ interface Image {
   filePath: string;
   fileName: string;
   mediaType: string;
+  isFavorite: boolean;
   createdAt: string;
   generation: {
     batch: {
@@ -148,6 +149,30 @@ export default function BatchDetailPage() {
       fetchImages(0, true);
     }
   }, [batch, fetchImages]);
+
+  const toggleFavorite = async (e: React.MouseEvent, image: Image) => {
+    e.stopPropagation();
+    const newStatus = !image.isFavorite;
+    
+    // Optimistic update
+    setImages(prev => prev.map(img => img.id === image.id ? { ...img, isFavorite: newStatus } : img));
+
+    try {
+      const response = await fetch(`/api/images/${image.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ isFavorite: newStatus }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to update favorite status');
+      }
+    } catch (error) {
+      console.error('Error toggling favorite:', error);
+      // Revert on error
+      setImages(prev => prev.map(img => img.id === image.id ? { ...img, isFavorite: !newStatus } : img));
+    }
+  };
 
   // Infinite scroll observer
   const lastImageElementRef = useCallback((node: HTMLDivElement | null) => {
@@ -330,27 +355,6 @@ export default function BatchDetailPage() {
         </Card>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Prompts</CardTitle>
-          <CardDescription>
-            {batch.batchPrompts.length} prompt(s) in this batch
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {batch.batchPrompts.map((prompt, index) => (
-            <Card key={prompt.id}>
-              <CardHeader>
-                <CardTitle className="text-base">Prompt {index + 1}</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm whitespace-pre-wrap">{prompt.promptText}</p>
-              </CardContent>
-            </Card>
-          ))}
-        </CardContent>
-      </Card>
-
       {(batch.generations.length > 0 || images.length > 0) && (
         <Card>
           <CardHeader>
@@ -390,6 +394,17 @@ export default function BatchDetailPage() {
                             (e.target as HTMLImageElement).src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="100" height="100"%3E%3Crect fill="%23ddd" width="100" height="100"/%3E%3Ctext x="50%25" y="50%25" text-anchor="middle" dy=".3em" fill="%23999"%3ENo Image%3C/text%3E%3C/svg%3E';
                           }}
                         />
+                        
+                        {/* Favorite toggle on card */}
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className={`absolute top-2 right-2 z-10 rounded-full bg-black/20 hover:bg-black/40 ${image.isFavorite ? 'text-red-500' : 'text-white'}`}
+                          onClick={(e) => toggleFavorite(e, image)}
+                        >
+                          <Heart className={`h-5 w-5 ${image.isFavorite ? 'fill-current' : ''}`} />
+                        </Button>
+
                         <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2 pointer-events-none group-hover:pointer-events-auto">
                           <Button
                             size="sm"
@@ -423,6 +438,27 @@ export default function BatchDetailPage() {
           </CardContent>
         </Card>
       )}
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Prompts</CardTitle>
+          <CardDescription>
+            {batch.batchPrompts.length} prompt(s) in this batch
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {batch.batchPrompts.map((prompt, index) => (
+            <Card key={prompt.id}>
+              <CardHeader>
+                <CardTitle className="text-base">Prompt {index + 1}</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm whitespace-pre-wrap">{prompt.promptText}</p>
+              </CardContent>
+            </Card>
+          ))}
+        </CardContent>
+      </Card>
 
       <Dialog
         open={selectedImageIndex !== null}
@@ -465,6 +501,28 @@ export default function BatchDetailPage() {
                     disabled={selectedImageIndex === images.length - 1}
                   >
                     <ChevronRight className="h-8 w-8" />
+                  </Button>
+                </div>
+
+                {/* Controls Overlay */}
+                <div className="absolute top-4 left-4 flex gap-2">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className={`h-12 w-12 rounded-full bg-black/20 hover:bg-black/40 ${images[selectedImageIndex].isFavorite ? 'text-red-500' : 'text-white'}`}
+                    onClick={(e) => toggleFavorite(e, images[selectedImageIndex])}
+                  >
+                    <Heart className={`h-8 w-8 ${images[selectedImageIndex].isFavorite ? 'fill-current' : ''}`} />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-12 w-12 rounded-full bg-black/20 text-white hover:bg-black/40"
+                    asChild
+                  >
+                    <a href={`/api/images/${images[selectedImageIndex].id}/file`} download={images[selectedImageIndex].fileName}>
+                      <Download className="h-8 w-8" />
+                    </a>
                   </Button>
                 </div>
 

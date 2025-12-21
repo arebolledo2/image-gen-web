@@ -1,4 +1,4 @@
-import { pgTable, uuid, text, integer, timestamp, json, pgEnum } from 'drizzle-orm/pg-core';
+import { pgTable, uuid, text, integer, timestamp, json, pgEnum, boolean } from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
 
 // Enums
@@ -124,6 +124,7 @@ export const images = pgTable('images', {
     height?: number;
     [key: string]: any;
   }>(),
+  isFavorite: boolean('is_favorite').default(false).notNull(),
   createdAt: timestamp('created_at').defaultNow().notNull(),
 });
 

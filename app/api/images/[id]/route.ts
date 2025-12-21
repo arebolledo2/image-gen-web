@@ -1,0 +1,43 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { db } from '@/lib/db';
+import { images } from '@/lib/db/schema';
+import { eq } from 'drizzle-orm';
+
+export async function PATCH(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id } = await params;
+    const body = await request.json();
+    const { isFavorite } = body;
+
+    if (typeof isFavorite !== 'boolean') {
+      return NextResponse.json(
+        { error: 'isFavorite must be a boolean' },
+        { status: 400 }
+      );
+    }
+
+    const updated = await db
+      .update(images)
+      .set({ isFavorite })
+      .where(eq(images.id, id))
+      .returning();
+
+    if (updated.length === 0) {
+      return NextResponse.json(
+        { error: 'Image not found' },
+        { status: 404 }
+      );
+    }
+
+    return NextResponse.json({ image: updated[0] });
+  } catch (error) {
+    console.error('Error updating image:', error);
+    return NextResponse.json(
+      { error: 'Failed to update image' },
+      { status: 500 }
+    );
+  }
+}

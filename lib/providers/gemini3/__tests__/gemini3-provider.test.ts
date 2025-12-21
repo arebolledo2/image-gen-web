@@ -23,6 +23,12 @@ vi.mock('@/lib/storage/local-storage', () => ({
   saveImage: vi.fn().mockResolvedValue('path/to/image.png'),
 }));
 
+// Mock schema
+vi.mock('@/lib/db/schema', () => ({
+  generations: 'generations',
+  images: 'images',
+}));
+
 // Mock global fetch
 const mockFetch = vi.fn();
 global.fetch = mockFetch;
@@ -34,6 +40,8 @@ describe('Gemini3Provider', () => {
     vi.clearAllMocks();
     provider = new Gemini3Provider();
     process.env.GEMINI_API_KEY = 'test-api-key';
+    // Mock console.error to avoid cluttering test output
+    vi.spyOn(console, 'error').mockImplementation(() => {});
   });
 
   it('should have the correct name', () => {

@@ -4,19 +4,22 @@ import { useEffect, useState, useRef, useCallback } from "react";
 import Link from "next/link";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Loader2, Download, ChevronLeft, ChevronRight } from "lucide-react";
+import { Loader2, Download, ChevronLeft, ChevronRight, Heart } from "lucide-react";
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 
 interface Image {
   id: string;
   filePath: string;
   fileName: string;
   mediaType: string;
+  isFavorite: boolean;
   createdAt: string;
   generation: {
     batch: {
@@ -32,18 +35,19 @@ export default function GalleryPage() {
   const [fetchingMore, setFetchingMore] = useState(false);
   const [hasMore, setHasMore] = useState(true);
   const [offset, setOffset] = useState(0);
+  const [favoritesOnly, setFavoritesOnly] = useState(false);
   const LIMIT = 20;
 
   // Modal state
   const [selectedImageIndex, setSelectedImageIndex] = useState<number | null>(null);
   const lastScrollTime = useRef(0);
 
-  const fetchImages = useCallback(async (currentOffset: number, isInitial: boolean = false) => {
+  const fetchImages = useCallback(async (currentOffset: number, isInitial: boolean = false, favOnly: boolean = false) => {
     if (isInitial) setLoading(true);
     else setFetchingMore(true);
 
     try {
-      const response = await fetch(`/api/images?limit=${LIMIT}&offset=${currentOffset}`);
+      const response = await fetch(`/api/images?limit=${LIMIT}&offset=${currentOffset}&favoritesOnly=${favOnly}`);
       const data = await response.json();
       
       const newImages = data.images || [];
@@ -63,8 +67,37 @@ export default function GalleryPage() {
   }, []);
 
   useEffect(() => {
-    fetchImages(0, true);
-  }, [fetchImages]);
+    fetchImages(0, true, favoritesOnly);
+  }, [fetchImages, favoritesOnly]);
+
+  const toggleFavorite = async (e: React.MouseEvent, image: Image) => {
+    e.stopPropagation();
+    const newStatus = !image.isFavorite;
+    
+    // Optimistic update
+    setImages(prev => prev.map(img => img.id === image.id ? { ...img, isFavorite: newStatus } : img));
+
+    try {
+      const response = await fetch(`/api/images/${image.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ isFavorite: newStatus }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to update favorite status');
+      }
+
+      // If we are in favorites-only view and we just unfavorited an image, remove it from the list
+      if (favoritesOnly && !newStatus) {
+        setImages(prev => prev.filter(img => img.id !== image.id));
+      }
+    } catch (error) {
+      console.error('Error toggling favorite:', error);
+      // Revert on error
+      setImages(prev => prev.map(img => img.id === image.id ? { ...img, isFavorite: !newStatus } : img));
+    }
+  };
 
   // Infinite scroll observer
   const observer = useRef<IntersectionObserver | null>(null);
@@ -76,12 +109,12 @@ export default function GalleryPage() {
       if (entries[0].isIntersecting && hasMore) {
         const nextOffset = images.length;
         setOffset(nextOffset);
-        fetchImages(nextOffset);
+        fetchImages(nextOffset, false, favoritesOnly);
       }
     });
 
     if (node) observer.current.observe(node);
-  }, [loading, fetchingMore, hasMore, images.length, fetchImages]);
+  }, [loading, fetchingMore, hasMore, images.length, fetchImages, favoritesOnly]);
 
   const navigateImage = useCallback((direction: 'next' | 'prev') => {
     if (selectedImageIndex === null) return;
@@ -128,11 +161,21 @@ export default function GalleryPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Gallery</h1>
-        <p className="text-muted-foreground">
-          Browse all your generated images
-        </p>
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Gallery</h1>
+          <p className="text-muted-foreground">
+            Browse all your generated images
+          </p>
+        </div>
+        <div className="flex items-center space-x-2 bg-muted/50 p-2 px-4 rounded-lg">
+          <Switch 
+            id="favorites-filter" 
+            checked={favoritesOnly}
+            onCheckedChange={setFavoritesOnly}
+          />
+          <Label htmlFor="favorites-filter" className="cursor-pointer">Favorites only</Label>
+        </div>
       </div>
 
       {images.length === 0 ? (
@@ -140,11 +183,15 @@ export default function GalleryPage() {
           <CardContent className="pt-6">
             <div className="text-center py-12">
               <p className="text-muted-foreground mb-4">
-                No images yet. Create and execute a batch to generate images!
+                {favoritesOnly 
+                  ? "No favorited images yet." 
+                  : "No images yet. Create and execute a batch to generate images!"}
               </p>
-              <Link href="/batches/new">
-                <Button>Create a Batch</Button>
-              </Link>
+              {!favoritesOnly && (
+                <Link href="/batches/new">
+                  <Button>Create a Batch</Button>
+                </Link>
+              )}
             </div>
           </CardContent>
         </Card>
@@ -171,6 +218,17 @@ export default function GalleryPage() {
                       (e.target as HTMLImageElement).src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="100" height="100"%3E%3Crect fill="%23ddd" width="100" height="100"/%3E%3Ctext x="50%25" y="50%25" text-anchor="middle" dy=".3em" fill="%23999"%3ENo Image%3C/text%3E%3C/svg%3E';
                     }}
                   />
+                  
+                  {/* Favorite toggle on card */}
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className={`absolute top-2 right-2 z-10 rounded-full bg-black/20 hover:bg-black/40 ${image.isFavorite ? 'text-red-500' : 'text-white'}`}
+                    onClick={(e) => toggleFavorite(e, image)}
+                  >
+                    <Heart className={`h-5 w-5 ${image.isFavorite ? 'fill-current' : ''}`} />
+                  </Button>
+
                   <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2 pointer-events-none group-hover:pointer-events-auto">
                     <Button
                       size="sm"
@@ -263,6 +321,28 @@ export default function GalleryPage() {
                         disabled={selectedImageIndex === images.length - 1}
                       >
                         <ChevronRight className="h-8 w-8" />
+                      </Button>
+                    </div>
+
+                    {/* Controls Overlay */}
+                    <div className="absolute top-4 left-4 flex gap-2">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className={`h-12 w-12 rounded-full bg-black/20 hover:bg-black/40 ${images[selectedImageIndex].isFavorite ? 'text-red-500' : 'text-white'}`}
+                        onClick={(e) => toggleFavorite(e, images[selectedImageIndex])}
+                      >
+                        <Heart className={`h-8 w-8 ${images[selectedImageIndex].isFavorite ? 'fill-current' : ''}`} />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-12 w-12 rounded-full bg-black/20 text-white hover:bg-black/40"
+                        asChild
+                      >
+                        <a href={`/api/images/${images[selectedImageIndex].id}/file`} download={images[selectedImageIndex].fileName}>
+                          <Download className="h-8 w-8" />
+                        </a>
                       </Button>
                     </div>
 
