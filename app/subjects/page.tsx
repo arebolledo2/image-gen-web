@@ -1,9 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -12,11 +14,13 @@ import { Plus, Loader2, Box, X, Sparkles } from "lucide-react";
 interface Subject {
   id: string;
   name: string;
+  version: number;
   description: string | null;
   createdAt: string;
 }
 
 export default function SubjectsPage() {
+  const router = useRouter();
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [loading, setLoading] = useState(true);
   const [showNewForm, setShowNewForm] = useState(false);
@@ -193,13 +197,18 @@ export default function SubjectsPage() {
       ) : (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {subjects.map((subject) => (
-            <Card key={subject.id} className="hover:shadow-md transition-shadow">
+            <Card
+              key={subject.id}
+              className="hover:shadow-md transition-shadow cursor-pointer"
+              onClick={() => router.push(`/subjects/${subject.id}`)}
+            >
               <CardHeader>
                 <div className="flex items-start justify-between">
                   <div className="space-y-1 flex-1">
                     <CardTitle className="flex items-center gap-2">
                       <Box className="h-5 w-5" />
                       {subject.name}
+                      <Badge variant="outline">v{subject.version}</Badge>
                     </CardTitle>
                     {subject.description && (
                       <CardDescription>

@@ -5,12 +5,13 @@ import { useParams, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Play, Trash2, ArrowLeft, Download, Heart, Sparkles, Layers } from "lucide-react";
+import { Loader2, Play, Trash2, ArrowLeft, Download, Heart, Sparkles, Layers, Copy, ChevronRight } from "lucide-react";
 import { ImageGalleryModal, type GalleryImage } from "@/components/image-gallery-modal";
 
 interface Batch {
   id: string;
   name: string;
+  version: number;
   description: string | null;
   status: string;
   provider: 'gemini' | 'comfyui';
@@ -19,6 +20,8 @@ interface Batch {
   defaults: any;
   batchPrompts: any[];
   generations: any[];
+  parentBatch?: { id: string; name: string } | null;
+  childBatches?: { id: string; name: string; version: number }[];
 }
 
 export default function BatchDetailPage() {
@@ -27,6 +30,7 @@ export default function BatchDetailPage() {
   const [batch, setBatch] = useState<Batch | null>(null);
   const [loading, setLoading] = useState(true);
   const [executing, setExecuting] = useState(false);
+  const [creatingVersion, setCreatingVersion] = useState(false);
 
   // Image gallery state
   const [images, setImages] = useState<GalleryImage[]>([]);
@@ -100,6 +104,27 @@ export default function BatchDetailPage() {
     } catch (error) {
       console.error('Error deleting batch:', error);
       alert('Failed to delete batch');
+    }
+  };
+
+  const handleCreateVersion = async () => {
+    setCreatingVersion(true);
+    try {
+      const response = await fetch(`/api/batches/${params.id}/version`, {
+        method: "POST",
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to create version");
+      }
+
+      const data = await response.json();
+      router.push(`/batches/${data.batch.id}`);
+    } catch (error) {
+      console.error("Error creating version:", error);
+      alert("Failed to create version");
+    } finally {
+      setCreatingVersion(false);
     }
   };
 
@@ -266,12 +291,13 @@ export default function BatchDetailPage() {
           <ArrowLeft className="h-4 w-4" />
         </Button>
         <div className="flex-1">
-          <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2">
-            {batch.name}
+          <div className="flex items-center gap-2">
+            <h1 className="text-3xl font-bold tracking-tight">{batch.name}</h1>
+            <Badge variant="outline">v{batch.version}</Badge>
             <Badge className={getStatusColor(batch.status)}>
               {batch.status}
             </Badge>
-          </h1>
+          </div>
           {batch.description && (
             <p className="text-muted-foreground">{batch.description}</p>
           )}
@@ -287,6 +313,14 @@ export default function BatchDetailPage() {
               Execute Batch
             </Button>
           )}
+          <Button onClick={handleCreateVersion} disabled={creatingVersion}>
+            {creatingVersion ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : (
+              <Copy className="mr-2 h-4 w-4" />
+            )}
+            Create Version
+          </Button>
           <Button variant="destructive" onClick={handleDelete}>
             <Trash2 className="mr-2 h-4 w-4" />
             Delete
@@ -467,6 +501,56 @@ export default function BatchDetailPage() {
                   </div>
                 )}
               </>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {(batch.parentBatch || (batch.childBatches && batch.childBatches.length > 0)) && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Batch Lineage</CardTitle>
+            <CardDescription>Related versions and parent batches</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {batch.parentBatch && (
+              <div>
+                <h4 className="text-sm font-medium mb-2 text-muted-foreground uppercase tracking-wider">Parent Batch</h4>
+                <Button
+                  variant="outline"
+                  className="w-full justify-between"
+                  onClick={() => router.push(`/batches/${batch.parentBatch!.id}`)}
+                >
+                  <span className="flex items-center gap-2">
+                    <Layers className="h-4 w-4" />
+                    {batch.parentBatch.name}
+                  </span>
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              </div>
+            )}
+
+            {batch.childBatches && batch.childBatches.length > 0 && (
+              <div>
+                <h4 className="text-sm font-medium mb-2 text-muted-foreground uppercase tracking-wider">Child Batches</h4>
+                <div className="grid gap-2">
+                  {batch.childBatches.map((child) => (
+                    <Button
+                      key={child.id}
+                      variant="outline"
+                      className="w-full justify-between"
+                      onClick={() => router.push(`/batches/${child.id}`)}
+                    >
+                      <span className="flex items-center gap-2">
+                        <Layers className="h-4 w-4" />
+                        {child.name}
+                        <Badge variant="secondary" className="text-[10px]">v{child.version}</Badge>
+                      </span>
+                      <ChevronRight className="h-4 w-4" />
+                    </Button>
+                  ))}
+                </div>
+              </div>
             )}
           </CardContent>
         </Card>

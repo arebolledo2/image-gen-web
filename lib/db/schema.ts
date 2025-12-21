@@ -31,6 +31,8 @@ export const styles = pgTable('styles', {
 export const subjects = pgTable('subjects', {
   id: uuid('id').defaultRandom().primaryKey(),
   name: text('name').notNull(),
+  version: integer('version').notNull().default(1),
+  parentSubjectId: uuid('parent_subject_id'),
   description: text('description'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
@@ -40,6 +42,8 @@ export const subjects = pgTable('subjects', {
 export const guidance = pgTable('guidance', {
   id: uuid('id').defaultRandom().primaryKey(),
   name: text('name').notNull(),
+  version: integer('version').notNull().default(1),
+  parentGuidanceId: uuid('parent_guidance_id'),
   description: text('description').notNull(),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
@@ -68,6 +72,8 @@ export const promptGuidance = pgTable('prompt_guidance', {
 export const batches = pgTable('batches', {
   id: uuid('id').defaultRandom().primaryKey(),
   name: text('name').notNull(),
+  version: integer('version').notNull().default(1),
+  parentBatchId: uuid('parent_batch_id'),
   description: text('description'),
   status: batchStatusEnum('status').default('draft').notNull(),
   provider: providerEnum('provider').default('gemini').notNull(),
@@ -142,11 +148,27 @@ export const stylesRelations = relations(styles, ({ one, many }) => ({
   prompts: many(prompts),
 }));
 
-export const subjectsRelations = relations(subjects, ({ many }) => ({
+export const subjectsRelations = relations(subjects, ({ one, many }) => ({
+  parentSubject: one(subjects, {
+    fields: [subjects.parentSubjectId],
+    references: [subjects.id],
+    relationName: 'subjectLineage',
+  }),
+  childSubjects: many(subjects, {
+    relationName: 'subjectLineage',
+  }),
   prompts: many(prompts),
 }));
 
-export const guidanceRelations = relations(guidance, ({ many }) => ({
+export const guidanceRelations = relations(guidance, ({ one, many }) => ({
+  parentGuidance: one(guidance, {
+    fields: [guidance.parentGuidanceId],
+    references: [guidance.id],
+    relationName: 'guidanceLineage',
+  }),
+  childGuidances: many(guidance, {
+    relationName: 'guidanceLineage',
+  }),
   promptGuidance: many(promptGuidance),
 }));
 
@@ -174,7 +196,15 @@ export const promptGuidanceRelations = relations(promptGuidance, ({ one }) => ({
   }),
 }));
 
-export const batchesRelations = relations(batches, ({ many }) => ({
+export const batchesRelations = relations(batches, ({ one, many }) => ({
+  parentBatch: one(batches, {
+    fields: [batches.parentBatchId],
+    references: [batches.id],
+    relationName: 'batchLineage',
+  }),
+  childBatches: many(batches, {
+    relationName: 'batchLineage',
+  }),
   batchPrompts: many(batchPrompts),
   generations: many(generations),
 }));

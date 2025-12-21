@@ -5,7 +5,9 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, ArrowLeft, Trash2, Palette, ChevronRight } from "lucide-react";
+import { Loader2, ArrowLeft, Trash2, Palette, ChevronRight, Copy, Pencil, Save, X, Plus } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 
 interface Style {
   id: string;
@@ -40,6 +42,19 @@ export default function StyleDetailPage({ params }: { params: Promise<{ id: stri
   const [style, setStyle] = useState<Style | null>(null);
   const [loading, setLoading] = useState(true);
   const [deleting, setDeleting] = useState(false);
+  const [creatingVersion, setCreatingVersion] = useState(false);
+  const [editing, setEditing] = useState(false);
+  const [saving, setSaving] = useState(false);
+
+  // Edit state for all fields
+  const [editName, setEditName] = useState("");
+  const [editDescription, setEditDescription] = useState("");
+  const [editPrimaryColors, setEditPrimaryColors] = useState<string[]>([]);
+  const [editAccentColors, setEditAccentColors] = useState<string[]>([]);
+  const [editBackground, setEditBackground] = useState("");
+  const [editMaterials, setEditMaterials] = useState<string[]>([]);
+  const [editEffects, setEditEffects] = useState<string[]>([]);
+  const [editFinish, setEditFinish] = useState("");
 
   useEffect(() => {
     fetchStyle();
@@ -52,7 +67,24 @@ export default function StyleDetailPage({ params }: { params: Promise<{ id: stri
         throw new Error("Failed to fetch style");
       }
       const data = await response.json();
-      setStyle(data.style);
+      const styleData = data.style;
+      setStyle(styleData);
+
+      // Initialize edit state
+      setEditName(styleData.name);
+      setEditDescription(styleData.description || "");
+
+      if (!Array.isArray(styleData.palette)) {
+        setEditPrimaryColors(styleData.palette.primary || []);
+        setEditAccentColors(styleData.palette.accent || []);
+        setEditBackground(styleData.palette.background || "#ffffff");
+      }
+
+      if (!Array.isArray(styleData.renderingCues)) {
+        setEditMaterials(styleData.renderingCues.materials || []);
+        setEditEffects(styleData.renderingCues.effects || []);
+        setEditFinish(styleData.renderingCues.finish || "");
+      }
     } catch (error) {
       console.error("Error fetching style:", error);
       alert("Failed to load style");
@@ -86,6 +118,82 @@ export default function StyleDetailPage({ params }: { params: Promise<{ id: stri
     }
   };
 
+  const handleCreateVersion = async () => {
+    setCreatingVersion(true);
+    try {
+      const response = await fetch(`/api/styles/${id}/version`, {
+        method: "POST",
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to create version");
+      }
+
+      const data = await response.json();
+      router.push(`/styles/${data.style.id}`);
+    } catch (error) {
+      console.error("Error creating version:", error);
+      alert("Failed to create version");
+    } finally {
+      setCreatingVersion(false);
+    }
+  };
+
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      const response = await fetch(`/api/styles/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: editName,
+          description: editDescription,
+          palette: {
+            primary: editPrimaryColors,
+            accent: editAccentColors,
+            background: editBackground,
+          },
+          renderingCues: {
+            materials: editMaterials,
+            effects: editEffects,
+            finish: editFinish,
+          },
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to save changes");
+      }
+
+      const data = await response.json();
+      setStyle(data.style);
+      setEditing(false);
+    } catch (error) {
+      console.error("Error saving style:", error);
+      alert("Failed to save changes");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleCancelEdit = () => {
+    if (style) {
+      setEditName(style.name);
+      setEditDescription(style.description || "");
+      if (!Array.isArray(style.palette)) {
+        setEditPrimaryColors(style.palette.primary || []);
+        setEditAccentColors(style.palette.accent || []);
+        setEditBackground(style.palette.background || "#ffffff");
+      }
+      if (!Array.isArray(style.renderingCues)) {
+        setEditMaterials(style.renderingCues.materials || []);
+        setEditEffects(style.renderingCues.effects || []);
+        setEditFinish(style.renderingCues.finish || "");
+      }
+    }
+    setEditing(false);
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
@@ -114,16 +222,290 @@ export default function StyleDetailPage({ params }: { params: Promise<{ id: stri
           </p>
         </div>
         <div className="flex gap-2">
-          <Button variant="destructive" onClick={handleDelete} disabled={deleting}>
-            {deleting ? (
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            ) : (
-              <Trash2 className="mr-2 h-4 w-4" />
-            )}
-            Delete
-          </Button>
+          {editing ? (
+            <>
+              <Button onClick={handleSave} disabled={saving}>
+                {saving ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <Save className="mr-2 h-4 w-4" />
+                )}
+                Save
+              </Button>
+              <Button variant="outline" onClick={handleCancelEdit} disabled={saving}>
+                <X className="mr-2 h-4 w-4" />
+                Cancel
+              </Button>
+            </>
+          ) : (
+            <>
+              <Button variant="outline" onClick={() => setEditing(true)}>
+                <Pencil className="mr-2 h-4 w-4" />
+                Edit
+              </Button>
+              <Button onClick={handleCreateVersion} disabled={creatingVersion}>
+                {creatingVersion ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <Copy className="mr-2 h-4 w-4" />
+                )}
+                Create Version
+              </Button>
+              <Button variant="destructive" onClick={handleDelete} disabled={deleting}>
+                {deleting ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <Trash2 className="mr-2 h-4 w-4" />
+                )}
+                Delete
+              </Button>
+            </>
+          )}
         </div>
       </div>
+
+      {editing && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Edit Style</CardTitle>
+            <CardDescription>Modify all style details including colors and rendering cues</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Name</label>
+              <Input
+                value={editName}
+                onChange={(e) => setEditName(e.target.value)}
+                placeholder="Style name"
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Description</label>
+              <Textarea
+                value={editDescription}
+                onChange={(e) => setEditDescription(e.target.value)}
+                placeholder="Style description"
+                rows={4}
+              />
+            </div>
+
+            <div className="border-t pt-6">
+              <h3 className="text-lg font-semibold mb-4">Color Palette</h3>
+
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <label className="text-sm font-medium">Primary Colors</label>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setEditPrimaryColors([...editPrimaryColors, "#000000"])}
+                    >
+                      <Plus className="h-3 w-3 mr-1" />
+                      Add Color
+                    </Button>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {editPrimaryColors.map((color, i) => (
+                      <div key={i} className="flex items-center gap-2 p-2 border rounded">
+                        <Input
+                          type="color"
+                          value={color}
+                          onChange={(e) => {
+                            const updated = [...editPrimaryColors];
+                            updated[i] = e.target.value;
+                            setEditPrimaryColors(updated);
+                          }}
+                          className="w-12 h-8"
+                        />
+                        <Input
+                          type="text"
+                          value={color}
+                          onChange={(e) => {
+                            const updated = [...editPrimaryColors];
+                            updated[i] = e.target.value;
+                            setEditPrimaryColors(updated);
+                          }}
+                          className="w-24 font-mono text-xs"
+                        />
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setEditPrimaryColors(editPrimaryColors.filter((_, idx) => idx !== i))}
+                        >
+                          <X className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <label className="text-sm font-medium">Accent Colors</label>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setEditAccentColors([...editAccentColors, "#000000"])}
+                    >
+                      <Plus className="h-3 w-3 mr-1" />
+                      Add Color
+                    </Button>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {editAccentColors.map((color, i) => (
+                      <div key={i} className="flex items-center gap-2 p-2 border rounded">
+                        <Input
+                          type="color"
+                          value={color}
+                          onChange={(e) => {
+                            const updated = [...editAccentColors];
+                            updated[i] = e.target.value;
+                            setEditAccentColors(updated);
+                          }}
+                          className="w-12 h-8"
+                        />
+                        <Input
+                          type="text"
+                          value={color}
+                          onChange={(e) => {
+                            const updated = [...editAccentColors];
+                            updated[i] = e.target.value;
+                            setEditAccentColors(updated);
+                          }}
+                          className="w-24 font-mono text-xs"
+                        />
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setEditAccentColors(editAccentColors.filter((_, idx) => idx !== i))}
+                        >
+                          <X className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Background Color</label>
+                  <div className="flex items-center gap-2">
+                    <Input
+                      type="color"
+                      value={editBackground}
+                      onChange={(e) => setEditBackground(e.target.value)}
+                      className="w-12 h-8"
+                    />
+                    <Input
+                      type="text"
+                      value={editBackground}
+                      onChange={(e) => setEditBackground(e.target.value)}
+                      className="w-32 font-mono text-xs"
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="border-t pt-6">
+              <h3 className="text-lg font-semibold mb-4">Rendering Cues</h3>
+
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <label className="text-sm font-medium">Materials</label>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setEditMaterials([...editMaterials, ""])}
+                    >
+                      <Plus className="h-3 w-3 mr-1" />
+                      Add Material
+                    </Button>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {editMaterials.map((material, i) => (
+                      <div key={i} className="flex items-center gap-2">
+                        <Input
+                          value={material}
+                          onChange={(e) => {
+                            const updated = [...editMaterials];
+                            updated[i] = e.target.value;
+                            setEditMaterials(updated);
+                          }}
+                          placeholder="e.g., glass, metal, wood"
+                          className="w-48"
+                        />
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setEditMaterials(editMaterials.filter((_, idx) => idx !== i))}
+                        >
+                          <X className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <label className="text-sm font-medium">Effects</label>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setEditEffects([...editEffects, ""])}
+                    >
+                      <Plus className="h-3 w-3 mr-1" />
+                      Add Effect
+                    </Button>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {editEffects.map((effect, i) => (
+                      <div key={i} className="flex items-center gap-2">
+                        <Input
+                          value={effect}
+                          onChange={(e) => {
+                            const updated = [...editEffects];
+                            updated[i] = e.target.value;
+                            setEditEffects(updated);
+                          }}
+                          placeholder="e.g., glow, shadow, blur"
+                          className="w-48"
+                        />
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setEditEffects(editEffects.filter((_, idx) => idx !== i))}
+                        >
+                          <X className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Finish</label>
+                  <Input
+                    value={editFinish}
+                    onChange={(e) => setEditFinish(e.target.value)}
+                    placeholder="e.g., matte, glossy, satin"
+                  />
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       <div className="grid gap-6 md:grid-cols-2">
         <Card>

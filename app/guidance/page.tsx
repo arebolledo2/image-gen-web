@@ -1,9 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -12,11 +14,13 @@ import { Plus, Loader2, Compass, X } from "lucide-react";
 interface Guidance {
   id: string;
   name: string;
+  version: number;
   description: string;
   createdAt: string;
 }
 
 export default function GuidancePage() {
+  const router = useRouter();
   const [guidanceList, setGuidanceList] = useState<Guidance[]>([]);
   const [loading, setLoading] = useState(true);
   const [showNewForm, setShowNewForm] = useState(false);
@@ -150,13 +154,18 @@ export default function GuidancePage() {
       ) : (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {guidanceList.map((guidance) => (
-            <Card key={guidance.id} className="hover:shadow-md transition-shadow">
+            <Card
+              key={guidance.id}
+              className="hover:shadow-md transition-shadow cursor-pointer"
+              onClick={() => router.push(`/guidance/${guidance.id}`)}
+            >
               <CardHeader>
                 <div className="flex items-start justify-between">
                   <div className="space-y-1 flex-1">
                     <CardTitle className="flex items-center gap-2">
                       <Compass className="h-5 w-5" />
                       {guidance.name}
+                      <Badge variant="outline">v{guidance.version}</Badge>
                     </CardTitle>
                     <CardDescription>
                       {guidance.description}

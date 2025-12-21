@@ -14,6 +14,8 @@ export async function GET(
     const batch = await db.query.batches.findFirst({
       where: eq(batches.id, id),
       with: {
+        parentBatch: true,
+        childBatches: true,
         batchPrompts: {
           orderBy: (batchPrompts, { asc }) => [asc(batchPrompts.order)],
         },
