@@ -85,6 +85,7 @@ export function ImageGalleryModal({
   const lastScrollTime = useRef(0);
   const [isSampling, setIsSampling] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [internalVersion, setInternalVersion] = useState<Record<string, number>>({});
 
   const navigateImage = useCallback((direction: 'next' | 'prev') => {
     if (selectedIndex === null) return;
@@ -172,7 +173,9 @@ export function ImageGalleryModal({
 
       // Check if click is within image bounds
       if (imageX >= 0 && imageX < naturalWidth && imageY >= 0 && imageY < naturalHeight) {
-        onMakeTransparent(e, currentImage, { x: imageX, y: imageY });
+        onMakeTransparent(e, currentImage, { x: imageX, y: imageY }).then(() => {
+          setInternalVersion(prev => ({ ...prev, [currentImage.id]: Date.now() }));
+        });
       }
     }
   };
@@ -195,7 +198,7 @@ export function ImageGalleryModal({
           {currentImage && (
             <>
               <img
-                src={`/api/images/${currentImage.id}/file${showTransparent[currentImage.id] ? `?version=transparent&t=${imageVersions[currentImage.id] || ''}` : ''}`}
+                src={`/api/images/${currentImage.id}/file${showTransparent[currentImage.id] ? `?version=transparent&t=${internalVersion[currentImage.id] || imageVersions[currentImage.id] || ''}` : ''}`}
                 alt={currentImage.fileName}
                 className={`max-w-full max-h-full w-auto h-auto object-contain transition-transform duration-200 ${isSampling ? 'cursor-crosshair' : ''} ${showTransparent[currentImage.id] ? 'bg-[url("https://www.transparenttextures.com/patterns/checkerboard.png")]' : ''}`}
                 onClick={handleImageClick}
@@ -252,7 +255,9 @@ export function ImageGalleryModal({
                     variant="ghost"
                     size="icon"
                     className={`h-12 w-12 rounded-full bg-black/20 hover:bg-black/40 text-white ${processingTransparency[currentImage.id] ? 'animate-pulse' : ''}`}
-                    onClick={(e) => onMakeTransparent(e, currentImage, undefined, true)}
+                    onClick={(e) => onMakeTransparent(e, currentImage, undefined, true).then(() => {
+                      setInternalVersion(prev => ({ ...prev, [currentImage.id]: Date.now() }));
+                    })}
                     disabled={processingTransparency[currentImage.id]}
                     title={currentImage.transparentFilePath ? "Redo from Original (Corners)" : "Make Transparent (Corners)"}
                   >

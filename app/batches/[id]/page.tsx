@@ -7,6 +7,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Loader2, Play, Trash2, ArrowLeft, Download, Heart, Sparkles, Layers, Copy, ChevronRight } from "lucide-react";
 import { ImageGalleryModal, type GalleryImage } from "@/components/image-gallery-modal";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 
 interface Batch {
   id: string;
@@ -41,6 +43,7 @@ export default function BatchDetailPage() {
   const IMAGES_LIMIT = 20;
 
   // Transparency toggle state (image id -> boolean)
+  const [globalTransparency, setGlobalTransparency] = useState(false);
   const [showTransparent, setShowTransparent] = useState<Record<string, boolean>>({});
   const [processingTransparency, setProcessingTransparency] = useState<Record<string, boolean>>({});
   const [transparencyTolerance, setTransparencyTolerance] = useState<Record<string, number>>({});
@@ -237,6 +240,19 @@ export default function BatchDetailPage() {
     setShowTransparent(prev => ({ ...prev, [imageId]: !prev[imageId] }));
   };
 
+  const toggleGlobalTransparency = () => {
+    const newValue = !globalTransparency;
+    setGlobalTransparency(newValue);
+    
+    const newShowTransparent = { ...showTransparent };
+    images.forEach(image => {
+      if (image.transparentFilePath) {
+        newShowTransparent[image.id] = newValue;
+      }
+    });
+    setShowTransparent(newShowTransparent);
+  };
+
   // Infinite scroll observer
   const lastImageElementRef = useCallback((node: HTMLDivElement | null) => {
     if (loadingImages || fetchingMore) return;
@@ -396,12 +412,22 @@ export default function BatchDetailPage() {
         <Card>
           <CardHeader>
             <CardTitle>Generated Images</CardTitle>
-            <CardDescription>
-              {loadingImages && images.length === 0
-                ? 'Loading images...'
-                : `${totalImageCount} image(s) generated`
-              }
-            </CardDescription>
+            <div className="flex items-center justify-between">
+              <CardDescription>
+                {loadingImages && images.length === 0
+                  ? 'Loading images...'
+                  : `${totalImageCount} image(s) generated`
+                }
+              </CardDescription>
+              <div className="flex items-center space-x-2 bg-muted/50 p-2 px-4 rounded-lg">
+                <Switch 
+                  id="global-transparency" 
+                  checked={globalTransparency}
+                  onCheckedChange={toggleGlobalTransparency}
+                />
+                <Label htmlFor="global-transparency" className="cursor-pointer">Transparency</Label>
+              </div>
+            </div>
           </CardHeader>
           <CardContent>
             {loadingImages && images.length === 0 ? (

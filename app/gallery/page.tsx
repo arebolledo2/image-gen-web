@@ -30,6 +30,7 @@ export default function GalleryPage() {
   }, [search]);
 
   // Transparency toggle state (image id -> boolean)
+  const [globalTransparency, setGlobalTransparency] = useState(false);
   const [showTransparent, setShowTransparent] = useState<Record<string, boolean>>({});
   const [processingTransparency, setProcessingTransparency] = useState<Record<string, boolean>>({});
   const [transparencyTolerance, setTransparencyTolerance] = useState<Record<string, number>>({});
@@ -151,6 +152,19 @@ export default function GalleryPage() {
     setShowTransparent(prev => ({ ...prev, [imageId]: !prev[imageId] }));
   };
 
+  const toggleGlobalTransparency = () => {
+    const newValue = !globalTransparency;
+    setGlobalTransparency(newValue);
+    
+    const newShowTransparent = { ...showTransparent };
+    images.forEach(image => {
+      if (image.transparentFilePath) {
+        newShowTransparent[image.id] = newValue;
+      }
+    });
+    setShowTransparent(newShowTransparent);
+  };
+
   // Infinite scroll observer
   const observer = useRef<IntersectionObserver | null>(null);
   const lastImageElementRef = useCallback((node: HTMLDivElement | null) => {
@@ -194,7 +208,15 @@ export default function GalleryPage() {
               checked={favoritesOnly}
               onCheckedChange={setFavoritesOnly}
             />
-            <Label htmlFor="favorites-filter" className="cursor-pointer">Favorites only</Label>
+            <Label htmlFor="favorites-filter" className="cursor-pointer">Favorites</Label>
+          </div>
+          <div className="flex items-center space-x-2 bg-muted/50 p-2 px-4 rounded-lg shrink-0">
+            <Switch 
+              id="global-transparency" 
+              checked={globalTransparency}
+              onCheckedChange={toggleGlobalTransparency}
+            />
+            <Label htmlFor="global-transparency" className="cursor-pointer">Transparency</Label>
           </div>
         </div>
       </div>

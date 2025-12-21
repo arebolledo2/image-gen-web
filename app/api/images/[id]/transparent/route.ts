@@ -27,6 +27,9 @@ export async function POST(
     }
 
     // Decide which file to load: original or already transparent one
+    // If we are sampling a point, we might want to start from original to avoid weird artifacts,
+    // but usually users want to ADD transparency. 
+    // HOWEVER, if it's already transparent, we should load the transparent one so we can see the transparency.
     const filePathToLoad = (!forceOriginal && imageRecord.transparentFilePath) || imageRecord.filePath;
 
     const absolutePath = path.isAbsolute(filePathToLoad)
@@ -34,6 +37,11 @@ export async function POST(
       : path.join(process.cwd(), filePathToLoad);
 
     const image = await (Jimp as any).read(absolutePath);
+    
+    // Ensure image is RGBA
+    if (image.bitmap.alpha === false) {
+      image.bitmap.alpha = true;
+    }
     const width = image.bitmap.width;
     const height = image.bitmap.height;
 
@@ -74,33 +82,44 @@ export async function POST(
     if (mode === 'flood') {
       // Flood fill approach
       const visited = new Uint8Array(width * height);
-      const queue: [number, number][] = [
-        [0, 0],
-        [width - 1, 0],
-        [0, height - 1],
-        [width - 1, height - 1]
-      ];
+      const queue: [number, number][] = [];
 
-      // Mark initial seeds as visited
-      queue.forEach(([x, y]) => {
-        visited[y * width + x] = 1;
-      });
+      if (samplePoint) {
+        queue.push([samplePoint.x, samplePoint.y]);
+        visited[samplePoint.y * width + samplePoint.x] = 1;
+      } else {
+        // Default to corners
+        const corners: [number, number][] = [
+          [0, 0], [width - 1, 0], [0, height - 1], [width - 1, height - 1]
+        ];
+        corners.forEach(([x, y]) => {
+          queue.push([x, y]);
+          visited[y * width + x] = 1;
+        });
+      }
 
-      while (queue.length > 0) {
-        const [x, y] = queue.shift()!;
+      let head = 0;
+      while (head < queue.length) {
+        const [x, y] = queue[head++];
         
         // Process current pixel
         const color = intToRGBA(image.getPixelColor(x, y));
+        
+        // If it's already transparent, we should still spread if it was reached,
+        // but it doesn't count as a match for color matching if we are looking for a specific color.
+        // Actually, if it's transparent, we just continue spreading to non-transparent matches.
+        
         const isMatch = 
           Math.abs(color.r - targetR) <= tolerance &&
           Math.abs(color.g - targetG) <= tolerance &&
           Math.abs(color.b - targetB) <= tolerance;
 
-        if (isMatch) {
-          // Make transparent by setting alpha to 0 (last 8 bits)
-          // We use >>> 0 to ensure the result is treated as an unsigned 32-bit integer
-          const transparentColor = (image.getPixelColor(x, y) & 0xFFFFFF00) >>> 0;
-          image.setPixelColor(transparentColor, x, y);
+        if (isMatch || color.a === 0) {
+          if (isMatch) {
+            // Make transparent by setting alpha to 0
+            const transparentColor = (image.getPixelColor(x, y) & 0xFFFFFF00) >>> 0;
+            image.setPixelColor(transparentColor, x, y);
+          }
 
           // Check neighbors
           const neighbors = [
@@ -109,8 +128,9 @@ export async function POST(
 
           for (const [nx, ny] of neighbors) {
             if (nx >= 0 && nx < width && ny >= 0 && ny < height) {
-              if (!visited[ny * width + nx]) {
-                visited[ny * width + nx] = 1;
+              const idx = ny * width + nx;
+              if (!visited[idx]) {
+                visited[idx] = 1;
                 queue.push([nx, ny]);
               }
             }

@@ -35,6 +35,7 @@ export async function GET(
       headers: {
         'Content-Type': 'image/png', // Transparent version is always PNG
         'Content-Disposition': `inline; filename="${image.fileName}"`,
+        'Cache-Control': 'no-store, must-revalidate',
       },
     });
   } catch (error) {
