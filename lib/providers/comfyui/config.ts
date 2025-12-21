@@ -30,8 +30,8 @@ export function getComfyUIConfig(): ComfyUIConfig {
 
     defaults: {
       txt2img: {
-        width: 512,
-        height: 128,
+        width: 1024,
+        height: 1024,
         steps: 10,
         cfg: 1.0,
         sampler: 'euler',

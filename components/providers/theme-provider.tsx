@@ -30,12 +30,14 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (!mounted) return;
 
-    let actualTheme: "light" | "dark" = theme;
+    let actualTheme: "light" | "dark";
 
     if (theme === "system") {
       actualTheme = window.matchMedia("(prefers-color-scheme: dark)").matches
         ? "dark"
         : "light";
+    } else {
+      actualTheme = theme;
     }
 
     const root = document.documentElement;

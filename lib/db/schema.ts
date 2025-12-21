@@ -75,6 +75,7 @@ export const batches = pgTable('batches', {
     aspectRatio?: string;
     imageSize?: string;
     count?: number;
+    resolution?: string;
   }>(),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
@@ -91,6 +92,7 @@ export const batchPrompts = pgTable('batch_prompts', {
     count?: number;
     aspectRatio?: string;
     imageSize?: string;
+    resolution?: string;
   }>(),
   order: integer('order').notNull(),
   createdAt: timestamp('created_at').defaultNow().notNull(),

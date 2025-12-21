@@ -15,7 +15,7 @@ export class GeminiProvider implements ImageProvider {
   }
 
   async generateImage(options: GenerationOptions): Promise<GenerationResult> {
-    const { prompt, batchId, generationId } = options;
+    const { prompt, batchId, generationId, parameters = {} } = options;
 
     // Update generation to running
     await db.update(generations)
@@ -23,9 +23,18 @@ export class GeminiProvider implements ImageProvider {
       .where(eq(generations.id, generationId));
 
     try {
-      // Call Gemini (same as current implementation)
+      // Extract imageConfig from parameters
+      const { imageConfig, ...otherParams } = parameters;
+
+      // Build provider options
+      const providerOptions: any = {};
+      if (imageConfig) {
+        providerOptions.imageConfig = imageConfig;
+      }
+
+      // Call Gemini with imageConfig
       const result = await generateText({
-        model: google('gemini-2.5-flash-image-preview'),
+        model: google('gemini-2.5-flash-image-preview', providerOptions),
         prompt,
       });
 

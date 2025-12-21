@@ -10,6 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Loader2, Plus, X, Palette, Box, Compass, Sparkles, Wand2 } from "lucide-react";
+import { RESOLUTION_PRESETS, DEFAULT_RESOLUTION } from "@/lib/config/resolution-presets";
 
 interface Entity {
   id: string;
@@ -44,6 +45,7 @@ export default function NewBatchPage() {
   const [description, setDescription] = useState("");
   const [provider, setProvider] = useState<'gemini' | 'comfyui'>('gemini');
   const [defaultCount, setDefaultCount] = useState(1);
+  const [resolution, setResolution] = useState<string>(DEFAULT_RESOLUTION);
   
   // Selection mode: 'preset' or 'construct'
   const [mode, setMode] = useState<'preset' | 'construct'>('preset');
@@ -176,6 +178,7 @@ export default function NewBatchPage() {
           provider,
           defaults: {
             count: defaultCount,
+            resolution: resolution,
           },
           prompts: prompts,
         }),
@@ -414,6 +417,22 @@ export default function NewBatchPage() {
                     <SelectContent>
                       <SelectItem value="gemini">⚡ Google Gemini (Fast)</SelectItem>
                       <SelectItem value="comfyui">🎨 ComfyUI (Advanced)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="resolution">Image Resolution</Label>
+                  <Select value={resolution} onValueChange={setResolution}>
+                    <SelectTrigger id="resolution">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {RESOLUTION_PRESETS.map((preset) => (
+                        <SelectItem key={preset.id} value={preset.id}>
+                          {preset.label}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>
