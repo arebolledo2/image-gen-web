@@ -145,12 +145,6 @@ export function ImageGalleryModal({
   };
 
   const handleImageClick = (e: React.MouseEvent<HTMLImageElement>) => {
-    console.log('Image clicked:', {
-      hasCurrentImage: !!currentImage,
-      isSampling,
-      willProcess: !!(currentImage && isSampling)
-    });
-
     if (currentImage && isSampling) {
       const rect = e.currentTarget.getBoundingClientRect();
 
@@ -158,7 +152,7 @@ export function ImageGalleryModal({
       const x = e.clientX - rect.left;
       const y = e.clientY - rect.top;
 
-      // The image might be scaled via object-contain. 
+      // The image might be scaled via object-contain.
       // We need to find the actual image dimensions and its position within the box.
       const renderedWidth = rect.width;
       const renderedHeight = rect.height;
@@ -166,7 +160,7 @@ export function ImageGalleryModal({
       const naturalHeight = e.currentTarget.naturalHeight;
 
       const scale = Math.min(renderedWidth / naturalWidth, renderedHeight / naturalHeight);
-      
+
       const actualRenderedWidth = naturalWidth * scale;
       const actualRenderedHeight = naturalHeight * scale;
 
@@ -177,30 +171,11 @@ export function ImageGalleryModal({
       const imageX = Math.floor((x - offsetX) / scale);
       const imageY = Math.floor((y - offsetY) / scale);
 
-      console.log('Calculated coordinates:', {
-        imageX,
-        imageY,
-        naturalWidth,
-        naturalHeight,
-        inBounds: imageX >= 0 && imageX < naturalWidth && imageY >= 0 && imageY < naturalHeight
-      });
-
       // Check if click is within image bounds
       if (imageX >= 0 && imageX < naturalWidth && imageY >= 0 && imageY < naturalHeight) {
-        console.log('Calling onMakeTransparent with sample point:', { x: imageX, y: imageY });
-        console.log('onMakeTransparent function:', onMakeTransparent);
-
-        const result = onMakeTransparent(e, currentImage, { x: imageX, y: imageY }, false);
-        console.log('onMakeTransparent returned:', result);
-
-        result.then(() => {
-          console.log('onMakeTransparent promise resolved');
+        onMakeTransparent(e, currentImage, { x: imageX, y: imageY }, false).then(() => {
           setInternalVersion(prev => ({ ...prev, [currentImage.id]: Date.now() }));
-        }).catch((error) => {
-          console.error('onMakeTransparent promise rejected:', error);
         });
-      } else {
-        console.log('Click was outside image bounds');
       }
     }
   };

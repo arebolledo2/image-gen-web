@@ -18,15 +18,6 @@ export async function POST(
     const samplePoint = body.samplePoint as { x: number, y: number } | undefined;
     const forceOriginal = body.forceOriginal === true;
 
-    console.log('Transparency request received:', {
-      imageId: id,
-      tolerance,
-      mode,
-      samplePoint,
-      forceOriginal,
-      hasSamplePoint: !!samplePoint
-    });
-
     const imageRecord = await db.query.images.findFirst({
       where: eq(images.id, id),
     });
@@ -40,15 +31,6 @@ export async function POST(
     // but usually users want to ADD transparency.
     // HOWEVER, if it's already transparent, we should load the transparent one so we can see the transparency.
     const filePathToLoad = (!forceOriginal && imageRecord.transparentFilePath) || imageRecord.filePath;
-
-    console.log('File loading decision:', {
-      forceOriginal,
-      hasTransparentFile: !!imageRecord.transparentFilePath,
-      transparentFilePath: imageRecord.transparentFilePath,
-      originalFilePath: imageRecord.filePath,
-      selectedFile: filePathToLoad,
-      loadingTransparentVersion: filePathToLoad === imageRecord.transparentFilePath
-    });
 
     const absolutePath = path.isAbsolute(filePathToLoad)
       ? filePathToLoad
@@ -80,12 +62,6 @@ export async function POST(
 
     if (samplePoint) {
       const color = intToRGBA(image.getPixelColor(samplePoint.x, samplePoint.y));
-
-      console.log(`Sampled pixel at (${samplePoint.x}, ${samplePoint.y}):`, {
-        r: color.r, g: color.g, b: color.b, a: color.a,
-        fileLoaded: filePathToLoad,
-        forceOriginal
-      });
 
       // Check if the sampled pixel is already fully transparent
       if (color.a === 0) {

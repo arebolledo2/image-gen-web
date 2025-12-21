@@ -9,6 +9,7 @@ import { ImageGalleryModal, type GalleryImage } from "@/components/image-gallery
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
+import { useImageTransparency } from "@/hooks/useImageTransparency";
 
 export default function GalleryPage() {
   const [images, setImages] = useState<GalleryImage[]>([]);
@@ -29,16 +30,38 @@ export default function GalleryPage() {
     return () => clearTimeout(timer);
   }, [search]);
 
-  // Transparency toggle state (image id -> boolean)
+  // Use shared transparency hook
+  const {
+    showTransparent,
+    processingTransparency,
+    transparencyTolerance,
+    transparencyMode,
+    imageVersions,
+    makeTransparent: makeTransparentBase,
+    toggleTransparencyView,
+    setTolerance,
+    setMode,
+    setShowTransparent,
+  } = useImageTransparency();
+
   const [globalTransparency, setGlobalTransparency] = useState(false);
-  const [showTransparent, setShowTransparent] = useState<Record<string, boolean>>({});
-  const [processingTransparency, setProcessingTransparency] = useState<Record<string, boolean>>({});
-  const [transparencyTolerance, setTransparencyTolerance] = useState<Record<string, number>>({});
-  const [transparencyMode, setTransparencyMode] = useState<Record<string, 'global' | 'flood'>>({});
-  const [imageVersions, setImageVersions] = useState<Record<string, number>>({});
 
   // Modal state
   const [selectedImageIndex, setSelectedImageIndex] = useState<number | null>(null);
+
+  // Wrapper to update images after transparency is applied
+  const makeTransparent = async (
+    e: React.MouseEvent | React.KeyboardEvent,
+    image: GalleryImage,
+    samplePoint?: { x: number, y: number },
+    forceOriginal?: boolean
+  ) => {
+    await makeTransparentBase(e, image, samplePoint, forceOriginal, (updatedImage) => {
+      setImages(prev => prev.map(img =>
+        img.id === image.id ? updatedImage : img
+      ));
+    });
+  };
 
   const fetchImages = useCallback(async (currentOffset: number, isInitial: boolean = false, favOnly: boolean = false, searchTerm: string = "") => {
     if (isInitial) setLoading(true);
@@ -105,67 +128,6 @@ export default function GalleryPage() {
     }
   };
 
-  const makeTransparent = async (
-    e: React.MouseEvent | React.KeyboardEvent,
-    image: GalleryImage,
-    samplePoint?: { x: number, y: number },
-    forceOriginal?: boolean
-  ) => {
-    e.stopPropagation();
-    if (processingTransparency[image.id]) return;
-
-    const tolerance = transparencyTolerance[image.id] ?? 30;
-    const mode = transparencyMode[image.id] ?? 'global';
-
-    setProcessingTransparency(prev => ({ ...prev, [image.id]: true }));
-
-    try {
-      const response = await fetch(`/api/images/${image.id}/transparent`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ tolerance, mode, samplePoint, forceOriginal }),
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to make image transparent');
-      }
-
-      const data = await response.json();
-
-      // Handle the case where user clicked on transparent pixel
-      if (data.alreadyTransparent) {
-        alert(data.message || 'The selected pixel is already transparent. Please click on a visible area.');
-        return; // Early exit, don't update state
-      }
-
-      if (!data.success) {
-        throw new Error(data.message || 'Failed to make image transparent');
-      }
-
-      // Update image in list with the new transparentFilePath
-      setImages(prev => prev.map(img =>
-        img.id === image.id
-          ? { ...img, transparentFilePath: data.transparentFilePath }
-          : img
-      ));
-
-      // Update version to bust cache
-      setImageVersions(prev => ({ ...prev, [image.id]: Date.now() }));
-
-      // Automatically switch to transparent view
-      setShowTransparent(prev => ({ ...prev, [image.id]: true }));
-    } catch (error) {
-      console.error('Error making image transparent:', error);
-      alert('Failed to make image transparent');
-    } finally {
-      setProcessingTransparency(prev => ({ ...prev, [image.id]: false }));
-    }
-  };
-
-  const toggleTransparencyView = (e: React.MouseEvent, imageId: string) => {
-    e.stopPropagation();
-    setShowTransparent(prev => ({ ...prev, [imageId]: !prev[imageId] }));
-  };
 
   const toggleGlobalTransparency = () => {
     const newValue = !globalTransparency;
@@ -390,13 +352,9 @@ export default function GalleryPage() {
             showTransparent={showTransparent}
             processingTransparency={processingTransparency}
             transparencyTolerance={transparencyTolerance}
-            onToleranceChange={(imageId, tolerance) =>
-              setTransparencyTolerance((prev) => ({ ...prev, [imageId]: tolerance }))
-            }
+            onToleranceChange={setTolerance}
             transparencyMode={transparencyMode}
-            onModeChange={(imageId, mode) =>
-              setTransparencyMode((prev) => ({ ...prev, [imageId]: mode }))
-            }
+            onModeChange={setMode}
             imageVersions={imageVersions}
           />
         </>
