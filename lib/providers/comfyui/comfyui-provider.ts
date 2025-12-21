@@ -96,7 +96,7 @@ export class ComfyUIProvider implements ImageProvider {
           filePath: img.filePath,
           fileName: img.fileName,
           mediaType: img.mediaType,
-          fileSize: img.fileSize,
+          fileSize: img.fileSize ?? undefined,
         })),
         metadata: { provider: 'comfyui', seed, promptId: prompt_id },
       };

@@ -71,7 +71,7 @@ describe('generateImage', () => {
           { id: mockGenerationId, status: 'running' },
         ]),
       }),
-    });
+    } as any);
 
     // Mock database update
     vi.mocked(db.update).mockReturnValue({
@@ -316,7 +316,7 @@ describe('executeBatch', () => {
       }),
     } as any);
 
-    vi.mocked(db.query.batches.findFirst).mockResolvedValue(null);
+    vi.mocked(db.query.batches.findFirst).mockResolvedValue(undefined);
 
     await expect(executeBatch('nonexistent')).rejects.toThrow('Batch not found');
   });

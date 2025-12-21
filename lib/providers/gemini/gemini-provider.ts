@@ -32,9 +32,9 @@ export class GeminiProvider implements ImageProvider {
         providerOptions.imageConfig = imageConfig;
       }
 
-      // Call Gemini with imageConfig
+      // Call Gemini
       const result = await generateText({
-        model: google('gemini-2.5-flash-image-preview', providerOptions),
+        model: google('gemini-2.5-flash-image-preview'),
         prompt,
       });
 
@@ -85,7 +85,7 @@ export class GeminiProvider implements ImageProvider {
           filePath: img.filePath,
           fileName: img.fileName,
           mediaType: img.mediaType,
-          fileSize: img.fileSize,
+          fileSize: img.fileSize ?? undefined,
         })),
         metadata: { provider: 'gemini', imageCount: imageFiles.length },
       };
