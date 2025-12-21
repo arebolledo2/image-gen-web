@@ -5,13 +5,8 @@ import { useParams, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Play, Trash2, ArrowLeft, Download, ChevronLeft, ChevronRight, Heart, Sparkles, Layers } from "lucide-react";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { Loader2, Play, Trash2, ArrowLeft, Download, Heart, Sparkles, Layers } from "lucide-react";
+import { ImageGalleryModal, type GalleryImage } from "@/components/image-gallery-modal";
 
 interface Batch {
   id: string;
@@ -26,22 +21,6 @@ interface Batch {
   generations: any[];
 }
 
-interface Image {
-  id: string;
-  filePath: string;
-  fileName: string;
-  mediaType: string;
-  isFavorite: boolean;
-  transparentFilePath: string | null;
-  createdAt: string;
-  generation: {
-    batch: {
-      id: string;
-      name: string;
-    } | null;
-  };
-}
-
 export default function BatchDetailPage() {
   const params = useParams();
   const router = useRouter();
@@ -50,7 +29,7 @@ export default function BatchDetailPage() {
   const [executing, setExecuting] = useState(false);
 
   // Image gallery state
-  const [images, setImages] = useState<Image[]>([]);
+  const [images, setImages] = useState<GalleryImage[]>([]);
   const [loadingImages, setLoadingImages] = useState(false);
   const [fetchingMore, setFetchingMore] = useState(false);
   const [hasMore, setHasMore] = useState(true);
@@ -60,10 +39,12 @@ export default function BatchDetailPage() {
   // Transparency toggle state (image id -> boolean)
   const [showTransparent, setShowTransparent] = useState<Record<string, boolean>>({});
   const [processingTransparency, setProcessingTransparency] = useState<Record<string, boolean>>({});
+  const [transparencyTolerance, setTransparencyTolerance] = useState<Record<string, number>>({});
+  const [transparencyMode, setTransparencyMode] = useState<Record<string, 'global' | 'flood'>>({});
+  const [imageVersions, setImageVersions] = useState<Record<string, number>>({});
 
   // Modal state
   const [selectedImageIndex, setSelectedImageIndex] = useState<number | null>(null);
-  const lastScrollTime = useRef(0);
   const observer = useRef<IntersectionObserver | null>(null);
 
   useEffect(() => {
@@ -155,7 +136,7 @@ export default function BatchDetailPage() {
     }
   }, [batch, fetchImages]);
 
-  const toggleFavorite = async (e: React.MouseEvent, image: Image) => {
+  const toggleFavorite = async (e: React.MouseEvent, image: GalleryImage) => {
     e.stopPropagation();
     const newStatus = !image.isFavorite;
     
@@ -179,9 +160,12 @@ export default function BatchDetailPage() {
     }
   };
 
-  const makeTransparent = async (e: React.MouseEvent, image: Image) => {
+  const makeTransparent = async (e: React.MouseEvent | React.KeyboardEvent, image: GalleryImage) => {
     e.stopPropagation();
     if (processingTransparency[image.id]) return;
+
+    const tolerance = transparencyTolerance[image.id] ?? 30;
+    const mode = transparencyMode[image.id] ?? 'global';
 
     setProcessingTransparency(prev => ({ ...prev, [image.id]: true }));
 
@@ -189,7 +173,7 @@ export default function BatchDetailPage() {
       const response = await fetch(`/api/images/${image.id}/transparent`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ tolerance: 30 }),
+        body: JSON.stringify({ tolerance, mode }),
       });
 
       if (!response.ok) {
@@ -204,6 +188,9 @@ export default function BatchDetailPage() {
           ? { ...img, transparentFilePath: data.transparentFilePath } 
           : img
       ));
+
+      // Update version to bust cache
+      setImageVersions(prev => ({ ...prev, [image.id]: Date.now() }));
 
       // Automatically switch to transparent view
       setShowTransparent(prev => ({ ...prev, [image.id]: true }));
@@ -235,41 +222,6 @@ export default function BatchDetailPage() {
 
     if (node) observer.current.observe(node);
   }, [loadingImages, fetchingMore, hasMore, images.length, fetchImages]);
-
-  const navigateImage = useCallback((direction: 'next' | 'prev') => {
-    if (selectedImageIndex === null) return;
-
-    if (direction === 'next' && selectedImageIndex < images.length - 1) {
-      setSelectedImageIndex(selectedImageIndex + 1);
-    } else if (direction === 'prev' && selectedImageIndex > 0) {
-      setSelectedImageIndex(selectedImageIndex - 1);
-    }
-  }, [selectedImageIndex, images.length]);
-
-  const handleWheel = useCallback((e: React.WheelEvent) => {
-    const now = Date.now();
-    if (now - lastScrollTime.current < 400) return; // Throttling 400ms
-
-    if (e.deltaY > 0) {
-      navigateImage('next');
-      lastScrollTime.current = now;
-    } else if (e.deltaY < 0) {
-      navigateImage('prev');
-      lastScrollTime.current = now;
-    }
-  }, [navigateImage]);
-
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (selectedImageIndex === null) return;
-      if (e.key === 'ArrowRight') navigateImage('next');
-      if (e.key === 'ArrowLeft') navigateImage('prev');
-      if (e.key === 'Escape') setSelectedImageIndex(null);
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [selectedImageIndex, navigateImage]);
 
   if (loading) {
     return (
@@ -432,7 +384,7 @@ export default function BatchDetailPage() {
                     >
                       <div className="aspect-square bg-muted relative">
                         <img
-                          src={`/api/images/${image.id}/file${showTransparent[image.id] ? '?version=transparent' : ''}`}
+                          src={`/api/images/${image.id}/file${showTransparent[image.id] ? `?version=transparent&t=${imageVersions[image.id] || ''}` : ''}`}
                           alt={image.fileName}
                           className={`w-full h-full object-cover cursor-pointer ${showTransparent[image.id] ? 'bg-[url("https://www.transparenttextures.com/patterns/checkerboard.png")]' : ''}`}
                           onClick={() => setSelectedImageIndex(index)}
@@ -448,6 +400,7 @@ export default function BatchDetailPage() {
                             size="icon"
                             className={`rounded-full bg-black/20 hover:bg-black/40 ${image.isFavorite ? 'text-red-500' : 'text-white'}`}
                             onClick={(e) => toggleFavorite(e, image)}
+                            title="Favorite"
                           >
                             <Heart className={`h-5 w-5 ${image.isFavorite ? 'fill-current' : ''}`} />
                           </Button>
@@ -535,115 +488,26 @@ export default function BatchDetailPage() {
         </CardContent>
       </Card>
 
-      <Dialog
-        open={selectedImageIndex !== null}
-        onOpenChange={(open) => !open && setSelectedImageIndex(null)}
-      >
-        <DialogContent
-          className="!max-w-none w-screen h-screen flex flex-col p-0 overflow-hidden bg-black/95 border-none [&>button]:text-white [&>button]:z-50 [&>button]:bg-black/50 [&>button]:rounded-full [&>button]:scale-150 [&>button]:right-8 [&>button]:top-8"
-          onWheel={handleWheel}
-        >
-          <DialogHeader className="sr-only">
-            <DialogTitle>
-              {selectedImageIndex !== null ? images[selectedImageIndex].fileName : "Image Viewer"}
-            </DialogTitle>
-          </DialogHeader>
-          <div className="flex-1 relative w-full h-full flex items-center justify-center group/modal overflow-hidden">
-            {selectedImageIndex !== null && (
-              <>
-                <img
-                  src={`/api/images/${images[selectedImageIndex].id}/file${showTransparent[images[selectedImageIndex].id] ? '?version=transparent' : ''}`}
-                  alt={images[selectedImageIndex].fileName}
-                  className={`max-w-full max-h-full w-auto h-auto object-contain transition-transform duration-200 ${showTransparent[images[selectedImageIndex].id] ? 'bg-[url("https://www.transparenttextures.com/patterns/checkerboard.png")]' : ''}`}
-                />
-
-                {/* Navigation Arrows */}
-                <div className="absolute inset-x-4 flex items-center justify-between pointer-events-none">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-12 w-12 rounded-full bg-black/20 text-white hover:bg-black/40 pointer-events-auto disabled:opacity-0"
-                    onClick={() => navigateImage('prev')}
-                    disabled={selectedImageIndex === 0}
-                  >
-                    <ChevronLeft className="h-8 w-8" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-12 w-12 rounded-full bg-black/20 text-white hover:bg-black/40 pointer-events-auto disabled:opacity-0"
-                    onClick={() => navigateImage('next')}
-                    disabled={selectedImageIndex === images.length - 1}
-                  >
-                    <ChevronRight className="h-8 w-8" />
-                  </Button>
-                </div>
-
-                {/* Controls Overlay */}
-                <div className="absolute top-4 left-4 flex gap-2">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className={`h-12 w-12 rounded-full bg-black/20 hover:bg-black/40 ${images[selectedImageIndex].isFavorite ? 'text-red-500' : 'text-white'}`}
-                    onClick={(e) => toggleFavorite(e, images[selectedImageIndex])}
-                    title="Favorite"
-                  >
-                    <Heart className={`h-8 w-8 ${images[selectedImageIndex].isFavorite ? 'fill-current' : ''}`} />
-                  </Button>
-
-                  {images[selectedImageIndex].transparentFilePath ? (
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className={`h-12 w-12 rounded-full bg-black/20 hover:bg-black/40 ${showTransparent[images[selectedImageIndex].id] ? 'text-blue-400' : 'text-white'}`}
-                      onClick={(e) => toggleTransparencyView(e, images[selectedImageIndex].id)}
-                      title="Toggle Transparency"
-                    >
-                      <Layers className="h-8 w-8" />
-                    </Button>
-                  ) : (
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-12 w-12 rounded-full bg-black/20 text-white hover:bg-black/40"
-                      onClick={(e) => makeTransparent(e, images[selectedImageIndex])}
-                      disabled={processingTransparency[images[selectedImageIndex].id]}
-                      title="Make Transparent"
-                    >
-                      {processingTransparency[images[selectedImageIndex].id] ? (
-                        <Loader2 className="h-8 w-8 animate-spin" />
-                      ) : (
-                        <Sparkles className="h-8 w-8" />
-                      )}
-                    </Button>
-                  )}
-
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-12 w-12 rounded-full bg-black/20 text-white hover:bg-black/40"
-                    asChild
-                  >
-                    <a 
-                      href={`/api/images/${images[selectedImageIndex].id}/file${showTransparent[images[selectedImageIndex].id] ? '?version=transparent' : ''}`} 
-                      download={images[selectedImageIndex].fileName}
-                      title="Download"
-                    >
-                      <Download className="h-8 w-8" />
-                    </a>
-                  </Button>
-                </div>
-
-                {/* Info Overlay */}
-                <div className="absolute bottom-4 left-4 right-4 text-white text-xs bg-black/50 p-2 rounded backdrop-blur-sm opacity-0 group-hover/modal:opacity-100 transition-opacity pointer-events-none">
-                  <p>Image {selectedImageIndex + 1} of {images.length}</p>
-                  <p>Batch: {batch?.name}</p>
-                </div>
-              </>
-            )}
-          </div>
-        </DialogContent>
-      </Dialog>
+      <ImageGalleryModal
+        images={images}
+        selectedIndex={selectedImageIndex}
+        onClose={() => setSelectedImageIndex(null)}
+        onNavigate={setSelectedImageIndex}
+        onToggleFavorite={toggleFavorite}
+        onMakeTransparent={makeTransparent}
+        onToggleTransparencyView={toggleTransparencyView}
+        showTransparent={showTransparent}
+        processingTransparency={processingTransparency}
+        transparencyTolerance={transparencyTolerance}
+        onToleranceChange={(imageId, tolerance) =>
+          setTransparencyTolerance((prev) => ({ ...prev, [imageId]: tolerance }))
+        }
+        transparencyMode={transparencyMode}
+        onModeChange={(imageId, mode) =>
+          setTransparencyMode((prev) => ({ ...prev, [imageId]: mode }))
+        }
+        imageVersions={imageVersions}
+      />
     </div>
   );
 }

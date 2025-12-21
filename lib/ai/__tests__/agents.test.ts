@@ -36,6 +36,12 @@ describe('createStyleAgent', () => {
         accent: ['#0000FF', '#FF1493'],
         background: '#0A0A1F',
       },
+      artisticDirection: {
+        visualStyle: 'Cyberpunk 3D',
+        lighting: 'Cinematic',
+        cameraPerspective: 'Top-down',
+        levelOfDetail: 'High',
+      },
       renderingCues: {
         materials: ['glossy metal', 'chrome'],
         effects: ['emissive seams', 'soft bloom'],
@@ -67,6 +73,7 @@ describe('createStyleAgent', () => {
         name: 'Test',
         description: 'Test style',
         palette: { primary: ['#FF0000'], accent: ['#00FF00'], background: '#0000FF' },
+        artisticDirection: { visualStyle: '', lighting: '', cameraPerspective: '', levelOfDetail: '' },
         renderingCues: { materials: [], effects: [], finish: 'matte' },
       },
       text: '',
@@ -89,6 +96,7 @@ describe('createStyleAgent', () => {
         name: 'Test',
         description: 'Test',
         palette: { primary: ['#FFFFFF'], accent: ['#000000'], background: '#AAAAAA' },
+        artisticDirection: { visualStyle: '', lighting: '', cameraPerspective: '', levelOfDetail: '' },
         renderingCues: { materials: [], effects: [], finish: 'matte' },
       },
       text: '',
@@ -182,7 +190,7 @@ describe('createPromptAgent', () => {
 
     expect(generateText).toHaveBeenCalledWith(
       expect.objectContaining({
-        system: expect.stringContaining('magenta background'),
+        system: expect.stringContaining('solid bright magenta background #FF00FF single tone with no gradients'),
       })
     );
   });
@@ -259,7 +267,7 @@ describe('suggestPromptVariations', () => {
 
     expect(generateText).toHaveBeenCalledWith(
       expect.objectContaining({
-        system: expect.stringContaining('magenta background'),
+        system: expect.stringContaining('solid bright magenta background #FF00FF single tone with no gradients'),
       })
     );
   });
@@ -371,7 +379,7 @@ describe('composeConstructedPromptAgent', () => {
 
     expect(generateText).toHaveBeenCalledWith(
       expect.objectContaining({
-        system: expect.stringContaining('magenta background'),
+        system: expect.stringContaining('solid bright magenta background #FF00FF single tone with no gradients'),
       })
     );
   });

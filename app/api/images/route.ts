@@ -53,6 +53,7 @@ export async function GET(request: NextRequest) {
           generation: {
             with: {
               batch: true,
+              batchPrompt: true,
             },
           },
         },
@@ -73,6 +74,7 @@ export async function GET(request: NextRequest) {
         generation: {
           with: {
             batch: true,
+            batchPrompt: true,
           },
         },
       },
