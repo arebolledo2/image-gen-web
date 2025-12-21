@@ -4,10 +4,11 @@ import { useEffect, useState, useRef, useCallback } from "react";
 import Link from "next/link";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Loader2, Download, Heart, Sparkles, Layers } from "lucide-react";
+import { Loader2, Download, Heart, Sparkles, Layers, Search } from "lucide-react";
 import { ImageGalleryModal, type GalleryImage } from "@/components/image-gallery-modal";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
 
 export default function GalleryPage() {
   const [images, setImages] = useState<GalleryImage[]>([]);
@@ -16,7 +17,17 @@ export default function GalleryPage() {
   const [hasMore, setHasMore] = useState(true);
   const [offset, setOffset] = useState(0);
   const [favoritesOnly, setFavoritesOnly] = useState(false);
+  const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const LIMIT = 20;
+
+  // Debounce search
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(search);
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [search]);
 
   // Transparency toggle state (image id -> boolean)
   const [showTransparent, setShowTransparent] = useState<Record<string, boolean>>({});
@@ -28,12 +39,20 @@ export default function GalleryPage() {
   // Modal state
   const [selectedImageIndex, setSelectedImageIndex] = useState<number | null>(null);
 
-  const fetchImages = useCallback(async (currentOffset: number, isInitial: boolean = false, favOnly: boolean = false) => {
+  const fetchImages = useCallback(async (currentOffset: number, isInitial: boolean = false, favOnly: boolean = false, searchTerm: string = "") => {
     if (isInitial) setLoading(true);
     else setFetchingMore(true);
 
     try {
-      const response = await fetch(`/api/images?limit=${LIMIT}&offset=${currentOffset}&favoritesOnly=${favOnly}`);
+      const url = new URL('/api/images', window.location.origin);
+      url.searchParams.append('limit', LIMIT.toString());
+      url.searchParams.append('offset', currentOffset.toString());
+      url.searchParams.append('favoritesOnly', favOnly.toString());
+      if (searchTerm) {
+        url.searchParams.append('search', searchTerm);
+      }
+
+      const response = await fetch(url.toString());
       const data = await response.json();
       
       const newImages = data.images || [];
@@ -53,8 +72,8 @@ export default function GalleryPage() {
   }, []);
 
   useEffect(() => {
-    fetchImages(0, true, favoritesOnly);
-  }, [fetchImages, favoritesOnly]);
+    fetchImages(0, true, favoritesOnly, debouncedSearch);
+  }, [fetchImages, favoritesOnly, debouncedSearch]);
 
   const toggleFavorite = async (e: React.MouseEvent, image: GalleryImage) => {
     e.stopPropagation();
@@ -142,20 +161,12 @@ export default function GalleryPage() {
       if (entries[0].isIntersecting && hasMore) {
         const nextOffset = images.length;
         setOffset(nextOffset);
-        fetchImages(nextOffset, false, favoritesOnly);
+        fetchImages(nextOffset, false, favoritesOnly, debouncedSearch);
       }
     });
 
     if (node) observer.current.observe(node);
-  }, [loading, fetchingMore, hasMore, images.length, fetchImages, favoritesOnly]);
-
-  if (loading && images.length === 0) {
-    return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
-    );
-  }
+  }, [loading, fetchingMore, hasMore, images.length, fetchImages, favoritesOnly, debouncedSearch]);
 
   return (
     <div className="space-y-6">
@@ -166,29 +177,52 @@ export default function GalleryPage() {
             Browse all your generated images
           </p>
         </div>
-        <div className="flex items-center space-x-2 bg-muted/50 p-2 px-4 rounded-lg">
-          <Switch 
-            id="favorites-filter" 
-            checked={favoritesOnly}
-            onCheckedChange={setFavoritesOnly}
-          />
-          <Label htmlFor="favorites-filter" className="cursor-pointer">Favorites only</Label>
+        <div className="flex flex-col sm:flex-row items-center gap-4">
+          <div className="relative w-full sm:w-64">
+            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Input
+              type="search"
+              placeholder="Search prompts or batches..."
+              className="pl-8"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+          </div>
+          <div className="flex items-center space-x-2 bg-muted/50 p-2 px-4 rounded-lg shrink-0">
+            <Switch 
+              id="favorites-filter" 
+              checked={favoritesOnly}
+              onCheckedChange={setFavoritesOnly}
+            />
+            <Label htmlFor="favorites-filter" className="cursor-pointer">Favorites only</Label>
+          </div>
         </div>
       </div>
 
-      {images.length === 0 ? (
+      {loading && images.length === 0 ? (
+        <div className="flex items-center justify-center min-h-[400px]">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </div>
+      ) : images.length === 0 ? (
         <Card>
           <CardContent className="pt-6">
             <div className="text-center py-12">
               <p className="text-muted-foreground mb-4">
-                {favoritesOnly 
-                  ? "No favorited images yet." 
-                  : "No images yet. Create and execute a batch to generate images!"}
+                {debouncedSearch 
+                  ? `No images found matching "${debouncedSearch}"`
+                  : favoritesOnly 
+                    ? "No favorited images yet." 
+                    : "No images yet. Create and execute a batch to generate images!"}
               </p>
-              {!favoritesOnly && (
+              {!favoritesOnly && !debouncedSearch && (
                 <Link href="/batches/new">
                   <Button>Create a Batch</Button>
                 </Link>
+              )}
+              {debouncedSearch && (
+                <Button variant="outline" onClick={() => setSearch("")}>
+                  Clear Search
+                </Button>
               )}
             </div>
           </CardContent>
