@@ -5,7 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Play, Trash2, ArrowLeft, Download, ChevronLeft, ChevronRight, Heart } from "lucide-react";
+import { Loader2, Play, Trash2, ArrowLeft, Download, ChevronLeft, ChevronRight, Heart, Sparkles, Layers } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -32,6 +32,7 @@ interface Image {
   fileName: string;
   mediaType: string;
   isFavorite: boolean;
+  transparentFilePath: string | null;
   createdAt: string;
   generation: {
     batch: {
@@ -55,6 +56,10 @@ export default function BatchDetailPage() {
   const [hasMore, setHasMore] = useState(true);
   const [imageOffset, setImageOffset] = useState(0);
   const IMAGES_LIMIT = 20;
+
+  // Transparency toggle state (image id -> boolean)
+  const [showTransparent, setShowTransparent] = useState<Record<string, boolean>>({});
+  const [processingTransparency, setProcessingTransparency] = useState<Record<string, boolean>>({});
 
   // Modal state
   const [selectedImageIndex, setSelectedImageIndex] = useState<number | null>(null);
@@ -172,6 +177,47 @@ export default function BatchDetailPage() {
       // Revert on error
       setImages(prev => prev.map(img => img.id === image.id ? { ...img, isFavorite: !newStatus } : img));
     }
+  };
+
+  const makeTransparent = async (e: React.MouseEvent, image: Image) => {
+    e.stopPropagation();
+    if (processingTransparency[image.id]) return;
+
+    setProcessingTransparency(prev => ({ ...prev, [image.id]: true }));
+
+    try {
+      const response = await fetch(`/api/images/${image.id}/transparent`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tolerance: 30 }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to make image transparent');
+      }
+
+      const data = await response.json();
+      
+      // Update image in list with the new transparentFilePath
+      setImages(prev => prev.map(img => 
+        img.id === image.id 
+          ? { ...img, transparentFilePath: data.transparentFilePath } 
+          : img
+      ));
+
+      // Automatically switch to transparent view
+      setShowTransparent(prev => ({ ...prev, [image.id]: true }));
+    } catch (error) {
+      console.error('Error making image transparent:', error);
+      alert('Failed to make image transparent');
+    } finally {
+      setProcessingTransparency(prev => ({ ...prev, [image.id]: false }));
+    }
+  };
+
+  const toggleTransparencyView = (e: React.MouseEvent, imageId: string) => {
+    e.stopPropagation();
+    setShowTransparent(prev => ({ ...prev, [imageId]: !prev[imageId] }));
   };
 
   // Infinite scroll observer
@@ -386,24 +432,53 @@ export default function BatchDetailPage() {
                     >
                       <div className="aspect-square bg-muted relative">
                         <img
-                          src={`/api/images/${image.id}/file`}
+                          src={`/api/images/${image.id}/file${showTransparent[image.id] ? '?version=transparent' : ''}`}
                           alt={image.fileName}
-                          className="w-full h-full object-cover cursor-pointer"
+                          className={`w-full h-full object-cover cursor-pointer ${showTransparent[image.id] ? 'bg-[url("https://www.transparenttextures.com/patterns/checkerboard.png")]' : ''}`}
                           onClick={() => setSelectedImageIndex(index)}
                           onError={(e) => {
                             (e.target as HTMLImageElement).src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="100" height="100"%3E%3Crect fill="%23ddd" width="100" height="100"/%3E%3Ctext x="50%25" y="50%25" text-anchor="middle" dy=".3em" fill="%23999"%3ENo Image%3C/text%3E%3C/svg%3E';
                           }}
                         />
                         
-                        {/* Favorite toggle on card */}
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className={`absolute top-2 right-2 z-10 rounded-full bg-black/20 hover:bg-black/40 ${image.isFavorite ? 'text-red-500' : 'text-white'}`}
-                          onClick={(e) => toggleFavorite(e, image)}
-                        >
-                          <Heart className={`h-5 w-5 ${image.isFavorite ? 'fill-current' : ''}`} />
-                        </Button>
+                        {/* Control buttons on card */}
+                        <div className="absolute top-2 right-2 z-10 flex flex-col gap-2">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className={`rounded-full bg-black/20 hover:bg-black/40 ${image.isFavorite ? 'text-red-500' : 'text-white'}`}
+                            onClick={(e) => toggleFavorite(e, image)}
+                          >
+                            <Heart className={`h-5 w-5 ${image.isFavorite ? 'fill-current' : ''}`} />
+                          </Button>
+
+                          {image.transparentFilePath ? (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className={`rounded-full bg-black/20 hover:bg-black/40 ${showTransparent[image.id] ? 'text-blue-400' : 'text-white'}`}
+                              onClick={(e) => toggleTransparencyView(e, image.id)}
+                              title="Toggle Transparency"
+                            >
+                              <Layers className="h-5 w-5" />
+                            </Button>
+                          ) : (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="rounded-full bg-black/20 hover:bg-black/40 text-white"
+                              onClick={(e) => makeTransparent(e, image)}
+                              disabled={processingTransparency[image.id]}
+                              title="Make Transparent"
+                            >
+                              {processingTransparency[image.id] ? (
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                              ) : (
+                                <Sparkles className="h-5 w-5" />
+                              )}
+                            </Button>
+                          )}
+                        </div>
 
                         <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2 pointer-events-none group-hover:pointer-events-auto">
                           <Button
@@ -477,9 +552,9 @@ export default function BatchDetailPage() {
             {selectedImageIndex !== null && (
               <>
                 <img
-                  src={`/api/images/${images[selectedImageIndex].id}/file`}
+                  src={`/api/images/${images[selectedImageIndex].id}/file${showTransparent[images[selectedImageIndex].id] ? '?version=transparent' : ''}`}
                   alt={images[selectedImageIndex].fileName}
-                  className="max-w-full max-h-full w-auto h-auto object-contain transition-transform duration-200"
+                  className={`max-w-full max-h-full w-auto h-auto object-contain transition-transform duration-200 ${showTransparent[images[selectedImageIndex].id] ? 'bg-[url("https://www.transparenttextures.com/patterns/checkerboard.png")]' : ''}`}
                 />
 
                 {/* Navigation Arrows */}
@@ -511,16 +586,49 @@ export default function BatchDetailPage() {
                     size="icon"
                     className={`h-12 w-12 rounded-full bg-black/20 hover:bg-black/40 ${images[selectedImageIndex].isFavorite ? 'text-red-500' : 'text-white'}`}
                     onClick={(e) => toggleFavorite(e, images[selectedImageIndex])}
+                    title="Favorite"
                   >
                     <Heart className={`h-8 w-8 ${images[selectedImageIndex].isFavorite ? 'fill-current' : ''}`} />
                   </Button>
+
+                  {images[selectedImageIndex].transparentFilePath ? (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className={`h-12 w-12 rounded-full bg-black/20 hover:bg-black/40 ${showTransparent[images[selectedImageIndex].id] ? 'text-blue-400' : 'text-white'}`}
+                      onClick={(e) => toggleTransparencyView(e, images[selectedImageIndex].id)}
+                      title="Toggle Transparency"
+                    >
+                      <Layers className="h-8 w-8" />
+                    </Button>
+                  ) : (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-12 w-12 rounded-full bg-black/20 text-white hover:bg-black/40"
+                      onClick={(e) => makeTransparent(e, images[selectedImageIndex])}
+                      disabled={processingTransparency[images[selectedImageIndex].id]}
+                      title="Make Transparent"
+                    >
+                      {processingTransparency[images[selectedImageIndex].id] ? (
+                        <Loader2 className="h-8 w-8 animate-spin" />
+                      ) : (
+                        <Sparkles className="h-8 w-8" />
+                      )}
+                    </Button>
+                  )}
+
                   <Button
                     variant="ghost"
                     size="icon"
                     className="h-12 w-12 rounded-full bg-black/20 text-white hover:bg-black/40"
                     asChild
                   >
-                    <a href={`/api/images/${images[selectedImageIndex].id}/file`} download={images[selectedImageIndex].fileName}>
+                    <a 
+                      href={`/api/images/${images[selectedImageIndex].id}/file${showTransparent[images[selectedImageIndex].id] ? '?version=transparent' : ''}`} 
+                      download={images[selectedImageIndex].fileName}
+                      title="Download"
+                    >
                       <Download className="h-8 w-8" />
                     </a>
                   </Button>

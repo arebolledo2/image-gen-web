@@ -10,6 +10,8 @@ export async function GET(
 ) {
   try {
     const { id } = await params;
+    const { searchParams } = new URL(request.url);
+    const version = searchParams.get('version'); // 'original' or 'transparent'
 
     const image = await db.query.images.findFirst({
       where: eq(images.id, id),
@@ -22,11 +24,16 @@ export async function GET(
       );
     }
 
-    const fileBuffer = await readImage(image.filePath);
+    let filePath = image.filePath;
+    if (version === 'transparent' && image.transparentFilePath) {
+      filePath = image.transparentFilePath;
+    }
 
-    return new NextResponse(fileBuffer, {
+    const fileBuffer = await readImage(filePath);
+
+    return new NextResponse(fileBuffer as unknown as BodyInit, {
       headers: {
-        'Content-Type': image.mediaType,
+        'Content-Type': 'image/png', // Transparent version is always PNG
         'Content-Disposition': `inline; filename="${image.fileName}"`,
       },
     });

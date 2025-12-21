@@ -4,7 +4,7 @@ import { useEffect, useState, useRef, useCallback } from "react";
 import Link from "next/link";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Loader2, Download, ChevronLeft, ChevronRight, Heart } from "lucide-react";
+import { Loader2, Download, ChevronLeft, ChevronRight, Heart, Sparkles, Layers } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/dialog";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
+import { Slider } from "@/components/ui/slider";
 
 interface Image {
   id: string;
@@ -20,6 +21,7 @@ interface Image {
   fileName: string;
   mediaType: string;
   isFavorite: boolean;
+  transparentFilePath: string | null;
   createdAt: string;
   generation: {
     batch: {
@@ -37,6 +39,12 @@ export default function GalleryPage() {
   const [offset, setOffset] = useState(0);
   const [favoritesOnly, setFavoritesOnly] = useState(false);
   const LIMIT = 20;
+
+  // Transparency toggle state (image id -> boolean)
+  const [showTransparent, setShowTransparent] = useState<Record<string, boolean>>({});
+  const [processingTransparency, setProcessingTransparency] = useState<Record<string, boolean>>({});
+  const [transparencyTolerance, setTransparencyTolerance] = useState<Record<string, number>>({});
+  const [imageVersions, setImageVersions] = useState<Record<string, number>>({});
 
   // Modal state
   const [selectedImageIndex, setSelectedImageIndex] = useState<number | null>(null);
@@ -97,6 +105,52 @@ export default function GalleryPage() {
       // Revert on error
       setImages(prev => prev.map(img => img.id === image.id ? { ...img, isFavorite: !newStatus } : img));
     }
+  };
+
+  const makeTransparent = async (e: React.MouseEvent | React.KeyboardEvent, image: Image) => {
+    e.stopPropagation();
+    if (processingTransparency[image.id]) return;
+
+    const tolerance = transparencyTolerance[image.id] ?? 30;
+
+    setProcessingTransparency(prev => ({ ...prev, [image.id]: true }));
+
+    try {
+      const response = await fetch(`/api/images/${image.id}/transparent`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tolerance }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to make image transparent');
+      }
+
+      const data = await response.json();
+      
+      // Update image in list with the new transparentFilePath
+      setImages(prev => prev.map(img => 
+        img.id === image.id 
+          ? { ...img, transparentFilePath: data.transparentFilePath } 
+          : img
+      ));
+
+      // Update version to bust cache
+      setImageVersions(prev => ({ ...prev, [image.id]: Date.now() }));
+
+      // Automatically switch to transparent view
+      setShowTransparent(prev => ({ ...prev, [image.id]: true }));
+    } catch (error) {
+      console.error('Error making image transparent:', error);
+      alert('Failed to make image transparent');
+    } finally {
+      setProcessingTransparency(prev => ({ ...prev, [image.id]: false }));
+    }
+  };
+
+  const toggleTransparencyView = (e: React.MouseEvent, imageId: string) => {
+    e.stopPropagation();
+    setShowTransparent(prev => ({ ...prev, [imageId]: !prev[imageId] }));
   };
 
   // Infinite scroll observer
@@ -210,24 +264,54 @@ export default function GalleryPage() {
               >
                 <div className="aspect-square bg-muted relative">
                   <img
-                    src={`/api/images/${image.id}/file`}
+                    src={`/api/images/${image.id}/file${showTransparent[image.id] ? `?version=transparent&t=${imageVersions[image.id] || ''}` : ''}`}
                     alt={image.fileName}
-                    className="w-full h-full object-cover cursor-pointer"
+                    className={`w-full h-full object-cover cursor-pointer ${showTransparent[image.id] ? 'bg-[url("https://www.transparenttextures.com/patterns/checkerboard.png")]' : ''}`}
                     onClick={() => setSelectedImageIndex(index)}
                     onError={(e) => {
                       (e.target as HTMLImageElement).src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="100" height="100"%3E%3Crect fill="%23ddd" width="100" height="100"/%3E%3Ctext x="50%25" y="50%25" text-anchor="middle" dy=".3em" fill="%23999"%3ENo Image%3C/text%3E%3C/svg%3E';
                     }}
                   />
                   
-                  {/* Favorite toggle on card */}
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className={`absolute top-2 right-2 z-10 rounded-full bg-black/20 hover:bg-black/40 ${image.isFavorite ? 'text-red-500' : 'text-white'}`}
-                    onClick={(e) => toggleFavorite(e, image)}
-                  >
-                    <Heart className={`h-5 w-5 ${image.isFavorite ? 'fill-current' : ''}`} />
-                  </Button>
+                  {/* Control buttons on card */}
+                  <div className="absolute top-2 right-2 z-10 flex flex-col gap-2">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className={`rounded-full bg-black/20 hover:bg-black/40 ${image.isFavorite ? 'text-red-500' : 'text-white'}`}
+                      onClick={(e) => toggleFavorite(e, image)}
+                      title="Favorite"
+                    >
+                      <Heart className={`h-5 w-5 ${image.isFavorite ? 'fill-current' : ''}`} />
+                    </Button>
+
+                    {image.transparentFilePath ? (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className={`rounded-full bg-black/20 hover:bg-black/40 ${showTransparent[image.id] ? 'text-blue-400' : 'text-white'}`}
+                        onClick={(e) => toggleTransparencyView(e, image.id)}
+                        title="Toggle Transparency"
+                      >
+                        <Layers className="h-5 w-5" />
+                      </Button>
+                    ) : (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="rounded-full bg-black/20 hover:bg-black/40 text-white"
+                        onClick={(e) => makeTransparent(e, image)}
+                        disabled={processingTransparency[image.id]}
+                        title="Make Transparent"
+                      >
+                        {processingTransparency[image.id] ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <Sparkles className="h-5 w-5" />
+                        )}
+                      </Button>
+                    )}
+                  </div>
 
                   <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2 pointer-events-none group-hover:pointer-events-auto">
                     <Button
@@ -297,9 +381,9 @@ export default function GalleryPage() {
                 {selectedImageIndex !== null && (
                   <>
                     <img
-                      src={`/api/images/${images[selectedImageIndex].id}/file`}
+                      src={`/api/images/${images[selectedImageIndex].id}/file${showTransparent[images[selectedImageIndex].id] ? `?version=transparent&t=${imageVersions[images[selectedImageIndex].id] || ''}` : ''}`}
                       alt={images[selectedImageIndex].fileName}
-                      className="max-w-full max-h-full w-auto h-auto object-contain transition-transform duration-200"
+                      className={`max-w-full max-h-full w-auto h-auto object-contain transition-transform duration-200 ${showTransparent[images[selectedImageIndex].id] ? 'bg-[url("https://www.transparenttextures.com/patterns/checkerboard.png")]' : ''}`}
                     />
                     
                     {/* Navigation Arrows */}
@@ -331,27 +415,77 @@ export default function GalleryPage() {
                         size="icon"
                         className={`h-12 w-12 rounded-full bg-black/20 hover:bg-black/40 ${images[selectedImageIndex].isFavorite ? 'text-red-500' : 'text-white'}`}
                         onClick={(e) => toggleFavorite(e, images[selectedImageIndex])}
+                        title="Favorite"
                       >
                         <Heart className={`h-8 w-8 ${images[selectedImageIndex].isFavorite ? 'fill-current' : ''}`} />
                       </Button>
+
+                      {images[selectedImageIndex].transparentFilePath ? (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className={`h-12 w-12 rounded-full bg-black/20 hover:bg-black/40 ${showTransparent[images[selectedImageIndex].id] ? 'text-blue-400' : 'text-white'}`}
+                          onClick={(e) => toggleTransparencyView(e, images[selectedImageIndex].id)}
+                          title="Toggle Transparency"
+                        >
+                          <Layers className="h-8 w-8" />
+                        </Button>
+                      ) : null}
+
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className={`h-12 w-12 rounded-full bg-black/20 hover:bg-black/40 text-white ${processingTransparency[images[selectedImageIndex].id] ? 'animate-pulse' : ''}`}
+                        onClick={(e) => makeTransparent(e, images[selectedImageIndex])}
+                        disabled={processingTransparency[images[selectedImageIndex].id]}
+                        title={images[selectedImageIndex].transparentFilePath ? "Redo Transparency" : "Make Transparent"}
+                      >
+                        {processingTransparency[images[selectedImageIndex].id] ? (
+                          <Loader2 className="h-8 w-8 animate-spin" />
+                        ) : (
+                          <Sparkles className="h-8 w-8" />
+                        )}
+                      </Button>
+
                       <Button
                         variant="ghost"
                         size="icon"
                         className="h-12 w-12 rounded-full bg-black/20 text-white hover:bg-black/40"
                         asChild
                       >
-                        <a href={`/api/images/${images[selectedImageIndex].id}/file`} download={images[selectedImageIndex].fileName}>
+                        <a 
+                          href={`/api/images/${images[selectedImageIndex].id}/file${showTransparent[images[selectedImageIndex].id] ? '?version=transparent' : ''}`} 
+                          download={images[selectedImageIndex].fileName}
+                          title="Download"
+                        >
                           <Download className="h-8 w-8" />
                         </a>
                       </Button>
                     </div>
 
                     {/* Info Overlay */}
-                    <div className="absolute bottom-4 left-4 right-4 text-white text-xs bg-black/50 p-2 rounded backdrop-blur-sm opacity-0 group-hover/modal:opacity-100 transition-opacity pointer-events-none">
-                      <p>Image {selectedImageIndex + 1} of {images.length}</p>
-                      {images[selectedImageIndex].generation.batch && (
-                        <p>Batch: {images[selectedImageIndex].generation.batch?.name}</p>
-                      )}
+                    <div className="absolute bottom-4 left-4 right-4 text-white text-xs bg-black/50 p-4 rounded backdrop-blur-sm opacity-0 group-hover/modal:opacity-100 transition-opacity flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+                      <div className="space-y-1">
+                        <p>Image {selectedImageIndex + 1} of {images.length}</p>
+                        {images[selectedImageIndex].generation.batch && (
+                          <p>Batch: {images[selectedImageIndex].generation.batch?.name}</p>
+                        )}
+                      </div>
+                      
+                      <div className="w-full md:w-64 space-y-2 pointer-events-auto">
+                        <div className="flex justify-between items-center">
+                          <Label htmlFor="tolerance-slider" className="text-white text-xs">Transparency Tolerance: {transparencyTolerance[images[selectedImageIndex].id] ?? 30}</Label>
+                        </div>
+                        <Slider
+                          id="tolerance-slider"
+                          min={0}
+                          max={255}
+                          step={1}
+                          value={[transparencyTolerance[images[selectedImageIndex].id] ?? 30]}
+                          onValueChange={(vals) => setTransparencyTolerance(prev => ({ ...prev, [images[selectedImageIndex].id]: vals[0] }))}
+                          className="w-full"
+                        />
+                      </div>
                     </div>
                   </>
                 )}

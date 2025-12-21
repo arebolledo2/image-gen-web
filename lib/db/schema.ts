@@ -125,6 +125,7 @@ export const images = pgTable('images', {
     [key: string]: any;
   }>(),
   isFavorite: boolean('is_favorite').default(false).notNull(),
+  transparentFilePath: text('transparent_file_path'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
 });
 
