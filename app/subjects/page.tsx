@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Plus, Loader2, Box, X } from "lucide-react";
+import { Plus, Loader2, Box, X, Sparkles } from "lucide-react";
 
 interface Subject {
   id: string;
@@ -23,6 +23,7 @@ export default function SubjectsPage() {
   const [newName, setNewName] = useState("");
   const [newDescription, setNewDescription] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [isGenerating, setIsGenerating] = useState(false);
 
   useEffect(() => {
     fetchSubjects();
@@ -62,6 +63,32 @@ export default function SubjectsPage() {
     }
   };
 
+  const handleAiAssist = async () => {
+    if (!newName && !newDescription) return;
+    
+    setIsGenerating(true);
+    try {
+      const concept = newName || newDescription;
+      const response = await fetch('/api/agents/create-subject', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ concept }),
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        if (data.subject) {
+          setNewName(data.subject.name);
+          setNewDescription(data.subject.description);
+        }
+      }
+    } catch (error) {
+      console.error('Error with AI assist:', error);
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
@@ -98,7 +125,24 @@ export default function SubjectsPage() {
           <CardContent>
             <form onSubmit={handleCreate} className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="name">Name</Label>
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="name">Name</Label>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="h-8 px-2 text-xs"
+                    onClick={handleAiAssist}
+                    disabled={isGenerating || (!newName && !newDescription)}
+                  >
+                    {isGenerating ? (
+                      <Loader2 className="mr-2 h-3 w-3 animate-spin" />
+                    ) : (
+                      <Sparkles className="mr-2 h-3 w-3" />
+                    )}
+                    AI Assist
+                  </Button>
+                </div>
                 <Input
                   id="name"
                   value={newName}
