@@ -444,3 +444,40 @@ Description: "A multi-legged combat automaton with polished obsidian plating and
 
   return experimental_output;
 }
+
+/**
+ * Adjust an existing prompt based on a quick suggestion.
+ */
+export async function adjustPromptAgent(
+  basePrompt: string,
+  suggestion: string,
+  promptStyle: 'terse' | 'verbose' = 'terse'
+): Promise<string> {
+  const styleInstruction = promptStyle === 'verbose'
+    ? `OUTPUT STYLE: VERBOSE
+- Use full, descriptive sentences.
+- Use periods to separate ideas.
+- Use new lines (line breaks) to separate logical sections of the prompt.
+- Aim for a narrative, detailed description of the scene and asset.`
+    : `OUTPUT STYLE: TERSE
+- Use brief descriptions.
+- Use lots of commas to separate ideas.
+- Keep it to a single paragraph.
+- Follow the structure: [SUBJECT], [FEATURES], [COLORS], [STYLE], [VIEW], [ANIMATION], [OUTLINE], [BACKGROUND]`;
+
+  const systemPrompt = `You are an expert at refining and adjusting AI image generation prompts for game assets.
+Your task is to take an existing prompt and modify it according to a user's suggestion while maintaining the overall intent and quality.
+
+CRITICAL RULES:
+1. Preserve technical instructions like "solid bright magenta background #FF00FF" if they are present in the base prompt.
+2. Integrate the new suggestion naturally into the existing structure.
+3. ${styleInstruction}`;
+
+  const { text } = await generateText({
+    model: google('gemini-2.0-flash-exp'),
+    system: systemPrompt,
+    prompt: `Adjust this prompt:\n\n${basePrompt}\n\nBased on this suggestion: ${suggestion}`,
+  });
+
+  return text.trim();
+}

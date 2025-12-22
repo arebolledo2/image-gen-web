@@ -6,6 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Loader2, Play, Trash2, ArrowLeft, Download, Heart, Sparkles, Layers, Copy, ChevronRight, Edit2, Check, X } from "lucide-react";
+import { AIAssistButton } from "@/components/agents/ai-assist-button";
+import { useSettings } from "@/components/providers/settings-provider";
 import { ImageGalleryModal, type GalleryImage } from "@/components/image-gallery-modal";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
@@ -30,6 +32,7 @@ interface Batch {
 export default function BatchDetailPage() {
   const params = useParams();
   const router = useRouter();
+  const { promptStyle } = useSettings();
   const [batch, setBatch] = useState<Batch | null>(null);
   const [loading, setLoading] = useState(true);
   const [executing, setExecuting] = useState(false);
@@ -360,6 +363,22 @@ export default function BatchDetailPage() {
     }
   };
 
+  const handleAdjustPrompt = async (promptId: string, suggestion: string) => {
+    const response = await fetch('/api/agents/adjust-prompt', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        basePrompt: editPromptText,
+        suggestion,
+        promptStyle
+      })
+    });
+
+    if (!response.ok) throw new Error('Failed to adjust prompt');
+    const data = await response.json();
+    setEditPromptText(data.promptText);
+  };
+
   const totalImageCount = images.length > 0
     ? images.length + (hasMore ? '+' : '')
     : batch?.generations.reduce((acc, g) => acc + (g.images?.length || 0), 0) || 0;
@@ -672,6 +691,15 @@ export default function BatchDetailPage() {
               <CardContent>
                 {editingPromptId === prompt.id ? (
                   <div className="space-y-2">
+                    <div className="flex justify-end">
+                      <AIAssistButton
+                        label="AI Adjust"
+                        title="Adjust Prompt"
+                        description="Make a quick suggestion to adjust this prompt."
+                        placeholder="e.g., make it more futuristic, add more blue..."
+                        onGenerate={(suggestion) => handleAdjustPrompt(prompt.id, suggestion)}
+                      />
+                    </div>
                     <Textarea
                       value={editPromptText}
                       onChange={(e) => setEditPromptText(e.target.value)}

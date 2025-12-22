@@ -10,6 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Loader2, Plus, X, Palette, Box, Compass, Sparkles, Wand2 } from "lucide-react";
+import { AIAssistButton } from "@/components/agents/ai-assist-button";
 import { RESOLUTION_PRESETS, DEFAULT_RESOLUTION } from "@/lib/config/resolution-presets";
 import { useSettings } from "@/components/providers/settings-provider";
 
@@ -197,6 +198,23 @@ export default function NewBatchPage() {
     setPreviewPrompts(prev => prev.map((p, i) => i === index ? { ...p, promptText: newText } : p));
   };
 
+  const handleAdjustPreview = async (index: number, suggestion: string) => {
+    const preview = previewPrompts[index];
+    const response = await fetch('/api/agents/adjust-prompt', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        basePrompt: preview.promptText,
+        suggestion,
+        promptStyle
+      })
+    });
+
+    if (!response.ok) throw new Error('Failed to adjust prompt');
+    const data = await response.json();
+    handleEditPreview(index, data.promptText);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -373,8 +391,17 @@ export default function NewBatchPage() {
                 {previewPrompts.map((p, index) => (
                   <div key={index} className="flex gap-4 p-3 bg-background border rounded-lg group">
                     <div className="flex-1 space-y-2">
-                      <div className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-                        {p.subjectName}
+                      <div className="flex items-center justify-between">
+                        <div className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                          {p.subjectName}
+                        </div>
+                        <AIAssistButton
+                          label="Adjust"
+                          title="Adjust Prompt"
+                          description="Make a quick suggestion to adjust this prompt."
+                          placeholder="e.g., make it more futuristic, add more blue..."
+                          onGenerate={(suggestion) => handleAdjustPreview(index, suggestion)}
+                        />
                       </div>
                       <Textarea
                         value={p.promptText}
