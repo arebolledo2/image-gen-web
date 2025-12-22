@@ -6,6 +6,7 @@ export const batchStatusEnum = pgEnum('batch_status', ['draft', 'queued', 'runni
 export const generationStatusEnum = pgEnum('generation_status', ['pending', 'running', 'success', 'failed']);
 export const providerEnum = pgEnum('provider', ['gemini', 'gemini3', 'comfyui']);
 export const animationTypeEnum = pgEnum('animation_type', ['bounce', 'squash_stretch']);
+export const animationGeneratorEnum = pgEnum('animation_generator', ['manual', 'ai']);
 
 // Styles table
 export const styles = pgTable('styles', {
@@ -145,12 +146,15 @@ export const squishAnimations = pgTable('squish_animations', {
   frameCount: integer('frame_count').notNull(),
   intensity: integer('intensity').notNull(), // 0-100 percentage
   animationType: animationTypeEnum('animation_type').default('bounce').notNull(),
+  generatedBy: animationGeneratorEnum('generated_by').default('manual').notNull(),
+  aiPrompt: text('ai_prompt'), // AI generation prompt (null for manual)
   metadata: json('metadata').$type<{
     width?: number;
     height?: number;
     frameWidth?: number;
     frameHeight?: number;
     duration?: number; // milliseconds per cycle
+    gridSize?: number; // 2, 3, or 4 for AI-generated animations
   }>(),
   createdAt: timestamp('created_at').defaultNow().notNull(),
 });

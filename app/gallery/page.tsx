@@ -11,6 +11,7 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { useImageTransparency } from "@/hooks/useImageTransparency";
 import { useSquishAnimation } from "@/hooks/use-squish-animation";
+import { useAIAnimation } from "@/hooks/use-ai-animation";
 
 export default function GalleryPage() {
   const [images, setImages] = useState<GalleryImage[]>([]);
@@ -62,6 +63,21 @@ export default function GalleryPage() {
     generateSquishAnimation,
     deleteSquishAnimation,
   } = useSquishAnimation();
+
+  const {
+    processingAI,
+    suggestingPrompt,
+    aiPrompt,
+    aiGridSize,
+    aiAnimations,
+    loadingAIAnimations,
+    setAIPrompt,
+    setAIGridSize,
+    fetchAIAnimations,
+    suggestAnimation,
+    generateAIAnimation,
+    deleteAIAnimation,
+  } = useAIAnimation();
 
   const [globalTransparency, setGlobalTransparency] = useState(false);
 
@@ -400,6 +416,30 @@ export default function GalleryPage() {
             onSelectedVersionChange={(imageId: string, version: string) =>
               setSelectedVersion((prev) => ({ ...prev, [imageId]: version }))
             }
+            processingAI={processingAI}
+            suggestingPrompt={suggestingPrompt}
+            aiPrompt={aiPrompt}
+            aiGridSize={aiGridSize}
+            aiAnimations={aiAnimations}
+            loadingAIAnimations={loadingAIAnimations}
+            onAIPromptChange={(imageId, prompt) =>
+              setAIPrompt((prev) => ({ ...prev, [imageId]: prompt }))
+            }
+            onAIGridSizeChange={(imageId, size) =>
+              setAIGridSize((prev) => ({ ...prev, [imageId]: size }))
+            }
+            onSuggestAnimation={async (e, image) => {
+              e.stopPropagation();
+              await suggestAnimation(image);
+            }}
+            onGenerateAIAnimation={async (e, image) => {
+              e.stopPropagation();
+              await generateAIAnimation(image, (version) => {
+                setSelectedVersion((prev) => ({ ...prev, [image.id]: version }));
+              });
+            }}
+            onFetchAIAnimations={fetchAIAnimations}
+            onDeleteAIAnimation={deleteAIAnimation}
           />
         </>
       )}

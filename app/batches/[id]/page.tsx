@@ -14,6 +14,7 @@ import { useBatchData } from "@/hooks/use-batch-data";
 import { useImageGallery } from "@/hooks/use-image-gallery";
 import { useTransparency } from "@/hooks/use-transparency";
 import { useSquishAnimation } from "@/hooks/use-squish-animation";
+import { useAIAnimation } from "@/hooks/use-ai-animation";
 
 export default function BatchDetailPage() {
   const params = useParams();
@@ -62,6 +63,21 @@ export default function BatchDetailPage() {
     generateSquishAnimation,
     deleteSquishAnimation,
   } = useSquishAnimation();
+
+  const {
+    processingAI,
+    suggestingPrompt,
+    aiPrompt,
+    aiGridSize,
+    aiAnimations,
+    loadingAIAnimations,
+    setAIPrompt,
+    setAIGridSize,
+    fetchAIAnimations,
+    suggestAnimation,
+    generateAIAnimation,
+    deleteAIAnimation,
+  } = useAIAnimation();
 
   // Local state
   const [executing, setExecuting] = useState(false);
@@ -214,6 +230,24 @@ export default function BatchDetailPage() {
     await generateSquishAnimation(image);
   }, [generateSquishAnimation]);
 
+  const handleSuggestAnimation = useCallback(async (
+    e: React.MouseEvent | React.KeyboardEvent,
+    image: GalleryImage
+  ) => {
+    e.stopPropagation();
+    await suggestAnimation(image);
+  }, [suggestAnimation]);
+
+  const handleGenerateAIAnimation = useCallback(async (
+    e: React.MouseEvent | React.KeyboardEvent,
+    image: GalleryImage
+  ) => {
+    e.stopPropagation();
+    await generateAIAnimation(image, (version) => {
+      setSelectedVersion((prev) => ({ ...prev, [image.id]: version }));
+    });
+  }, [generateAIAnimation, setSelectedVersion]);
+
   // Memoized values
   const totalImageCount = useMemo(() => {
     return images.length > 0
@@ -320,6 +354,22 @@ export default function BatchDetailPage() {
         onSelectedVersionChange={(imageId: string, version: string) =>
           setSelectedVersion((prev) => ({ ...prev, [imageId]: version }))
         }
+        processingAI={processingAI}
+        suggestingPrompt={suggestingPrompt}
+        aiPrompt={aiPrompt}
+        aiGridSize={aiGridSize}
+        aiAnimations={aiAnimations}
+        loadingAIAnimations={loadingAIAnimations}
+        onAIPromptChange={(imageId, prompt) =>
+          setAIPrompt((prev) => ({ ...prev, [imageId]: prompt }))
+        }
+        onAIGridSizeChange={(imageId, size) =>
+          setAIGridSize((prev) => ({ ...prev, [imageId]: size }))
+        }
+        onSuggestAnimation={handleSuggestAnimation}
+        onGenerateAIAnimation={handleGenerateAIAnimation}
+        onFetchAIAnimations={fetchAIAnimations}
+        onDeleteAIAnimation={deleteAIAnimation}
       />
     </div>
   );

@@ -15,6 +15,13 @@
       "when": 1766318177002,
       "tag": "0001_condemned_daimon_hellstrom",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1766421540810,
+      "tag": "0002_many_celestials",
+      "breakpoints": true
     }
   ]
 }

@@ -25,6 +25,7 @@ import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
   SelectContent,
@@ -88,6 +89,19 @@ interface ImageGalleryModalProps {
   onDeleteSquishAnimation: (imageId: string, animationId: string) => Promise<void>;
   selectedVersion: Record<string, string>;
   onSelectedVersionChange: (imageId: string, version: string) => void;
+  // AI animation props
+  processingAI: Record<string, boolean>;
+  suggestingPrompt: Record<string, boolean>;
+  aiPrompt: Record<string, string>;
+  aiGridSize: Record<string, 2 | 3 | 4>;
+  aiAnimations: Record<string, any[]>;
+  loadingAIAnimations: Record<string, boolean>;
+  onAIPromptChange: (imageId: string, prompt: string) => void;
+  onAIGridSizeChange: (imageId: string, size: 2 | 3 | 4) => void;
+  onSuggestAnimation: (e: React.MouseEvent | React.KeyboardEvent, image: GalleryImage) => Promise<void>;
+  onGenerateAIAnimation: (e: React.MouseEvent | React.KeyboardEvent, image: GalleryImage) => Promise<void>;
+  onFetchAIAnimations: (imageId: string) => Promise<void>;
+  onDeleteAIAnimation: (imageId: string, animationId: string) => Promise<void>;
 }
 
 export function ImageGalleryModal({
@@ -119,6 +133,18 @@ export function ImageGalleryModal({
   onDeleteSquishAnimation,
   selectedVersion,
   onSelectedVersionChange,
+  processingAI,
+  suggestingPrompt,
+  aiPrompt,
+  aiGridSize,
+  aiAnimations,
+  loadingAIAnimations,
+  onAIPromptChange,
+  onAIGridSizeChange,
+  onSuggestAnimation,
+  onGenerateAIAnimation,
+  onFetchAIAnimations,
+  onDeleteAIAnimation,
 }: ImageGalleryModalProps) {
   const lastScrollTime = useRef(0);
   const [isSampling, setIsSampling] = useState(false);
@@ -170,6 +196,9 @@ export function ImageGalleryModal({
   useEffect(() => {
     if (currentImage && !squishAnimations[currentImage.id]) {
       onFetchSquishAnimations(currentImage.id);
+    }
+    if (currentImage && !aiAnimations[currentImage.id]) {
+      onFetchAIAnimations(currentImage.id);
     }
   }, [currentImage?.id]);
 
@@ -577,6 +606,141 @@ export function ImageGalleryModal({
                               onClick={(e) => {
                                 e.stopPropagation();
                                 onDeleteSquishAnimation(currentImage.id, animation.id);
+                              }}
+                            >
+                              <X className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* AI Animation Controls */}
+                <div className="w-64 space-y-3 pointer-events-auto bg-black/40 p-3 rounded-lg border border-white/10 backdrop-blur-sm">
+                  <div className="flex items-center justify-between">
+                    <Label className="text-white text-sm font-medium flex items-center gap-1">
+                      <Sparkles className="h-4 w-4" />
+                      AI Animation
+                    </Label>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="h-7 px-2 text-xs text-white hover:bg-white/10"
+                      onClick={() => onFetchAIAnimations(currentImage.id)}
+                      disabled={loadingAIAnimations[currentImage.id]}
+                    >
+                      {loadingAIAnimations[currentImage.id] ? (
+                        <Loader2 className="h-3 w-3 animate-spin" />
+                      ) : (
+                        'Refresh'
+                      )}
+                    </Button>
+                  </div>
+                  
+                  <div className="space-y-3">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="w-full h-8 text-xs"
+                      onClick={(e) => onSuggestAnimation(e, currentImage)}
+                      disabled={suggestingPrompt[currentImage.id]}
+                    >
+                      {suggestingPrompt[currentImage.id] ? (
+                        <>
+                          <Loader2 className="h-3 w-3 animate-spin mr-1" />
+                          Suggesting...
+                        </>
+                      ) : (
+                        <>
+                          <Sparkles className="h-3 w-3 mr-1" />
+                          Suggest Animation
+                        </>
+                      )}
+                    </Button>
+
+                    <div>
+                      <Label className="text-white text-xs">Animation Description:</Label>
+                      <Textarea
+                        className="mt-1 text-xs min-h-[60px] bg-black/30 border-white/20 text-white"
+                        placeholder="Describe the animation (e.g., 'walks forward with bouncy steps')"
+                        value={aiPrompt[currentImage.id] || ''}
+                        onChange={(e) => {
+                          e.stopPropagation();
+                          onAIPromptChange(currentImage.id, e.target.value);
+                        }}
+                        onKeyDown={(e) => e.stopPropagation()}
+                      />
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <Label className="text-white text-xs">Grid Size (frames):</Label>
+                      <div className="flex gap-2">
+                        {[2, 3, 4].map(size => {
+                          const frameCount = size * size;
+                          return (
+                            <Button
+                              key={size}
+                              size="sm"
+                              variant={(aiGridSize[currentImage.id] ?? 2) === size ? "default" : "outline"}
+                              className="h-8 flex-1 text-xs"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onAIGridSizeChange(currentImage.id, size as 2 | 3 | 4);
+                              }}
+                            >
+                              {size}×{size}
+                              <span className="ml-1 text-[10px] opacity-70">({frameCount}f)</span>
+                            </Button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                    
+                    <Button
+                      size="sm"
+                      className="w-full h-8 text-xs"
+                      onClick={(e) => onGenerateAIAnimation(e, currentImage)}
+                      disabled={processingAI[currentImage.id] || !aiPrompt[currentImage.id]?.trim()}
+                    >
+                      {processingAI[currentImage.id] ? (
+                        <>
+                          <Loader2 className="h-3 w-3 animate-spin mr-1" />
+                          Generating...
+                        </>
+                      ) : (
+                        <>
+                          <Sparkles className="h-3 w-3 mr-1" />
+                          Generate AI Animation
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                  
+                  {/* List of existing AI animations */}
+                  {aiAnimations[currentImage.id] && aiAnimations[currentImage.id].length > 0 && (
+                    <div className="mt-3 space-y-2 pt-3 border-t border-white/10">
+                      <Label className="text-white text-xs">AI Animations ({aiAnimations[currentImage.id].length}):</Label>
+                      <div className="space-y-1 max-h-32 overflow-y-auto">
+                        {aiAnimations[currentImage.id].map((animation: any) => (
+                          <div key={animation.id} className="flex items-center gap-2 text-xs bg-black/30 p-2 rounded">
+                            <a
+                              href={`/api/squish-animations/${animation.id}/file`}
+                              download
+                              className="flex-1 hover:underline truncate text-white"
+                              onClick={(e) => e.stopPropagation()}
+                              title={animation.aiPrompt}
+                            >
+                              {animation.metadata?.gridSize || 2}×{animation.metadata?.gridSize || 2} - {animation.aiPrompt?.substring(0, 20)}...
+                            </a>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="h-6 w-6 p-0 text-white hover:bg-white/10"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onDeleteAIAnimation(currentImage.id, animation.id);
                               }}
                             >
                               <X className="h-3 w-3" />
