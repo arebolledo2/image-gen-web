@@ -8,7 +8,7 @@ import { composeConstructedPromptAgent } from '@/lib/ai/agents';
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { styleId, subjectId, guidanceIds } = body;
+    const { styleId, subjectId, guidanceIds, promptStyle } = body;
 
     if (!styleId || !subjectId) {
       return NextResponse.json(
@@ -45,7 +45,8 @@ export async function POST(request: NextRequest) {
         guidance: selectedGuidance.map(g => ({
             name: g.name,
             description: g.description
-        }))
+        })),
+        promptStyle
     });
 
     return NextResponse.json({ promptText });

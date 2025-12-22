@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { Loader2, Plus, X, Palette, Box, Compass, Sparkles, Wand2 } from "lucide-react";
 import { RESOLUTION_PRESETS, DEFAULT_RESOLUTION } from "@/lib/config/resolution-presets";
+import { useSettings } from "@/components/providers/settings-provider";
 
 interface Entity {
   id: string;
@@ -37,6 +38,7 @@ interface BatchPrompt {
 
 export default function NewBatchPage() {
   const router = useRouter();
+  const { promptStyle } = useSettings();
   const [loading, setLoading] = useState(false);
   const [dataLoading, setDataLoading] = useState(true);
   
@@ -151,7 +153,8 @@ export default function NewBatchPage() {
             body: JSON.stringify({
               styleId,
               subjectId: subId,
-              guidanceIds: selectedGuidanceIds
+              guidanceIds: selectedGuidanceIds,
+              promptStyle
             })
           });
           const data = await response.json();
