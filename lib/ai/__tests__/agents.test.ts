@@ -61,7 +61,7 @@ describe('createStyleAgent', () => {
     expect(result).toEqual(mockStyle);
     expect(generateText).toHaveBeenCalledWith(
       expect.objectContaining({
-        model: expect.objectContaining({ model: 'gemini-2.0-flash-exp' }),
+          model: expect.objectContaining({ model: 'gemini-2.5-flash' }),
         prompt: 'Create a style based on: futuristic neon style',
       })
     );
@@ -90,7 +90,7 @@ describe('createStyleAgent', () => {
     );
   });
 
-  it('should use gemini-2.0-flash-exp model', async () => {
+  it('should use gemini-2.5-flash model', async () => {
     vi.mocked(generateText).mockResolvedValue({
       experimental_output: {
         name: 'Test',
@@ -108,7 +108,7 @@ describe('createStyleAgent', () => {
 
     expect(generateText).toHaveBeenCalledWith(
       expect.objectContaining({
-        model: expect.objectContaining({ model: 'gemini-2.0-flash-exp' }),
+        model: expect.objectContaining({ model: 'gemini-2.5-flash' }),
       })
     );
   });

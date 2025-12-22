@@ -209,7 +209,10 @@ export function ImageGalleryModal({
     if (!version.startsWith('animation-')) return;
 
     const animationId = version.replace('animation-', '');
-    const animation = squishAnimations[currentImage.id]?.find((a: any) => a.id === animationId);
+    // Check both squish and AI animations
+    const squishAnimation = squishAnimations[currentImage.id]?.find((a: any) => a.id === animationId);
+    const aiAnimation = aiAnimations[currentImage.id]?.find((a: any) => a.id === animationId);
+    const animation = squishAnimation || aiAnimation;
     if (!animation || !canvasRef.current) return;
 
     const canvas = canvasRef.current;
@@ -221,8 +224,31 @@ export function ImageGalleryModal({
     
     img.onload = () => {
       const frameCount = animation.frameCount;
-      const frameWidth = animation.metadata?.frameWidth || img.width / frameCount;
-      const frameHeight = animation.metadata?.frameHeight || img.height;
+      const gridSize = animation.metadata?.gridSize; // AI animations have gridSize (2, 3, or 4)
+      
+      console.log('Animation Debug:', {
+        frameCount,
+        gridSize,
+        frameWidth: animation.metadata?.frameWidth,
+        frameHeight: animation.metadata?.frameHeight,
+        totalWidth: animation.metadata?.width,
+        totalHeight: animation.metadata?.height,
+        imageWidth: img.width,
+        imageHeight: img.height,
+      });
+      
+      let frameWidth: number;
+      let frameHeight: number;
+      
+      if (gridSize) {
+        // AI animation: use stored frame dimensions from metadata
+        frameWidth = animation.metadata?.frameWidth || img.width / gridSize;
+        frameHeight = animation.metadata?.frameHeight || img.height / gridSize;
+      } else {
+        // Squish animation: horizontal row layout
+        frameWidth = animation.metadata?.frameWidth || img.width / frameCount;
+        frameHeight = animation.metadata?.frameHeight || img.height;
+      }
 
       canvas.width = frameWidth;
       canvas.height = frameHeight;
@@ -240,8 +266,23 @@ export function ImageGalleryModal({
 
         if (timestamp - lastFrameTime >= frameInterval) {
           ctx.clearRect(0, 0, frameWidth, frameHeight);
-          const sourceX = frame * frameWidth;
-          ctx.drawImage(img, sourceX, 0, frameWidth, frameHeight, 0, 0, frameWidth, frameHeight);
+          
+          let sourceX: number;
+          let sourceY: number;
+          
+          if (gridSize) {
+            // AI animation: calculate grid position (left-to-right, top-to-bottom)
+            const col = frame % gridSize;
+            const row = Math.floor(frame / gridSize);
+            sourceX = col * frameWidth;
+            sourceY = row * frameHeight;
+          } else {
+            // Squish animation: horizontal row
+            sourceX = frame * frameWidth;
+            sourceY = 0;
+          }
+          
+          ctx.drawImage(img, sourceX, sourceY, frameWidth, frameHeight, 0, 0, frameWidth, frameHeight);
           frame = (frame + 1) % frameCount;
           lastFrameTime = timestamp;
         }
@@ -257,7 +298,7 @@ export function ImageGalleryModal({
         cancelAnimationFrame(animationFrameRef.current);
       }
     };
-  }, [currentImage?.id, selectedVersion, squishAnimations, isPlaying]);
+  }, [currentImage?.id, selectedVersion, squishAnimations, aiAnimations, isPlaying]);
 
   const handleCopyFileName = async () => {
     if (!currentImage) return;
@@ -269,7 +310,9 @@ export function ImageGalleryModal({
       pathToCopy = currentImage.transparentFilePath;
     } else if (version.startsWith('animation-')) {
       const animationId = version.replace('animation-', '');
-      const animation = squishAnimations[currentImage.id]?.find((a: any) => a.id === animationId);
+      const squishAnimation = squishAnimations[currentImage.id]?.find((a: any) => a.id === animationId);
+      const aiAnimation = aiAnimations[currentImage.id]?.find((a: any) => a.id === animationId);
+      const animation = squishAnimation || aiAnimation;
       if (animation) {
         pathToCopy = animation.spritesheetPath;
       }
@@ -401,7 +444,12 @@ export function ImageGalleryModal({
                       )}
                       {squishAnimations[currentImage.id]?.map((animation: any) => (
                         <SelectItem key={animation.id} value={`animation-${animation.id}`}>
-                          Animation - {animation.frameCount}f @ {animation.intensity}%
+                          Squish - {animation.frameCount}f @ {animation.intensity}%
+                        </SelectItem>
+                      ))}
+                      {aiAnimations[currentImage.id]?.map((animation: any) => (
+                        <SelectItem key={animation.id} value={`animation-${animation.id}`}>
+                          AI - {animation.metadata?.gridSize || 2}×{animation.metadata?.gridSize || 2} ({animation.frameCount}f)
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -753,8 +801,8 @@ export function ImageGalleryModal({
                 </div>
               </div>
 
-              {/* Info Overlay */}
-              <div className="absolute bottom-4 left-4 right-4 text-white text-xs bg-black/50 p-4 rounded backdrop-blur-sm opacity-0 group-hover/modal:opacity-100 transition-opacity flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+              {/* Info Overlay - positioned to avoid left controls */}
+              <div className="absolute bottom-4 left-72 right-4 text-white text-xs bg-black/50 p-4 rounded backdrop-blur-sm opacity-0 group-hover/modal:opacity-100 transition-opacity flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
                 <div className="space-y-2 flex-1 min-w-0">
                   <div className="flex flex-col md:flex-row md:items-center gap-2 md:gap-4 text-gray-300">
                     <p>Image {(selectedIndex ?? 0) + 1} of {images.length}</p>

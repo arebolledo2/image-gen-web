@@ -92,7 +92,7 @@ Examples of high-quality style definitions:
 Provide a complete definition that captures the essence of the requested style.`;
 
   const { experimental_output } = await generateText({
-    model: google('gemini-2.0-flash-exp'),
+    model: google('gemini-2.5-flash'),
     system: systemPrompt,
     experimental_output: Output.object({
       schema: styleSchema,
@@ -187,7 +187,7 @@ ${styleKeywords?.length ? `Style Keywords: ${styleKeywords.join(', ')}` : ''}
 ${description ? `Description: ${description}` : ''}`;
 
   const { experimental_output } = await generateText({
-    model: google('gemini-2.0-flash-exp'),
+    model: google('gemini-2.5-flash'),
     system: systemPrompt,
     experimental_output: Output.object({
       schema: promptSchema,
@@ -243,7 +243,7 @@ Given a base prompt, create ${count} variations that:
 4. Are suitable for generating diverse sprite variations`;
 
   const { experimental_output } = await generateText({
-    model: google('gemini-2.0-flash-exp'),
+    model: google('gemini-2.5-flash'),
     system: systemPrompt,
     experimental_output: Output.object({
       schema: z.object({
@@ -355,7 +355,7 @@ Guidance:
 ${guidance.map(g => `- ${g.name}: ${g.description}`).join('\n')}`;
 
   const { text } = await generateText({
-    model: google('gemini-2.0-flash-exp'),
+    model: google('gemini-2.5-flash'),
     system: systemPrompt,
     prompt: userPrompt,
   });
@@ -390,7 +390,7 @@ Focus on game development themes like turrets, enemies, environments, or specifi
 The name should be concise (3-6 words) and the description should be 1-2 sentences summarizing the visual theme.`;
 
   const { experimental_output } = await generateText({
-    model: google('gemini-2.0-flash-exp'),
+    model: google('gemini-2.5-flash'),
     system: systemPrompt,
     experimental_output: Output.object({
       schema: batchMetadataSchema,
@@ -436,7 +436,7 @@ Name: "Arachno-Droid Sentinel"
 Description: "A multi-legged combat automaton with polished obsidian plating and glowing crimson optical sensors. Its joints are reinforced with exposed bronze gears and hydraulic pistons, carrying a specialized energy projector on its reinforced cephalothorax."`;
 
   const { experimental_output } = await generateText({
-    model: google('gemini-2.0-flash-exp'),
+    model: google('gemini-2.5-flash'),
     system: systemPrompt,
     experimental_output: Output.object({
       schema: subjectSchema,
@@ -478,7 +478,7 @@ CRITICAL RULES:
 4. ONLY output the final prompt text. Do not include any conversational filler, explanations, or "Here is the modified prompt:".`;
 
   const { text } = await generateText({
-    model: google('gemini-2.0-flash-exp'),
+    model: google('gemini-2.5-flash'),
     system: systemPrompt,
     prompt: `Adjust this prompt:\n\n${basePrompt}\n\nBased on this suggestion: ${suggestion}`,
   });

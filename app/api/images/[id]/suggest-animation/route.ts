@@ -4,6 +4,8 @@ import { generateText } from 'ai';
 import { db } from '@/lib/db';
 import { images } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
+import fs from 'fs/promises';
+import path from 'path';
 
 export async function POST(
   request: NextRequest,
@@ -37,37 +39,53 @@ export async function POST(
       return NextResponse.json({ error: 'Image not found' }, { status: 404 });
     }
 
+    // Load the actual image file
+    const filePathToLoad = imageRecord.transparentFilePath || imageRecord.filePath;
+    const absolutePath = path.isAbsolute(filePathToLoad)
+      ? filePathToLoad
+      : path.join(process.cwd(), filePathToLoad);
+
+    const imageBuffer = await fs.readFile(absolutePath);
+    const base64Image = imageBuffer.toString('base64');
+    const mimeType = imageRecord.mediaType || 'image/png';
+
     // Construct context for the AI
     const styleName = imageRecord.generation?.batchPrompt?.prompt?.style?.name || 'unknown style';
     const subjectName = imageRecord.generation?.batchPrompt?.prompt?.subject?.name || 'sprite';
-    const promptText = imageRecord.generation?.batchPrompt?.prompt?.promptText || 'No prompt available';
 
-    const systemPrompt = `You are an animation expert. Given information about a game sprite image, suggest a creative animation description that would work well for that sprite.
+    const systemPrompt = `You are an animation expert analyzing game sprite images. Based on what you SEE in the image, suggest a creative animation description.
 
 CRITICAL RULES:
-1. Suggest a brief, clear animation description (1-2 sentences max)
-2. Focus on actions that make sense for the sprite type (enemy, turret, character, etc.)
-3. Consider the art style when suggesting animations
+1. Carefully LOOK at the image and describe what you actually see
+2. Suggest a brief, clear animation description (1-2 sentences max)
+3. Focus on actions that make sense for what you see in the sprite
 4. Be specific about motion (e.g., "walks forward" not just "moves")
-5. ONLY output the animation description. No conversational filler.
+5. Consider the visual style and shape of the sprite
+6. ONLY output the animation description. No conversational filler.
+7. Base your suggestion on the VISUAL content, not just the metadata
 
 Good examples:
-- "The robot walks forward with mechanical precision, each leg lifting and placing deliberately."
-- "The turret rotates smoothly while its barrel recoils from firing energy blasts."
-- "The creature bounces energetically from left to right with a playful squash-and-stretch motion."
+- For a robot enemy: "The robot walks forward with mechanical precision, each leg lifting and placing deliberately."
+- For a turret: "The turret rotates smoothly while its barrel recoils from firing energy blasts."
+- For a flying drone: "The drone hovers with subtle bobbing motion while its propellers spin continuously."
 `;
 
-    const userPrompt = `Sprite Information:
-Subject: ${subjectName}
-Style: ${styleName}
-Original Prompt: ${promptText}
-
-Suggest a creative animation for this sprite that would work as a ${2}x${2}, ${3}x${3}, or ${4}x${4} frame grid.`;
+    const userPrompt = `Analyze this game sprite image (Subject: ${subjectName}, Style: ${styleName}) and suggest a creative animation that would work as a sprite sheet with 4-16 frames. Base your suggestion on what you actually see in the image.`;
 
     const { text } = await generateText({
-      model: google('gemini-2.0-flash-exp'),
-      system: systemPrompt,
-      prompt: userPrompt,
+      model: google('gemini-2.5-flash'),
+      messages: [
+        {
+          role: 'user' as const,
+          content: [
+            { type: 'text', text: systemPrompt + '\n\n' + userPrompt },
+            {
+              type: 'image',
+              image: `data:${mimeType};base64,${base64Image}`,
+            },
+          ],
+        },
+      ],
     });
 
     const suggestion = text.trim();
