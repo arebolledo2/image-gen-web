@@ -10,6 +10,7 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { useImageTransparency } from "@/hooks/useImageTransparency";
+import { useSquishAnimation } from "@/hooks/use-squish-animation";
 
 export default function GalleryPage() {
   const [images, setImages] = useState<GalleryImage[]>([]);
@@ -43,6 +44,24 @@ export default function GalleryPage() {
     setMode,
     setShowTransparent,
   } = useImageTransparency();
+
+  // Use squish animation hook
+  const {
+    processingSquish,
+    squishIntensity,
+    squishFrameCount,
+    squishAnimationType,
+    squishAnimations,
+    loadingSquishAnimations,
+    selectedVersion,
+    setSquishIntensity,
+    setSquishFrameCount,
+    setSquishAnimationType,
+    setSelectedVersion,
+    fetchSquishAnimations,
+    generateSquishAnimation,
+    deleteSquishAnimation,
+  } = useSquishAnimation();
 
   const [globalTransparency, setGlobalTransparency] = useState(false);
 
@@ -356,6 +375,31 @@ export default function GalleryPage() {
             transparencyMode={transparencyMode}
             onModeChange={setMode}
             imageVersions={imageVersions}
+            processingSquish={processingSquish}
+            squishIntensity={squishIntensity}
+            squishFrameCount={squishFrameCount}
+            squishAnimationType={squishAnimationType}
+            squishAnimations={squishAnimations}
+            loadingSquishAnimations={loadingSquishAnimations}
+            onSquishIntensityChange={(imageId, intensity) =>
+              setSquishIntensity((prev) => ({ ...prev, [imageId]: intensity }))
+            }
+            onSquishFrameCountChange={(imageId, count) =>
+              setSquishFrameCount((prev) => ({ ...prev, [imageId]: count }))
+            }
+            onSquishAnimationTypeChange={(imageId, type) =>
+              setSquishAnimationType((prev) => ({ ...prev, [imageId]: type }))
+            }
+            onGenerateSquish={async (e, image) => {
+              e.stopPropagation();
+              await generateSquishAnimation(image);
+            }}
+            onFetchSquishAnimations={fetchSquishAnimations}
+            onDeleteSquishAnimation={deleteSquishAnimation}
+            selectedVersion={selectedVersion}
+            onSelectedVersionChange={(imageId: string, version: string) =>
+              setSelectedVersion((prev) => ({ ...prev, [imageId]: version }))
+            }
           />
         </>
       )}

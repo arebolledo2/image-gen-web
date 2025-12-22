@@ -1,0 +1,83 @@
+"use client";
+
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { memo } from "react";
+
+interface BatchDetailsProps {
+  batch: {
+    provider: 'gemini' | 'comfyui';
+    createdAt: string;
+    completedAt: string | null;
+    batchPrompts: any[];
+    generations: any[];
+    defaults: any;
+  };
+}
+
+export const BatchDetails = memo(function BatchDetails({ batch }: BatchDetailsProps) {
+  return (
+    <div className="grid gap-6 md:grid-cols-2">
+      <Card>
+        <CardHeader>
+          <CardTitle>Details</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-2 text-sm">
+          <div className="flex justify-between">
+            <span className="text-muted-foreground">Provider:</span>
+            <span className="font-medium">
+              {batch.provider === 'gemini' ? '⚡ Google Gemini' : '🎨 ComfyUI'}
+            </span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-muted-foreground">Created:</span>
+            <span>{new Date(batch.createdAt).toLocaleString()}</span>
+          </div>
+          {batch.completedAt && (
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Completed:</span>
+              <span>{new Date(batch.completedAt).toLocaleString()}</span>
+            </div>
+          )}
+          <div className="flex justify-between">
+            <span className="text-muted-foreground">Prompts:</span>
+            <span>{batch.batchPrompts.length}</span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-muted-foreground">Images per prompt:</span>
+            <span>{batch.defaults?.count || 1}</span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-muted-foreground">Total generations:</span>
+            <span>{batch.generations.length}</span>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Generation Stats</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-2 text-sm">
+          <div className="flex justify-between">
+            <span className="text-muted-foreground">Successful:</span>
+            <span className="text-green-600">
+              {batch.generations.filter(g => g.status === 'success').length}
+            </span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-muted-foreground">Failed:</span>
+            <span className="text-red-600">
+              {batch.generations.filter(g => g.status === 'failed').length}
+            </span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-muted-foreground">Pending:</span>
+            <span className="text-gray-600">
+              {batch.generations.filter(g => g.status === 'pending').length}
+            </span>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+});
