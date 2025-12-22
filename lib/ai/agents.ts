@@ -305,7 +305,8 @@ export async function composeConstructedPromptAgent(params: ComposePromptParams)
 - Use full, descriptive sentences.
 - Use periods to separate ideas.
 - Use new lines (line breaks) to separate logical sections of the prompt.
-- Aim for a narrative, detailed description of the scene and asset.`
+- Aim for a narrative, detailed description of the scene and asset.
+- AVOID redundancy: Ensure information from the style or guidance is integrated naturally and not repeated across different sections.`
     : `OUTPUT STYLE: TERSE
 - Use brief descriptions.
 - Use lots of commas to separate ideas.
@@ -458,7 +459,8 @@ export async function adjustPromptAgent(
 - Use full, descriptive sentences.
 - Use periods to separate ideas.
 - Use new lines (line breaks) to separate logical sections of the prompt.
-- Aim for a narrative, detailed description of the scene and asset.`
+- Aim for a narrative, detailed description of the scene and asset.
+- AVOID redundancy: Ensure information is integrated naturally and not repeated across different sections.`
     : `OUTPUT STYLE: TERSE
 - Use brief descriptions.
 - Use lots of commas to separate ideas.
@@ -471,7 +473,8 @@ Your task is to take an existing prompt and modify it according to a user's sugg
 CRITICAL RULES:
 1. Preserve technical instructions like "solid bright magenta background #FF00FF" if they are present in the base prompt.
 2. Integrate the new suggestion naturally into the existing structure.
-3. ${styleInstruction}`;
+3. ${styleInstruction}
+4. ONLY output the final prompt text. Do not include any conversational filler, explanations, or "Here is the modified prompt:".`;
 
   const { text } = await generateText({
     model: google('gemini-2.0-flash-exp'),
