@@ -287,17 +287,30 @@ export interface ComposePromptParams {
     name: string;
     description: string;
   }>;
+  promptStyle?: 'terse' | 'verbose';
 }
 
 /**
  * AI Agent to compose a final image generation prompt from building blocks.
  */
 export async function composeConstructedPromptAgent(params: ComposePromptParams): Promise<string> {
-  const { subject, style, guidance } = params;
+  const { subject, style, guidance, promptStyle = 'terse' } = params;
 
   const backgroundInstruction = subject.isTransparent !== false
     ? 'ALWAYS include "solid bright magenta background #FF00FF single tone with no gradients" for sprite transparency unless explicitly told otherwise.'
     : 'Include a background description that fits the subject and style, but DO NOT use a magenta background.';
+
+  const styleInstruction = promptStyle === 'verbose'
+    ? `OUTPUT STYLE: VERBOSE
+- Use full, descriptive sentences.
+- Use periods to separate ideas.
+- Use new lines (line breaks) to separate logical sections of the prompt.
+- Aim for a narrative, detailed description of the scene and asset.`
+    : `OUTPUT STYLE: TERSE
+- Use brief descriptions.
+- Use lots of commas to separate ideas.
+- Keep it to a single paragraph.
+- Follow the structure: [SUBJECT], [FEATURES], [COLORS], [STYLE], [VIEW], [ANIMATION], [OUTLINE], [BACKGROUND]`;
 
   const systemPrompt = `You are an expert at creating technical prompts for AI image generation, specifically for game assets.
 Your task is to take a high-level Subject, a Style, and multiple Guidance instructions and compose them into a single, cohesive, high-quality prompt.
@@ -307,9 +320,7 @@ CRITICAL RULES:
 2. Be specific about view angle if implied by guidance or subject.
 3. Request consistent sizing for sprite sheets if "sprite sheet" is mentioned in guidance.
 4. Integrate the style's palette and rendering cues naturally.
-5. Ensure the result is a single string that will produce the best possible result in an image generator.
-
-STRUCTURE: [SUBJECT], [FEATURES], [COLORS], [STYLE], [VIEW], [ANIMATION], [OUTLINE], [BACKGROUND]`;
+5. ${styleInstruction}`;
 
   const paletteText = Array.isArray(style.palette) 
     ? style.palette.join(', ')

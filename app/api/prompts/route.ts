@@ -34,7 +34,7 @@ export async function GET() {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { name, styleId, subjectId, guidanceIds } = body;
+    const { name, styleId, subjectId, guidanceIds, promptStyle } = body;
 
     // Validate required fields
     if (!name || !styleId || !subjectId) {
@@ -74,7 +74,8 @@ export async function POST(request: NextRequest) {
         guidance: selectedGuidance.map(g => ({
             name: g.name,
             description: g.description
-        }))
+        })),
+        promptStyle
     });
 
     // Create prompt

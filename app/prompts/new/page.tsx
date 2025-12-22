@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Loader2, Plus, X, Box, Palette, Compass } from "lucide-react";
+import { useSettings } from "@/components/providers/settings-provider";
 
 interface Entity {
   id: string;
@@ -17,6 +18,7 @@ interface Entity {
 
 export default function NewPromptPage() {
   const router = useRouter();
+  const { promptStyle } = useSettings();
   const [loading, setLoading] = useState(false);
   const [styles, setStyles] = useState<Entity[]>([]);
   const [subjects, setSubjects] = useState<Entity[]>([]);
@@ -70,6 +72,7 @@ export default function NewPromptPage() {
           styleId,
           subjectId,
           guidanceIds: selectedGuidanceIds,
+          promptStyle,
         }),
       });
 
