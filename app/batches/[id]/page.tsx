@@ -5,13 +5,14 @@ import { useParams, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Play, Trash2, ArrowLeft, Download, Heart, Sparkles, Layers, Copy, ChevronRight, Edit2, Check, X } from "lucide-react";
+import { Loader2, Play, Trash2, ArrowLeft, Download, Heart, Sparkles, Layers, Copy, ChevronRight, Edit2, Check, X, Film, Settings } from "lucide-react";
 import { AIAssistButton } from "@/components/agents/ai-assist-button";
 import { useSettings } from "@/components/providers/settings-provider";
 import { ImageGalleryModal, type GalleryImage } from "@/components/image-gallery-modal";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Slider } from "@/components/ui/slider";
 
 interface Batch {
   id: string;
@@ -58,6 +59,14 @@ export default function BatchDetailPage() {
   const [transparencyTolerance, setTransparencyTolerance] = useState<Record<string, number>>({});
   const [transparencyMode, setTransparencyMode] = useState<Record<string, 'global' | 'flood'>>({});
   const [imageVersions, setImageVersions] = useState<Record<string, number>>({});
+
+  // Squish animation state
+  const [processingSquish, setProcessingSquish] = useState<Record<string, boolean>>({});
+  const [squishIntensity, setSquishIntensity] = useState<Record<string, number>>({});
+  const [squishFrameCount, setSquishFrameCount] = useState<Record<string, number>>({});
+  const [squishAnimationType, setSquishAnimationType] = useState<Record<string, 'bounce' | 'squash_stretch'>>({});
+  const [squishAnimations, setSquishAnimations] = useState<Record<string, any[]>>({});
+  const [loadingSquishAnimations, setLoadingSquishAnimations] = useState<Record<string, boolean>>({});
 
   // Modal state
   const [selectedImageIndex, setSelectedImageIndex] = useState<number | null>(null);
@@ -289,6 +298,82 @@ export default function BatchDetailPage() {
       }
     });
     setShowTransparent(newShowTransparent);
+  };
+
+  // Squish animation functions
+  const fetchSquishAnimations = async (imageId: string) => {
+    setLoadingSquishAnimations(prev => ({ ...prev, [imageId]: true }));
+    try {
+      const response = await fetch(`/api/images/${imageId}/squish`);
+      if (!response.ok) throw new Error('Failed to fetch squish animations');
+      const data = await response.json();
+      setSquishAnimations(prev => ({ ...prev, [imageId]: data.animations || [] }));
+    } catch (error) {
+      console.error('Error fetching squish animations:', error);
+    } finally {
+      setLoadingSquishAnimations(prev => ({ ...prev, [imageId]: false }));
+    }
+  };
+
+  const generateSquishAnimation = async (
+    e: React.MouseEvent | React.KeyboardEvent,
+    image: GalleryImage
+  ) => {
+    e.stopPropagation();
+    if (processingSquish[image.id]) return;
+
+    const frameCount = squishFrameCount[image.id] ?? 8;
+    const intensity = squishIntensity[image.id] ?? 20;
+    const animationType = squishAnimationType[image.id] ?? 'bounce';
+
+    setProcessingSquish(prev => ({ ...prev, [image.id]: true }));
+
+    try {
+      const response = await fetch(`/api/images/${image.id}/squish`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ frameCount, intensity, animationType }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to generate squish animation');
+      }
+
+      const data = await response.json();
+
+      if (!data.success) {
+        throw new Error(data.error || 'Failed to generate squish animation');
+      }
+
+      // Refresh animations list
+      await fetchSquishAnimations(image.id);
+      alert('Squish animation generated successfully!');
+    } catch (error) {
+      console.error('Error generating squish animation:', error);
+      alert('Failed to generate squish animation');
+    } finally {
+      setProcessingSquish(prev => ({ ...prev, [image.id]: false }));
+    }
+  };
+
+  const deleteSquishAnimation = async (imageId: string, animationId: string) => {
+    if (!confirm('Delete this squish animation?')) return;
+
+    try {
+      const response = await fetch(`/api/images/${imageId}/squish?animationId=${animationId}`, {
+        method: 'DELETE',
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to delete squish animation');
+      }
+
+      // Refresh animations list
+      await fetchSquishAnimations(imageId);
+    } catch (error) {
+      console.error('Error deleting squish animation:', error);
+      alert('Failed to delete squish animation');
+    }
   };
 
   // Infinite scroll observer
@@ -600,6 +685,112 @@ export default function BatchDetailPage() {
                           </Button>
                         </div>
                       </div>
+                      
+                      {/* Squish Animation Controls */}
+                      <CardContent className="p-3 space-y-2 border-t">
+                        <div className="flex items-center justify-between">
+                          <Label className="text-xs font-medium flex items-center gap-1">
+                            <Film className="h-3 w-3" />
+                            Squish Animation
+                          </Label>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="h-7 px-2 text-xs"
+                            onClick={() => fetchSquishAnimations(image.id)}
+                            disabled={loadingSquishAnimations[image.id]}
+                          >
+                            {loadingSquishAnimations[image.id] ? (
+                              <Loader2 className="h-3 w-3 animate-spin" />
+                            ) : (
+                              <Settings className="h-3 w-3" />
+                            )}
+                          </Button>
+                        </div>
+                        
+                        <div className="space-y-2">
+                          <div>
+                            <Label className="text-[10px] text-muted-foreground">Intensity: {squishIntensity[image.id] ?? 20}%</Label>
+                            <Slider
+                              min={10}
+                              max={50}
+                              step={5}
+                              value={[squishIntensity[image.id] ?? 20]}
+                              onValueChange={(vals) => setSquishIntensity(prev => ({ ...prev, [image.id]: vals[0] }))}
+                              className="h-1"
+                            />
+                          </div>
+                          
+                          <div className="flex items-center gap-2">
+                            <Label className="text-[10px] text-muted-foreground">Frames:</Label>
+                            <div className="flex gap-1">
+                              {[4, 8, 12, 16].map(count => (
+                                <Button
+                                  key={count}
+                                  size="sm"
+                                  variant={(squishFrameCount[image.id] ?? 8) === count ? "default" : "outline"}
+                                  className="h-6 w-8 text-[10px] p-0"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setSquishFrameCount(prev => ({ ...prev, [image.id]: count }));
+                                  }}
+                                >
+                                  {count}
+                                </Button>
+                              ))}
+                            </div>
+                          </div>
+                          
+                          <Button
+                            size="sm"
+                            className="w-full h-7 text-xs"
+                            onClick={(e) => generateSquishAnimation(e, image)}
+                            disabled={processingSquish[image.id]}
+                          >
+                            {processingSquish[image.id] ? (
+                              <>
+                                <Loader2 className="h-3 w-3 animate-spin mr-1" />
+                                Generating...
+                              </>
+                            ) : (
+                              <>
+                                <Film className="h-3 w-3 mr-1" />
+                                Generate Squish
+                              </>
+                            )}
+                          </Button>
+                        </div>
+                        
+                        {/* List of existing animations */}
+                        {squishAnimations[image.id] && squishAnimations[image.id].length > 0 && (
+                          <div className="mt-2 space-y-1">
+                            <Label className="text-[10px] text-muted-foreground">Animations ({squishAnimations[image.id].length}):</Label>
+                            {squishAnimations[image.id].map((animation: any) => (
+                              <div key={animation.id} className="flex items-center gap-1 text-[10px] bg-muted/50 p-1 rounded">
+                                <a
+                                  href={`/api/squish-animations/${animation.id}/file`}
+                                  download
+                                  className="flex-1 hover:underline truncate"
+                                  onClick={(e) => e.stopPropagation()}
+                                >
+                                  {animation.frameCount}f @ {animation.intensity}%
+                                </a>
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  className="h-5 w-5 p-0"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    deleteSquishAnimation(image.id, animation.id);
+                                  }}
+                                >
+                                  <X className="h-3 w-3" />
+                                </Button>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </CardContent>
                     </Card>
                   ))}
                 </div>

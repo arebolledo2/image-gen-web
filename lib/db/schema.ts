@@ -5,6 +5,7 @@ import { relations } from 'drizzle-orm';
 export const batchStatusEnum = pgEnum('batch_status', ['draft', 'queued', 'running', 'completed', 'failed']);
 export const generationStatusEnum = pgEnum('generation_status', ['pending', 'running', 'success', 'failed']);
 export const providerEnum = pgEnum('provider', ['gemini', 'gemini3', 'comfyui']);
+export const animationTypeEnum = pgEnum('animation_type', ['bounce', 'squash_stretch']);
 
 // Styles table
 export const styles = pgTable('styles', {
@@ -136,6 +137,24 @@ export const images = pgTable('images', {
   createdAt: timestamp('created_at').defaultNow().notNull(),
 });
 
+// Squish Animations table
+export const squishAnimations = pgTable('squish_animations', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  imageId: uuid('image_id').notNull(),
+  spritesheetPath: text('spritesheet_path').notNull(),
+  frameCount: integer('frame_count').notNull(),
+  intensity: integer('intensity').notNull(), // 0-100 percentage
+  animationType: animationTypeEnum('animation_type').default('bounce').notNull(),
+  metadata: json('metadata').$type<{
+    width?: number;
+    height?: number;
+    frameWidth?: number;
+    frameHeight?: number;
+    duration?: number; // milliseconds per cycle
+  }>(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+});
+
 // Relations
 export const stylesRelations = relations(styles, ({ one, many }) => ({
   parentStyle: one(styles, {
@@ -234,10 +253,18 @@ export const generationsRelations = relations(generations, ({ one, many }) => ({
   images: many(images),
 }));
 
-export const imagesRelations = relations(images, ({ one }) => ({
+export const imagesRelations = relations(images, ({ one, many }) => ({
   generation: one(generations, {
     fields: [images.generationId],
     references: [generations.id],
+  }),
+  squishAnimations: many(squishAnimations),
+}));
+
+export const squishAnimationsRelations = relations(squishAnimations, ({ one }) => ({
+  image: one(images, {
+    fields: [squishAnimations.imageId],
+    references: [images.id],
   }),
 }));
 
@@ -260,3 +287,5 @@ export type Generation = typeof generations.$inferSelect;
 export type NewGeneration = typeof generations.$inferInsert;
 export type Image = typeof images.$inferSelect;
 export type NewImage = typeof images.$inferInsert;
+export type SquishAnimation = typeof squishAnimations.$inferSelect;
+export type NewSquishAnimation = typeof squishAnimations.$inferInsert;
