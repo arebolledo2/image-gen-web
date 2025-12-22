@@ -25,6 +25,13 @@ import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 export interface GalleryImage {
   id: string;
@@ -113,6 +120,13 @@ export function ImageGalleryModal({
   const [isSampling, setIsSampling] = useState(false);
   const [copied, setCopied] = useState(false);
   const [internalVersion, setInternalVersion] = useState<Record<string, number>>({});
+  const [selectedVersion, setSelectedVersion] = useState<Record<string, string>>({});
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const animationFrameRef = useRef<number | null>(null);
+  const [currentFrame, setCurrentFrame] = useState(0);
+  const [isPlaying, setIsPlaying] = useState(true);
+
+  const currentImage = selectedIndex !== null ? images[selectedIndex] : null;
 
   const navigateImage = useCallback((direction: 'next' | 'prev') => {
     if (selectedIndex === null) return;
@@ -149,15 +163,85 @@ export function ImageGalleryModal({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [selectedIndex, navigateImage, onClose]);
 
-  const currentImage = selectedIndex !== null ? images[selectedIndex] : null;
+  // Fetch animations when image changes
+  useEffect(() => {
+    if (currentImage && !squishAnimations[currentImage.id]) {
+      onFetchSquishAnimations(currentImage.id);
+    }
+  }, [currentImage?.id]);
+
+  // Animation playback effect
+  useEffect(() => {
+    if (!currentImage) return;
+    const version = selectedVersion[currentImage.id] || 'original';
+    if (!version.startsWith('animation-')) return;
+
+    const animationId = version.replace('animation-', '');
+    const animation = squishAnimations[currentImage.id]?.find((a: any) => a.id === animationId);
+    if (!animation || !canvasRef.current) return;
+
+    const canvas = canvasRef.current;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    const img = new Image();
+    img.src = `/api/squish-animations/${animationId}/file`;
+    
+    img.onload = () => {
+      const frameCount = animation.frameCount;
+      const frameWidth = animation.metadata?.frameWidth || img.width / frameCount;
+      const frameHeight = animation.metadata?.frameHeight || img.height;
+
+      canvas.width = frameWidth;
+      canvas.height = frameHeight;
+
+      let frame = 0;
+      const fps = 12;
+      const frameInterval = 1000 / fps;
+      let lastFrameTime = 0;
+
+      const animate = (timestamp: number) => {
+        if (!isPlaying) {
+          animationFrameRef.current = requestAnimationFrame(animate);
+          return;
+        }
+
+        if (timestamp - lastFrameTime >= frameInterval) {
+          ctx.clearRect(0, 0, frameWidth, frameHeight);
+          const sourceX = frame * frameWidth;
+          ctx.drawImage(img, sourceX, 0, frameWidth, frameHeight, 0, 0, frameWidth, frameHeight);
+          frame = (frame + 1) % frameCount;
+          lastFrameTime = timestamp;
+        }
+
+        animationFrameRef.current = requestAnimationFrame(animate);
+      };
+
+      animationFrameRef.current = requestAnimationFrame(animate);
+    };
+
+    return () => {
+      if (animationFrameRef.current) {
+        cancelAnimationFrame(animationFrameRef.current);
+      }
+    };
+  }, [currentImage?.id, selectedVersion, squishAnimations, isPlaying]);
 
   const handleCopyFileName = async () => {
     if (!currentImage) return;
 
-    const isTransparent = showTransparent[currentImage.id];
-    const pathToCopy = (isTransparent && currentImage.transparentFilePath) 
-      ? currentImage.transparentFilePath 
-      : currentImage.filePath;
+    const version = selectedVersion[currentImage.id] || 'original';
+    let pathToCopy = currentImage.filePath;
+
+    if (version === 'transparent' && currentImage.transparentFilePath) {
+      pathToCopy = currentImage.transparentFilePath;
+    } else if (version.startsWith('animation-')) {
+      const animationId = version.replace('animation-', '');
+      const animation = squishAnimations[currentImage.id]?.find((a: any) => a.id === animationId);
+      if (animation) {
+        pathToCopy = animation.spritesheetPath;
+      }
+    }
 
     // Extract filename from path
     const fileName = pathToCopy.split(/[\\/]/).pop() || pathToCopy;
@@ -224,12 +308,21 @@ export function ImageGalleryModal({
         <div className="flex-1 relative w-full h-full flex items-center justify-center group/modal overflow-hidden">
           {currentImage && (
             <>
-              <img
-                src={`/api/images/${currentImage.id}/file${showTransparent[currentImage.id] ? `?version=transparent&t=${internalVersion[currentImage.id] || imageVersions[currentImage.id] || ''}` : ''}`}
-                alt={currentImage.fileName}
-                className={`max-w-full max-h-full w-auto h-auto object-contain transition-transform duration-200 ${isSampling ? 'cursor-crosshair' : ''} ${showTransparent[currentImage.id] ? 'bg-[url("https://www.transparenttextures.com/patterns/checkerboard.png")]' : ''}`}
-                onClick={handleImageClick}
-              />
+              {/* Show canvas for animations, img for static versions */}
+              {selectedVersion[currentImage.id]?.startsWith('animation-') ? (
+                <canvas
+                  ref={canvasRef}
+                  className={`max-w-full max-h-full w-auto h-auto object-contain bg-[url("https://www.transparenttextures.com/patterns/checkerboard.png")]`}
+                  style={{ imageRendering: 'pixelated' }}
+                />
+              ) : (
+                <img
+                  src={`/api/images/${currentImage.id}/file${selectedVersion[currentImage.id] === 'transparent' ? `?version=transparent&t=${internalVersion[currentImage.id] || imageVersions[currentImage.id] || ''}` : ''}`}
+                  alt={currentImage.fileName}
+                  className={`max-w-full max-h-full w-auto h-auto object-contain transition-transform duration-200 ${isSampling ? 'cursor-crosshair' : ''} ${selectedVersion[currentImage.id] === 'transparent' ? 'bg-[url("https://www.transparenttextures.com/patterns/checkerboard.png")]' : ''}`}
+                  onClick={handleImageClick}
+                />
+              )}
               
               {/* Navigation Arrows */}
               <div className="absolute inset-x-4 flex items-center justify-between pointer-events-none">
@@ -255,6 +348,34 @@ export function ImageGalleryModal({
 
               {/* Controls Overlay */}
               <div className="absolute top-4 left-4 flex flex-col gap-4">
+                {/* Version Selector */}
+                <div className="w-64 pointer-events-auto">
+                  <Select
+                    value={selectedVersion[currentImage.id] || 'original'}
+                    onValueChange={(value) => {
+                      setSelectedVersion(prev => ({ ...prev, [currentImage.id]: value }));
+                      if (value === 'transparent') {
+                        onToggleTransparencyView({} as React.MouseEvent, currentImage.id);
+                      }
+                    }}
+                  >
+                    <SelectTrigger className="bg-black/40 border-white/10 text-white hover:bg-black/50">
+                      <SelectValue placeholder="Select version" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="original">Original</SelectItem>
+                      {currentImage.transparentFilePath && (
+                        <SelectItem value="transparent">Transparent</SelectItem>
+                      )}
+                      {squishAnimations[currentImage.id]?.map((animation: any) => (
+                        <SelectItem key={animation.id} value={`animation-${animation.id}`}>
+                          Animation - {animation.frameCount}f @ {animation.intensity}%
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
                 <div className="flex gap-2">
                   <Button
                     variant="ghost"
@@ -265,18 +386,6 @@ export function ImageGalleryModal({
                   >
                     <Heart className={`h-8 w-8 ${currentImage.isFavorite ? 'fill-current' : ''}`} />
                   </Button>
-
-                  {currentImage.transparentFilePath ? (
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className={`h-12 w-12 rounded-full bg-black/20 hover:bg-black/40 ${showTransparent[currentImage.id] ? 'text-blue-400' : 'text-white'}`}
-                      onClick={(e) => onToggleTransparencyView(e, currentImage.id)}
-                      title="Toggle Transparency"
-                    >
-                      <Layers className="h-8 w-8" />
-                    </Button>
-                  ) : null}
 
                   <Button
                     variant="ghost"
@@ -326,7 +435,11 @@ export function ImageGalleryModal({
                     asChild
                   >
                     <a 
-                      href={`/api/images/${currentImage.id}/file${showTransparent[currentImage.id] ? '?version=transparent' : ''}`} 
+                      href={
+                        selectedVersion[currentImage.id]?.startsWith('animation-')
+                          ? `/api/squish-animations/${selectedVersion[currentImage.id].replace('animation-', '')}/file`
+                          : `/api/images/${currentImage.id}/file${selectedVersion[currentImage.id] === 'transparent' ? '?version=transparent' : ''}`
+                      } 
                       download={currentImage.fileName}
                       title="Download"
                     >
@@ -390,7 +503,7 @@ export function ImageGalleryModal({
                     <div>
                       <Label className="text-white text-xs">Intensity: {squishIntensity[currentImage.id] ?? 20}%</Label>
                       <Slider
-                        min={10}
+                        min={5}
                         max={50}
                         step={5}
                         value={[squishIntensity[currentImage.id] ?? 20]}
