@@ -5,10 +5,11 @@ import { useParams, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Play, Trash2, ArrowLeft, Download, Heart, Sparkles, Layers, Copy, ChevronRight } from "lucide-react";
+import { Loader2, Play, Trash2, ArrowLeft, Download, Heart, Sparkles, Layers, Copy, ChevronRight, Edit2, Check, X } from "lucide-react";
 import { ImageGalleryModal, type GalleryImage } from "@/components/image-gallery-modal";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 
 interface Batch {
   id: string;
@@ -33,6 +34,11 @@ export default function BatchDetailPage() {
   const [loading, setLoading] = useState(true);
   const [executing, setExecuting] = useState(false);
   const [creatingVersion, setCreatingVersion] = useState(false);
+
+  // Prompt editing state
+  const [editingPromptId, setEditingPromptId] = useState<string | null>(null);
+  const [editPromptText, setEditPromptText] = useState("");
+  const [savingPrompt, setSavingPrompt] = useState(false);
 
   // Image gallery state
   const [images, setImages] = useState<GalleryImage[]>([]);
@@ -322,6 +328,35 @@ export default function BatchDetailPage() {
         return 'bg-gray-500';
       default:
         return 'bg-gray-500';
+    }
+  };
+
+  const handleEditPrompt = (prompt: any) => {
+    setEditingPromptId(prompt.id);
+    setEditPromptText(prompt.promptText);
+  };
+
+  const handleSavePrompt = async (promptId: string) => {
+    setSavingPrompt(true);
+    try {
+      const response = await fetch(`/api/batch-prompts/${promptId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ promptText: editPromptText }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to update prompt');
+      }
+
+      // Refresh batch data to show updated prompt
+      await fetchBatch();
+      setEditingPromptId(null);
+    } catch (error) {
+      console.error('Error updating prompt:', error);
+      alert('Failed to update prompt');
+    } finally {
+      setSavingPrompt(false);
     }
   };
 
@@ -621,11 +656,54 @@ export default function BatchDetailPage() {
         <CardContent className="space-y-4">
           {batch.batchPrompts.map((prompt, index) => (
             <Card key={prompt.id}>
-              <CardHeader>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-base">Prompt {index + 1}</CardTitle>
+                {batch.status === 'draft' && editingPromptId !== prompt.id && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleEditPrompt(prompt)}
+                  >
+                    <Edit2 className="h-4 w-4 mr-2" />
+                    Edit
+                  </Button>
+                )}
               </CardHeader>
               <CardContent>
-                <p className="text-sm whitespace-pre-wrap">{prompt.promptText}</p>
+                {editingPromptId === prompt.id ? (
+                  <div className="space-y-2">
+                    <Textarea
+                      value={editPromptText}
+                      onChange={(e) => setEditPromptText(e.target.value)}
+                      className="min-h-[100px] text-sm"
+                    />
+                    <div className="flex justify-end gap-2">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => setEditingPromptId(null)}
+                        disabled={savingPrompt}
+                      >
+                        <X className="h-4 w-4 mr-2" />
+                        Cancel
+                      </Button>
+                      <Button
+                        size="sm"
+                        onClick={() => handleSavePrompt(prompt.id)}
+                        disabled={savingPrompt}
+                      >
+                        {savingPrompt ? (
+                          <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                        ) : (
+                          <Check className="h-4 w-4 mr-2" />
+                        )}
+                        Save
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <p className="text-sm whitespace-pre-wrap">{prompt.promptText}</p>
+                )}
               </CardContent>
             </Card>
           ))}
