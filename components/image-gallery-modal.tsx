@@ -11,7 +11,9 @@ import {
   Layers,
   Pipette,
   Copy,
-  Check
+  Check,
+  Film,
+  X
 } from "lucide-react";
 import {
   Dialog,
@@ -64,6 +66,19 @@ interface ImageGalleryModalProps {
   transparencyMode: Record<string, 'global' | 'flood'>;
   onModeChange: (imageId: string, mode: 'global' | 'flood') => void;
   imageVersions: Record<string, number>;
+  // Squish animation props
+  processingSquish: Record<string, boolean>;
+  squishIntensity: Record<string, number>;
+  squishFrameCount: Record<string, number>;
+  squishAnimationType: Record<string, 'bounce' | 'squash_stretch'>;
+  squishAnimations: Record<string, any[]>;
+  loadingSquishAnimations: Record<string, boolean>;
+  onSquishIntensityChange: (imageId: string, intensity: number) => void;
+  onSquishFrameCountChange: (imageId: string, count: number) => void;
+  onSquishAnimationTypeChange: (imageId: string, type: 'bounce' | 'squash_stretch') => void;
+  onGenerateSquish: (e: React.MouseEvent | React.KeyboardEvent, image: GalleryImage) => Promise<void>;
+  onFetchSquishAnimations: (imageId: string) => Promise<void>;
+  onDeleteSquishAnimation: (imageId: string, animationId: string) => Promise<void>;
 }
 
 export function ImageGalleryModal({
@@ -81,6 +96,18 @@ export function ImageGalleryModal({
   transparencyMode,
   onModeChange,
   imageVersions,
+  processingSquish,
+  squishIntensity,
+  squishFrameCount,
+  squishAnimationType,
+  squishAnimations,
+  loadingSquishAnimations,
+  onSquishIntensityChange,
+  onSquishFrameCountChange,
+  onSquishAnimationTypeChange,
+  onGenerateSquish,
+  onFetchSquishAnimations,
+  onDeleteSquishAnimation,
 }: ImageGalleryModalProps) {
   const lastScrollTime = useRef(0);
   const [isSampling, setIsSampling] = useState(false);
@@ -335,6 +362,114 @@ export function ImageGalleryModal({
                       className="w-full"
                     />
                   </div>
+                </div>
+
+                {/* Squish Animation Controls */}
+                <div className="w-64 space-y-3 pointer-events-auto bg-black/40 p-3 rounded-lg border border-white/10 backdrop-blur-sm">
+                  <div className="flex items-center justify-between">
+                    <Label className="text-white text-sm font-medium flex items-center gap-1">
+                      <Film className="h-4 w-4" />
+                      Squish Animation
+                    </Label>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="h-7 px-2 text-xs text-white hover:bg-white/10"
+                      onClick={() => onFetchSquishAnimations(currentImage.id)}
+                      disabled={loadingSquishAnimations[currentImage.id]}
+                    >
+                      {loadingSquishAnimations[currentImage.id] ? (
+                        <Loader2 className="h-3 w-3 animate-spin" />
+                      ) : (
+                        'Refresh'
+                      )}
+                    </Button>
+                  </div>
+                  
+                  <div className="space-y-3">
+                    <div>
+                      <Label className="text-white text-xs">Intensity: {squishIntensity[currentImage.id] ?? 20}%</Label>
+                      <Slider
+                        min={10}
+                        max={50}
+                        step={5}
+                        value={[squishIntensity[currentImage.id] ?? 20]}
+                        onValueChange={(vals) => onSquishIntensityChange(currentImage.id, vals[0])}
+                        className="mt-2"
+                      />
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <Label className="text-white text-xs">Frames:</Label>
+                      <div className="flex gap-2">
+                        {[4, 8, 12, 16].map(count => (
+                          <Button
+                            key={count}
+                            size="sm"
+                            variant={(squishFrameCount[currentImage.id] ?? 8) === count ? "default" : "outline"}
+                            className="h-8 flex-1 text-xs"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onSquishFrameCountChange(currentImage.id, count);
+                            }}
+                          >
+                            {count}
+                          </Button>
+                        ))}
+                      </div>
+                    </div>
+                    
+                    <Button
+                      size="sm"
+                      className="w-full h-8 text-xs"
+                      onClick={(e) => onGenerateSquish(e, currentImage)}
+                      disabled={processingSquish[currentImage.id]}
+                    >
+                      {processingSquish[currentImage.id] ? (
+                        <>
+                          <Loader2 className="h-3 w-3 animate-spin mr-1" />
+                          Generating...
+                        </>
+                      ) : (
+                        <>
+                          <Film className="h-3 w-3 mr-1" />
+                          Generate Squish
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                  
+                  {/* List of existing animations */}
+                  {squishAnimations[currentImage.id] && squishAnimations[currentImage.id].length > 0 && (
+                    <div className="mt-3 space-y-2 pt-3 border-t border-white/10">
+                      <Label className="text-white text-xs">Animations ({squishAnimations[currentImage.id].length}):</Label>
+                      <div className="space-y-1 max-h-32 overflow-y-auto">
+                        {squishAnimations[currentImage.id].map((animation: any) => (
+                          <div key={animation.id} className="flex items-center gap-2 text-xs bg-black/30 p-2 rounded">
+                            <a
+                              href={`/api/squish-animations/${animation.id}/file`}
+                              download
+                              className="flex-1 hover:underline truncate text-white"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              {animation.frameCount}f @ {animation.intensity}%
+                            </a>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="h-6 w-6 p-0 text-white hover:bg-white/10"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onDeleteSquishAnimation(currentImage.id, animation.id);
+                              }}
+                            >
+                              <X className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
 

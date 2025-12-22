@@ -5,7 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Play, Trash2, ArrowLeft, Download, Heart, Sparkles, Layers, Copy, ChevronRight, Edit2, Check, X, Film, Settings } from "lucide-react";
+import { Loader2, Play, Trash2, ArrowLeft, Download, Heart, Sparkles, Layers, Copy, ChevronRight, Edit2, Check, X } from "lucide-react";
 import { AIAssistButton } from "@/components/agents/ai-assist-button";
 import { useSettings } from "@/components/providers/settings-provider";
 import { ImageGalleryModal, type GalleryImage } from "@/components/image-gallery-modal";
@@ -685,112 +685,6 @@ export default function BatchDetailPage() {
                           </Button>
                         </div>
                       </div>
-                      
-                      {/* Squish Animation Controls */}
-                      <CardContent className="p-3 space-y-2 border-t">
-                        <div className="flex items-center justify-between">
-                          <Label className="text-xs font-medium flex items-center gap-1">
-                            <Film className="h-3 w-3" />
-                            Squish Animation
-                          </Label>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="h-7 px-2 text-xs"
-                            onClick={() => fetchSquishAnimations(image.id)}
-                            disabled={loadingSquishAnimations[image.id]}
-                          >
-                            {loadingSquishAnimations[image.id] ? (
-                              <Loader2 className="h-3 w-3 animate-spin" />
-                            ) : (
-                              <Settings className="h-3 w-3" />
-                            )}
-                          </Button>
-                        </div>
-                        
-                        <div className="space-y-2">
-                          <div>
-                            <Label className="text-[10px] text-muted-foreground">Intensity: {squishIntensity[image.id] ?? 20}%</Label>
-                            <Slider
-                              min={10}
-                              max={50}
-                              step={5}
-                              value={[squishIntensity[image.id] ?? 20]}
-                              onValueChange={(vals) => setSquishIntensity(prev => ({ ...prev, [image.id]: vals[0] }))}
-                              className="h-1"
-                            />
-                          </div>
-                          
-                          <div className="flex items-center gap-2">
-                            <Label className="text-[10px] text-muted-foreground">Frames:</Label>
-                            <div className="flex gap-1">
-                              {[4, 8, 12, 16].map(count => (
-                                <Button
-                                  key={count}
-                                  size="sm"
-                                  variant={(squishFrameCount[image.id] ?? 8) === count ? "default" : "outline"}
-                                  className="h-6 w-8 text-[10px] p-0"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    setSquishFrameCount(prev => ({ ...prev, [image.id]: count }));
-                                  }}
-                                >
-                                  {count}
-                                </Button>
-                              ))}
-                            </div>
-                          </div>
-                          
-                          <Button
-                            size="sm"
-                            className="w-full h-7 text-xs"
-                            onClick={(e) => generateSquishAnimation(e, image)}
-                            disabled={processingSquish[image.id]}
-                          >
-                            {processingSquish[image.id] ? (
-                              <>
-                                <Loader2 className="h-3 w-3 animate-spin mr-1" />
-                                Generating...
-                              </>
-                            ) : (
-                              <>
-                                <Film className="h-3 w-3 mr-1" />
-                                Generate Squish
-                              </>
-                            )}
-                          </Button>
-                        </div>
-                        
-                        {/* List of existing animations */}
-                        {squishAnimations[image.id] && squishAnimations[image.id].length > 0 && (
-                          <div className="mt-2 space-y-1">
-                            <Label className="text-[10px] text-muted-foreground">Animations ({squishAnimations[image.id].length}):</Label>
-                            {squishAnimations[image.id].map((animation: any) => (
-                              <div key={animation.id} className="flex items-center gap-1 text-[10px] bg-muted/50 p-1 rounded">
-                                <a
-                                  href={`/api/squish-animations/${animation.id}/file`}
-                                  download
-                                  className="flex-1 hover:underline truncate"
-                                  onClick={(e) => e.stopPropagation()}
-                                >
-                                  {animation.frameCount}f @ {animation.intensity}%
-                                </a>
-                                <Button
-                                  size="sm"
-                                  variant="ghost"
-                                  className="h-5 w-5 p-0"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    deleteSquishAnimation(image.id, animation.id);
-                                  }}
-                                >
-                                  <X className="h-3 w-3" />
-                                </Button>
-                              </div>
-                            ))}
-                          </div>
-                        )}
-                      </CardContent>
                     </Card>
                   ))}
                 </div>
@@ -948,6 +842,24 @@ export default function BatchDetailPage() {
           setTransparencyMode((prev) => ({ ...prev, [imageId]: mode }))
         }
         imageVersions={imageVersions}
+        processingSquish={processingSquish}
+        squishIntensity={squishIntensity}
+        squishFrameCount={squishFrameCount}
+        squishAnimationType={squishAnimationType}
+        squishAnimations={squishAnimations}
+        loadingSquishAnimations={loadingSquishAnimations}
+        onSquishIntensityChange={(imageId, intensity) =>
+          setSquishIntensity((prev) => ({ ...prev, [imageId]: intensity }))
+        }
+        onSquishFrameCountChange={(imageId, count) =>
+          setSquishFrameCount((prev) => ({ ...prev, [imageId]: count }))
+        }
+        onSquishAnimationTypeChange={(imageId, type) =>
+          setSquishAnimationType((prev) => ({ ...prev, [imageId]: type }))
+        }
+        onGenerateSquish={generateSquishAnimation}
+        onFetchSquishAnimations={fetchSquishAnimations}
+        onDeleteSquishAnimation={deleteSquishAnimation}
       />
     </div>
   );
