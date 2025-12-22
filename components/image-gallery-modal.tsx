@@ -86,6 +86,8 @@ interface ImageGalleryModalProps {
   onGenerateSquish: (e: React.MouseEvent | React.KeyboardEvent, image: GalleryImage) => Promise<void>;
   onFetchSquishAnimations: (imageId: string) => Promise<void>;
   onDeleteSquishAnimation: (imageId: string, animationId: string) => Promise<void>;
+  selectedVersion: Record<string, string>;
+  onSelectedVersionChange: (imageId: string, version: string) => void;
 }
 
 export function ImageGalleryModal({
@@ -115,12 +117,13 @@ export function ImageGalleryModal({
   onGenerateSquish,
   onFetchSquishAnimations,
   onDeleteSquishAnimation,
+  selectedVersion,
+  onSelectedVersionChange,
 }: ImageGalleryModalProps) {
   const lastScrollTime = useRef(0);
   const [isSampling, setIsSampling] = useState(false);
   const [copied, setCopied] = useState(false);
   const [internalVersion, setInternalVersion] = useState<Record<string, number>>({});
-  const [selectedVersion, setSelectedVersion] = useState<Record<string, string>>({});
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const animationFrameRef = useRef<number | null>(null);
   const [currentFrame, setCurrentFrame] = useState(0);
@@ -353,7 +356,7 @@ export function ImageGalleryModal({
                   <Select
                     value={selectedVersion[currentImage.id] || 'original'}
                     onValueChange={(value) => {
-                      setSelectedVersion(prev => ({ ...prev, [currentImage.id]: value }));
+                      onSelectedVersionChange(currentImage.id, value);
                       if (value === 'transparent') {
                         onToggleTransparencyView({} as React.MouseEvent, currentImage.id);
                       }

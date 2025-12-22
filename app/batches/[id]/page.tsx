@@ -68,6 +68,9 @@ export default function BatchDetailPage() {
   const [squishAnimations, setSquishAnimations] = useState<Record<string, any[]>>({});
   const [loadingSquishAnimations, setLoadingSquishAnimations] = useState<Record<string, boolean>>({});
 
+  // Selected version state (for dropdown)
+  const [selectedVersion, setSelectedVersion] = useState<Record<string, string>>({});
+
   // Modal state
   const [selectedImageIndex, setSelectedImageIndex] = useState<number | null>(null);
   const observer = useRef<IntersectionObserver | null>(null);
@@ -274,6 +277,9 @@ export default function BatchDetailPage() {
 
       // Automatically switch to transparent view
       setShowTransparent(prev => ({ ...prev, [image.id]: true }));
+      
+      // Auto-select transparent version in dropdown
+      setSelectedVersion(prev => ({ ...prev, [image.id]: 'transparent' }));
     } catch (error) {
       console.error('Error making image transparent:', error);
       alert('Failed to make image transparent');
@@ -347,6 +353,12 @@ export default function BatchDetailPage() {
 
       // Refresh animations list
       await fetchSquishAnimations(image.id);
+      
+      // Auto-select the newly created animation
+      if (data.animation?.id) {
+        setSelectedVersion(prev => ({ ...prev, [image.id]: `animation-${data.animation.id}` }));
+      }
+      
       alert('Squish animation generated successfully!');
     } catch (error) {
       console.error('Error generating squish animation:', error);
@@ -860,6 +872,10 @@ export default function BatchDetailPage() {
         onGenerateSquish={generateSquishAnimation}
         onFetchSquishAnimations={fetchSquishAnimations}
         onDeleteSquishAnimation={deleteSquishAnimation}
+        selectedVersion={selectedVersion}
+        onSelectedVersionChange={(imageId: string, version: string) =>
+          setSelectedVersion((prev) => ({ ...prev, [imageId]: version }))
+        }
       />
     </div>
   );
