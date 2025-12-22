@@ -321,7 +321,8 @@ CRITICAL RULES:
 2. Be specific about view angle if implied by guidance or subject.
 3. Request consistent sizing for sprite sheets if "sprite sheet" is mentioned in guidance.
 4. Integrate the style's palette and rendering cues naturally.
-5. ${styleInstruction}`;
+5. ${styleInstruction}
+6. ONLY output the final prompt text. Do not include any conversational filler, introductions, or explanations.`;
 
   const paletteText = Array.isArray(style.palette) 
     ? style.palette.join(', ')
