@@ -6,7 +6,8 @@ import {
   ChevronLeft,
   ChevronRight,
   Heart,
-  Edit
+  Edit,
+  HelpCircle
 } from "lucide-react";
 import {
   Dialog,
@@ -383,9 +384,31 @@ export function ImageGalleryModal({
               </div>
 
               {/* Info Overlay - positioned to avoid left controls */}
-              <div className="absolute bottom-4 left-4 right-4 text-white text-xs bg-black/50 p-4 rounded backdrop-blur-sm opacity-0 group-hover/modal:opacity-100 transition-opacity flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-                <div className="space-y-2 flex-1 min-w-0">
-                  <div className="flex flex-col md:flex-row md:items-center gap-2 md:gap-4 text-gray-300">
+              <div className="absolute bottom-4 left-4 right-4 text-white text-xs flex flex-col md:flex-row items-start md:items-end justify-between gap-4 pointer-events-none">
+                <div className="space-y-2 flex-1 min-w-0 flex flex-col items-start">
+                  {/* Prompt with Help Icon Trigger */}
+                  {currentImage.generation.batchPrompt?.promptText && (
+                    <div className="group/prompt relative pointer-events-auto">
+                      <div className="bg-black/50 p-2 rounded-full backdrop-blur-sm hover:bg-black/70 transition-colors cursor-help">
+                        <HelpCircle className="h-5 w-5 text-white/70 group-hover/prompt:text-white" />
+                      </div>
+                      
+                      {/* Tooltip-like prompt display */}
+                      <div 
+                        className="absolute bottom-full left-0 mb-0 w-80 md:w-96 opacity-0 group-hover/prompt:opacity-100 transition-opacity pointer-events-none group-hover/prompt:pointer-events-auto pb-4"
+                        onWheel={(e) => e.stopPropagation()}
+                      >
+                        <div className="bg-black/90 p-4 rounded-lg border border-white/10 shadow-xl backdrop-blur-md">
+                          <p className="text-gray-400 font-medium mb-2 border-b border-white/10 pb-1">Prompt</p>
+                          <p className="text-white italic max-h-48 overflow-y-auto whitespace-pre-wrap leading-relaxed text-sm scrollbar-thin scrollbar-thumb-white/20 scrollbar-track-transparent">
+                            {currentImage.generation.batchPrompt.promptText}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="flex flex-col md:flex-row md:items-center gap-2 md:gap-4 text-gray-300 bg-black/50 p-2 px-3 rounded-full backdrop-blur-sm">
                     <p>Image {(selectedIndex ?? 0) + 1} of {images.length}</p>
                     {currentImage.generation.batch && (
                       <p>Batch: <span className="text-white">{currentImage.generation.batch?.name}</span></p>
@@ -394,16 +417,6 @@ export function ImageGalleryModal({
                       <p className="text-blue-400 font-medium">Viewing Animation</p>
                     )}
                   </div>
-
-                  {/* Original Image Prompt */}
-                  {currentImage.generation.batchPrompt?.promptText && (
-                    <div className="space-y-1">
-                      <p className="text-gray-400 font-medium">Prompt:</p>
-                      <p className="text-white italic bg-black/30 p-2 rounded border border-white/5 max-h-24 overflow-y-auto whitespace-pre-wrap leading-relaxed">
-                        {currentImage.generation.batchPrompt.promptText}
-                      </p>
-                    </div>
-                  )}
                 </div>
               </div>
 
