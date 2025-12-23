@@ -120,7 +120,7 @@ export default function EditorPage() {
   // Handle transparency application
   const handleApplyTransparency = async () => {
     if (!image) return;
-    await makeTransparent({} as React.MouseEvent, image, undefined, true, (updatedImage) => {
+    await makeTransparent(null, image, undefined, true, (updatedImage) => {
       setImage(updatedImage);
       setInternalVersion(Date.now());
       setSelectedVersion((prev) => ({ ...prev, [image.id]: 'transparent' }));
@@ -150,7 +150,7 @@ export default function EditorPage() {
     const imageY = Math.floor((y - offsetY) / scale);
 
     if (imageX >= 0 && imageX < naturalWidth && imageY >= 0 && imageY < naturalHeight) {
-      makeTransparent({} as React.MouseEvent, image, { x: imageX, y: imageY }, false, (updatedImage) => {
+      makeTransparent(e, image, { x: imageX, y: imageY }, false, (updatedImage) => {
         setImage(updatedImage);
         setInternalVersion(Date.now());
         setSelectedVersion((prev) => ({ ...prev, [image.id]: 'transparent' }));
@@ -354,6 +354,10 @@ export default function EditorPage() {
         squishAnimations={squishAnimations[image.id] || []}
         aiAnimations={aiAnimations[image.id] || []}
         isSampling={isSampling}
+        hasTransparent={!!image.transparentFilePath}
+        onVersionChange={(version) => {
+          setSelectedVersion((prev) => ({ ...prev, [image.id]: version }));
+        }}
         onImageClick={handleImageClick}
       />
     </EditorLayout>

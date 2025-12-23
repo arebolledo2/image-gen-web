@@ -9,13 +9,13 @@ export function useImageTransparency() {
   const [imageVersions, setImageVersions] = useState<Record<string, number>>({});
 
   const makeTransparent = async (
-    e: React.MouseEvent | React.KeyboardEvent,
+    e: React.MouseEvent | React.KeyboardEvent | null,
     image: GalleryImage,
     samplePoint?: { x: number, y: number },
     forceOriginal?: boolean,
     onSuccess?: (updatedImage: GalleryImage) => void
   ) => {
-    e.stopPropagation();
+    e?.stopPropagation();
     if (processingTransparency[image.id]) return;
 
     const tolerance = transparencyTolerance[image.id] ?? 30;
