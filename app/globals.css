@@ -125,6 +125,6 @@
   }
   
   body {
-    @apply bg-background text-foreground transition-colors duration-300 overflow-hidden;
+    @apply bg-background text-foreground transition-colors duration-300;
   }
 }
