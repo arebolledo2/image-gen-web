@@ -1,19 +1,20 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { 
-  Loader2, 
-  Download, 
-  ChevronLeft, 
-  ChevronRight, 
-  Heart, 
-  Sparkles, 
+import {
+  Loader2,
+  Download,
+  ChevronLeft,
+  ChevronRight,
+  Heart,
+  Sparkles,
   Layers,
   Pipette,
   Copy,
   Check,
   Film,
-  X
+  X,
+  Edit
 } from "lucide-react";
 import {
   Dialog,
@@ -60,9 +61,10 @@ interface ImageGalleryModalProps {
   onClose: () => void;
   onNavigate: (index: number) => void;
   onToggleFavorite: (e: React.MouseEvent, image: GalleryImage) => Promise<void>;
+  onOpenEditor: (imageId: string) => void;
   onMakeTransparent: (
-    e: React.MouseEvent | React.KeyboardEvent, 
-    image: GalleryImage, 
+    e: React.MouseEvent | React.KeyboardEvent,
+    image: GalleryImage,
     samplePoint?: { x: number, y: number },
     forceOriginal?: boolean
   ) => Promise<void>;
@@ -110,6 +112,7 @@ export function ImageGalleryModal({
   onClose,
   onNavigate,
   onToggleFavorite,
+  onOpenEditor,
   onMakeTransparent,
   onToggleTransparencyView,
   showTransparent,
@@ -465,6 +468,16 @@ export function ImageGalleryModal({
                     title="Favorite"
                   >
                     <Heart className={`h-8 w-8 ${currentImage.isFavorite ? 'fill-current' : ''}`} />
+                  </Button>
+
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-12 w-12 rounded-full bg-black/20 text-white hover:bg-black/40"
+                    onClick={() => onOpenEditor(currentImage.id)}
+                    title="Open in Editor"
+                  >
+                    <Edit className="h-8 w-8" />
                   </Button>
 
                   <Button

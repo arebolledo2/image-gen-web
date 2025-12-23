@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useRef, useCallback } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Loader2, Download, Heart, Sparkles, Layers, Search } from "lucide-react";
@@ -14,6 +15,7 @@ import { useSquishAnimation } from "@/hooks/use-squish-animation";
 import { useAIAnimation } from "@/hooks/use-ai-animation";
 
 export default function GalleryPage() {
+  const router = useRouter();
   const [images, setImages] = useState<GalleryImage[]>([]);
   const [loading, setLoading] = useState(true);
   const [fetchingMore, setFetchingMore] = useState(false);
@@ -163,6 +165,9 @@ export default function GalleryPage() {
     }
   };
 
+  const handleOpenEditor = (imageId: string) => {
+    router.push(`/editor/${imageId}?from=gallery`);
+  };
 
   const toggleGlobalTransparency = () => {
     const newValue = !globalTransparency;
@@ -382,6 +387,7 @@ export default function GalleryPage() {
             onClose={() => setSelectedImageIndex(null)}
             onNavigate={setSelectedImageIndex}
             onToggleFavorite={toggleFavorite}
+            onOpenEditor={handleOpenEditor}
             onMakeTransparent={makeTransparent}
             onToggleTransparencyView={toggleTransparencyView}
             showTransparent={showTransparent}

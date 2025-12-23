@@ -12,7 +12,7 @@ import { BatchPromptsList } from "@/components/batch/batch-prompts-list";
 import { ImageGallery } from "@/components/batch/image-gallery";
 import { useBatchData } from "@/hooks/use-batch-data";
 import { useImageGallery } from "@/hooks/use-image-gallery";
-import { useTransparency } from "@/hooks/use-transparency";
+import { useImageTransparency } from "@/hooks/useImageTransparency";
 import { useSquishAnimation } from "@/hooks/use-squish-animation";
 import { useAIAnimation } from "@/hooks/use-ai-animation";
 
@@ -34,18 +34,31 @@ export default function BatchDetailPage() {
   } = useImageGallery(params.id, !!batch);
   
   const {
-    globalTransparency,
     showTransparent,
     processingTransparency,
     transparencyTolerance,
     transparencyMode,
     imageVersions,
-    toggleGlobalTransparency,
     toggleTransparencyView,
     makeTransparent,
-    setTransparencyTolerance,
-    setTransparencyMode,
-  } = useTransparency();
+    setTolerance: setTransparencyTolerance,
+    setMode: setTransparencyMode,
+    setShowTransparent,
+  } = useImageTransparency();
+
+  // Global transparency toggle for batch page
+  const [globalTransparency, setGlobalTransparency] = useState(false);
+  const toggleGlobalTransparency = () => {
+    const newValue = !globalTransparency;
+    setGlobalTransparency(newValue);
+    const newShowTransparent: Record<string, boolean> = {};
+    images.forEach(image => {
+      if (image.transparentFilePath) {
+        newShowTransparent[image.id] = newValue;
+      }
+    });
+    setShowTransparent(newShowTransparent);
+  };
 
   const {
     processingSquish,
@@ -146,7 +159,7 @@ export default function BatchDetailPage() {
   const handleToggleFavorite = useCallback(async (e: React.MouseEvent, image: GalleryImage) => {
     e.stopPropagation();
     const newStatus = !image.isFavorite;
-    
+
     // Optimistic update
     updateImage(image.id, { isFavorite: newStatus });
 
@@ -167,26 +180,28 @@ export default function BatchDetailPage() {
     }
   }, [updateImage]);
 
+  const handleOpenEditor = useCallback((imageId: string) => {
+    router.push(`/editor/${imageId}?from=batch&batchId=${params.id}`);
+  }, [router, params.id]);
+
   const handleMakeTransparent = useCallback(async (
     e: React.MouseEvent | React.KeyboardEvent,
     image: GalleryImage,
     samplePoint?: { x: number; y: number },
     forceOriginal?: boolean
   ) => {
-    e.stopPropagation();
-    await makeTransparent(image, samplePoint, forceOriginal, (imageId, transparentFilePath) => {
-      updateImage(imageId, { transparentFilePath });
+    await makeTransparent(e, image, samplePoint, forceOriginal, (updatedImage) => {
+      updateImage(updatedImage.id, { transparentFilePath: updatedImage.transparentFilePath });
     });
   }, [makeTransparent, updateImage]);
 
   const handleToggleTransparencyView = useCallback((e: React.MouseEvent, imageId: string) => {
-    e.stopPropagation();
-    toggleTransparencyView(imageId);
+    toggleTransparencyView(e, imageId);
   }, [toggleTransparencyView]);
 
   const handleToggleGlobalTransparency = useCallback(() => {
-    toggleGlobalTransparency(images);
-  }, [toggleGlobalTransparency, images]);
+    toggleGlobalTransparency();
+  }, [toggleGlobalTransparency]);
 
   const handlePromptUpdate = useCallback(async (promptId: string, newText: string) => {
     const response = await fetch(`/api/batch-prompts/${promptId}`, {
@@ -319,18 +334,15 @@ export default function BatchDetailPage() {
         onClose={() => setSelectedImageIndex(null)}
         onNavigate={setSelectedImageIndex}
         onToggleFavorite={handleToggleFavorite}
+        onOpenEditor={handleOpenEditor}
         onMakeTransparent={handleMakeTransparent}
         onToggleTransparencyView={handleToggleTransparencyView}
         showTransparent={showTransparent}
         processingTransparency={processingTransparency}
         transparencyTolerance={transparencyTolerance}
-        onToleranceChange={(imageId, tolerance) =>
-          setTransparencyTolerance((prev) => ({ ...prev, [imageId]: tolerance }))
-        }
+        onToleranceChange={setTransparencyTolerance}
         transparencyMode={transparencyMode}
-        onModeChange={(imageId, mode) =>
-          setTransparencyMode((prev) => ({ ...prev, [imageId]: mode }))
-        }
+        onModeChange={setTransparencyMode}
         imageVersions={imageVersions}
         processingSquish={processingSquish}
         squishIntensity={squishIntensity}
