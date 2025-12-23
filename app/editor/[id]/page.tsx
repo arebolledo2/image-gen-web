@@ -2,8 +2,14 @@
 
 import { useEffect, useState } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
-import { Heart, Download, Loader2 } from "lucide-react";
+import { Heart, Download, Loader2, Sparkles, Move, Scissors } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "@/components/ui/tabs";
 import {
   Select,
   SelectContent,
@@ -207,143 +213,172 @@ export default function EditorPage() {
       onBack={handleBack}
       backLabel={from === 'batch' ? `Back to Batch` : 'Back to Gallery'}
       header={
-        <div className="flex items-center gap-4 flex-1">
-          <div className="flex-1">
-            <h1 className="text-lg font-semibold truncate">{image.fileName}</h1>
-            {image.generation.batchPrompt && (
-              <p className="text-sm text-muted-foreground truncate">
-                {image.generation.batchPrompt.promptText}
-              </p>
-            )}
-          </div>
-
-          {/* Version Selector */}
-          <Select
-            value={currentVersion}
-            onValueChange={(value) => {
-              setSelectedVersion((prev) => ({ ...prev, [image.id]: value }));
-            }}
-          >
-            <SelectTrigger className="w-64">
-              <SelectValue placeholder="Select version" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="original">Original</SelectItem>
-              {image.transparentFilePath && (
-                <SelectItem value="transparent">Transparent</SelectItem>
-              )}
-              {squishAnimations[image.id]?.map((animation: any) => (
-                <SelectItem key={animation.id} value={`squish-${animation.id}`}>
-                  Squish - {animation.frameCount}f @ {animation.intensity}%
-                </SelectItem>
-              ))}
-              {aiAnimations[image.id]?.map((animation: any) => (
-                <SelectItem key={animation.id} value={`ai-${animation.id}`}>
-                  AI - {animation.metadata?.gridSize || 2}×{animation.metadata?.gridSize || 2} ({animation.frameCount}f)
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-
-          {/* Action Buttons */}
-          <div className="flex gap-2">
-            <Button
-              variant="outline"
-              size="icon"
-              className={image.isFavorite ? 'text-red-500' : ''}
-              onClick={toggleFavorite}
-              title="Favorite"
-            >
-              <Heart className={`h-4 w-4 ${image.isFavorite ? 'fill-current' : ''}`} />
-            </Button>
-
-            <Button
-              variant="outline"
-              size="icon"
-              asChild
-            >
-              <a
-                href={
-                  currentVersion.startsWith('squish-')
-                    ? `/api/squish-animations/${currentVersion.replace('squish-', '')}/file`
-                    : currentVersion.startsWith('ai-')
-                    ? `/api/squish-animations/${currentVersion.replace('ai-', '')}/file`
-                    : `/api/images/${image.id}/file${currentVersion === 'transparent' ? '?version=transparent' : ''}`
-                }
-                download={image.fileName}
-                title="Download"
-              >
-                <Download className="h-4 w-4" />
-              </a>
-            </Button>
-          </div>
+        <div className="flex flex-col gap-1 min-w-0 flex-1">
+          <h1 className="text-lg font-semibold truncate leading-tight" title={image.fileName}>
+            {image.fileName}
+          </h1>
+          {image.generation.batchPrompt && (
+            <p className="text-xs text-muted-foreground truncate leading-tight" title={image.generation.batchPrompt.promptText}>
+              {image.generation.batchPrompt.promptText}
+            </p>
+          )}
         </div>
       }
       sidebar={
-        <>
-          <TransparencyPanel
-            mode={transparencyMode[image.id] || 'global'}
-            tolerance={transparencyTolerance[image.id] || 30}
-            processing={processingTransparency[image.id] || false}
-            isSampling={isSampling}
-            onModeChange={(mode) => setMode(image.id, mode)}
-            onToleranceChange={(tolerance) => setTolerance(image.id, tolerance)}
-            onApplyCorners={handleApplyTransparency}
-            onToggleSampling={() => setIsSampling(!isSampling)}
-          />
+        <div className="flex flex-col h-full gap-4">
+          <div className="flex flex-col gap-4 p-3 border rounded-lg bg-muted/20 shrink-0">
+            <div className="px-1">
+              <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Image Version</span>
+            </div>
+            {/* Version Selector */}
+            <Select
+              value={currentVersion}
+              onValueChange={(value) => {
+                setSelectedVersion((prev) => ({ ...prev, [image.id]: value }));
+              }}
+            >
+              <SelectTrigger className="w-full bg-background h-9">
+                <SelectValue placeholder="Select version" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="original">Original</SelectItem>
+                {image.transparentFilePath && (
+                  <SelectItem value="transparent">Transparent</SelectItem>
+                )}
+                {squishAnimations[image.id]?.map((animation: any) => (
+                  <SelectItem key={animation.id} value={`squish-${animation.id}`}>
+                    Squish - {animation.frameCount}f @ {animation.intensity}%
+                  </SelectItem>
+                ))}
+                {aiAnimations[image.id]?.map((animation: any) => (
+                  <SelectItem key={animation.id} value={`ai-${animation.id}`}>
+                    AI - {animation.metadata?.gridSize || 2}×{animation.metadata?.gridSize || 2} ({animation.frameCount}f)
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
 
-          <SquishAnimationPanel
-            intensity={squishIntensity[image.id] || 20}
-            frameCount={squishFrameCount[image.id] || 8}
-            processing={processingSquish[image.id] || false}
-            loading={loadingSquishAnimations[image.id] || false}
-            animations={squishAnimations[image.id] || []}
-            onIntensityChange={(intensity) =>
-              setSquishIntensity((prev) => ({ ...prev, [image.id]: intensity }))
-            }
-            onFrameCountChange={(count) =>
-              setSquishFrameCount((prev) => ({ ...prev, [image.id]: count }))
-            }
-            onGenerate={async () => {
-              await generateSquishAnimation(image);
-              await fetchSquishAnimations(image.id);
-            }}
-            onRefresh={() => fetchSquishAnimations(image.id)}
-            onDelete={async (animationId) => {
-              await deleteSquishAnimation(image.id, animationId);
-              await fetchSquishAnimations(image.id);
-            }}
-          />
+            {/* Action Buttons */}
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                className={`flex-1 gap-2 h-9 ${image.isFavorite ? 'text-red-500' : ''}`}
+                onClick={toggleFavorite}
+              >
+                <Heart className={`h-4 w-4 ${image.isFavorite ? 'fill-current' : ''}`} />
+                <span className="hidden lg:inline">{image.isFavorite ? 'Favorited' : 'Favorite'}</span>
+              </Button>
 
-          <AIAnimationPanel
-            prompt={aiPrompt[image.id] || ''}
-            gridSize={aiGridSize[image.id] || 2}
-            processing={processingAI[image.id] || false}
-            suggesting={suggestingPrompt[image.id] || false}
-            loading={loadingAIAnimations[image.id] || false}
-            animations={aiAnimations[image.id] || []}
-            onPromptChange={(prompt) =>
-              setAIPrompt((prev) => ({ ...prev, [image.id]: prompt }))
-            }
-            onGridSizeChange={(size) =>
-              setAIGridSize((prev) => ({ ...prev, [image.id]: size }))
-            }
-            onSuggest={async () => {
-              await suggestAnimation(image);
-            }}
-            onGenerate={async () => {
-              await generateAIAnimation(image, (version) => {
-                setSelectedVersion((prev) => ({ ...prev, [image.id]: version }));
-              });
-              await fetchAIAnimations(image.id);
-            }}
-            onRefresh={() => fetchAIAnimations(image.id)}
-            onDelete={async (animationId) => {
-              await deleteAIAnimation(image.id, animationId);
-              await fetchAIAnimations(image.id);
-            }}
-          />
-        </>
+              <Button
+                variant="outline"
+                size="sm"
+                className="flex-1 gap-2 h-9"
+                asChild
+              >
+                <a
+                  href={
+                    currentVersion.startsWith('squish-')
+                      ? `/api/squish-animations/${currentVersion.replace('squish-', '')}/file`
+                      : currentVersion.startsWith('ai-')
+                      ? `/api/squish-animations/${currentVersion.replace('ai-', '')}/file`
+                      : `/api/images/${image.id}/file${currentVersion === 'transparent' ? '?version=transparent' : ''}`
+                  }
+                  download={image.fileName}
+                >
+                  <Download className="h-4 w-4" />
+                  <span className="hidden lg:inline">Download</span>
+                </a>
+              </Button>
+            </div>
+          </div>
+
+          <Tabs defaultValue="transparency" className="w-full flex-1 flex flex-col min-h-0">
+            <TabsList className="grid w-full grid-cols-3 mb-4 shrink-0 h-10">
+              <TabsTrigger value="transparency" title="Transparency" className="px-0">
+                <Scissors className="h-3.5 w-3.5 shrink-0" />
+                <span className="ml-1.5 text-xs truncate">Cut</span>
+              </TabsTrigger>
+              <TabsTrigger value="squish" title="Squish Animation" className="px-0">
+                <Move className="h-3.5 w-3.5 shrink-0" />
+                <span className="ml-1.5 text-xs truncate">Squish</span>
+              </TabsTrigger>
+              <TabsTrigger value="ai" title="AI Animation" className="px-0">
+                <Sparkles className="h-3.5 w-3.5 shrink-0" />
+                <span className="ml-1.5 text-xs truncate">AI</span>
+              </TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="transparency" className="space-y-4 flex-1 overflow-y-auto min-h-0 p-1">
+              <TransparencyPanel
+                mode={transparencyMode[image.id] || 'global'}
+                tolerance={transparencyTolerance[image.id] || 30}
+                processing={processingTransparency[image.id] || false}
+                isSampling={isSampling}
+                onModeChange={(mode) => setMode(image.id, mode)}
+                onToleranceChange={(tolerance) => setTolerance(image.id, tolerance)}
+                onApplyCorners={handleApplyTransparency}
+                onToggleSampling={() => setIsSampling(!isSampling)}
+              />
+            </TabsContent>
+
+            <TabsContent value="squish" className="space-y-4 flex-1 overflow-y-auto min-h-0 p-1">
+              <SquishAnimationPanel
+                intensity={squishIntensity[image.id] || 20}
+                frameCount={squishFrameCount[image.id] || 8}
+                processing={processingSquish[image.id] || false}
+                loading={loadingSquishAnimations[image.id] || false}
+                animations={squishAnimations[image.id] || []}
+                onIntensityChange={(intensity) =>
+                  setSquishIntensity((prev) => ({ ...prev, [image.id]: intensity }))
+                }
+                onFrameCountChange={(count) =>
+                  setSquishFrameCount((prev) => ({ ...prev, [image.id]: count }))
+                }
+                onGenerate={async () => {
+                  await generateSquishAnimation(image);
+                  await fetchSquishAnimations(image.id);
+                }}
+                onRefresh={() => fetchSquishAnimations(image.id)}
+                onDelete={async (animationId) => {
+                  await deleteSquishAnimation(image.id, animationId);
+                  await fetchSquishAnimations(image.id);
+                }}
+              />
+            </TabsContent>
+
+            <TabsContent value="ai" className="space-y-4 flex-1 overflow-y-auto min-h-0 p-1">
+              <AIAnimationPanel
+                prompt={aiPrompt[image.id] || ''}
+                gridSize={aiGridSize[image.id] || 2}
+                processing={processingAI[image.id] || false}
+                suggesting={suggestingPrompt[image.id] || false}
+                loading={loadingAIAnimations[image.id] || false}
+                animations={aiAnimations[image.id] || []}
+                onPromptChange={(prompt) =>
+                  setAIPrompt((prev) => ({ ...prev, [image.id]: prompt }))
+                }
+                onGridSizeChange={(size) =>
+                  setAIGridSize((prev) => ({ ...prev, [image.id]: size }))
+                }
+                onSuggest={async () => {
+                  await suggestAnimation(image);
+                }}
+                onGenerate={async () => {
+                  await generateAIAnimation(image, (version) => {
+                    setSelectedVersion((prev) => ({ ...prev, [image.id]: version }));
+                  });
+                  await fetchAIAnimations(image.id);
+                }}
+                onRefresh={() => fetchAIAnimations(image.id)}
+                onDelete={async (animationId) => {
+                  await deleteAIAnimation(image.id, animationId);
+                  await fetchAIAnimations(image.id);
+                }}
+              />
+            </TabsContent>
+          </Tabs>
+        </div>
       }
     >
       <ImagePreview
