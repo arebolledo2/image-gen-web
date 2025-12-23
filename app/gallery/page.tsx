@@ -388,64 +388,12 @@ export default function GalleryPage() {
             onNavigate={setSelectedImageIndex}
             onToggleFavorite={toggleFavorite}
             onOpenEditor={handleOpenEditor}
-            onMakeTransparent={makeTransparent}
-            onToggleTransparencyView={toggleTransparencyView}
-            showTransparent={showTransparent}
-            processingTransparency={processingTransparency}
-            transparencyTolerance={transparencyTolerance}
-            onToleranceChange={setTolerance}
-            transparencyMode={transparencyMode}
-            onModeChange={setMode}
-            imageVersions={imageVersions}
-            processingSquish={processingSquish}
-            squishIntensity={squishIntensity}
-            squishFrameCount={squishFrameCount}
-            squishAnimationType={squishAnimationType}
-            squishAnimations={squishAnimations}
-            loadingSquishAnimations={loadingSquishAnimations}
-            onSquishIntensityChange={(imageId, intensity) =>
-              setSquishIntensity((prev) => ({ ...prev, [imageId]: intensity }))
-            }
-            onSquishFrameCountChange={(imageId, count) =>
-              setSquishFrameCount((prev) => ({ ...prev, [imageId]: count }))
-            }
-            onSquishAnimationTypeChange={(imageId, type) =>
-              setSquishAnimationType((prev) => ({ ...prev, [imageId]: type }))
-            }
-            onGenerateSquish={async (e, image) => {
-              e.stopPropagation();
-              await generateSquishAnimation(image);
-            }}
-            onFetchSquishAnimations={fetchSquishAnimations}
-            onDeleteSquishAnimation={deleteSquishAnimation}
             selectedVersion={selectedVersion}
             onSelectedVersionChange={(imageId: string, version: string) =>
               setSelectedVersion((prev) => ({ ...prev, [imageId]: version }))
             }
-            processingAI={processingAI}
-            suggestingPrompt={suggestingPrompt}
-            aiPrompt={aiPrompt}
-            aiGridSize={aiGridSize}
+            squishAnimations={squishAnimations}
             aiAnimations={aiAnimations}
-            loadingAIAnimations={loadingAIAnimations}
-            onAIPromptChange={(imageId, prompt) =>
-              setAIPrompt((prev) => ({ ...prev, [imageId]: prompt }))
-            }
-            onAIGridSizeChange={(imageId, size) =>
-              setAIGridSize((prev) => ({ ...prev, [imageId]: size }))
-            }
-            onSuggestAnimation={async (e, image) => {
-              e.stopPropagation();
-              await suggestAnimation(image);
-            }}
-            onGenerateAIAnimation={async (e, image) => {
-              e.stopPropagation();
-              await generateAIAnimation(image, (version) => {
-                setSelectedVersion((prev) => ({ ...prev, [image.id]: version }));
-              });
-            }}
-            onFetchAIAnimations={fetchAIAnimations}
-            onDeleteAIAnimation={deleteAIAnimation}
           />
         </>
       )}

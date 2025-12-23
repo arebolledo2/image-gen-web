@@ -36,13 +36,9 @@ export default function BatchDetailPage() {
   const {
     showTransparent,
     processingTransparency,
-    transparencyTolerance,
-    transparencyMode,
     imageVersions,
     toggleTransparencyView,
     makeTransparent,
-    setTolerance: setTransparencyTolerance,
-    setMode: setTransparencyMode,
     setShowTransparent,
   } = useImageTransparency();
 
@@ -61,35 +57,13 @@ export default function BatchDetailPage() {
   };
 
   const {
-    processingSquish,
-    squishIntensity,
-    squishFrameCount,
-    squishAnimationType,
     squishAnimations,
-    loadingSquishAnimations,
     selectedVersion,
-    setSquishIntensity,
-    setSquishFrameCount,
-    setSquishAnimationType,
     setSelectedVersion,
-    fetchSquishAnimations,
-    generateSquishAnimation,
-    deleteSquishAnimation,
   } = useSquishAnimation();
 
   const {
-    processingAI,
-    suggestingPrompt,
-    aiPrompt,
-    aiGridSize,
     aiAnimations,
-    loadingAIAnimations,
-    setAIPrompt,
-    setAIGridSize,
-    fetchAIAnimations,
-    suggestAnimation,
-    generateAIAnimation,
-    deleteAIAnimation,
   } = useAIAnimation();
 
   // Local state
@@ -237,32 +211,6 @@ export default function BatchDetailPage() {
     return data.promptText;
   }, [promptStyle]);
 
-  const handleGenerateSquish = useCallback(async (
-    e: React.MouseEvent | React.KeyboardEvent,
-    image: GalleryImage
-  ) => {
-    e.stopPropagation();
-    await generateSquishAnimation(image);
-  }, [generateSquishAnimation]);
-
-  const handleSuggestAnimation = useCallback(async (
-    e: React.MouseEvent | React.KeyboardEvent,
-    image: GalleryImage
-  ) => {
-    e.stopPropagation();
-    await suggestAnimation(image);
-  }, [suggestAnimation]);
-
-  const handleGenerateAIAnimation = useCallback(async (
-    e: React.MouseEvent | React.KeyboardEvent,
-    image: GalleryImage
-  ) => {
-    e.stopPropagation();
-    await generateAIAnimation(image, (version) => {
-      setSelectedVersion((prev) => ({ ...prev, [image.id]: version }));
-    });
-  }, [generateAIAnimation, setSelectedVersion]);
-
   // Memoized values
   const totalImageCount = useMemo(() => {
     return images.length > 0
@@ -335,53 +283,12 @@ export default function BatchDetailPage() {
         onNavigate={setSelectedImageIndex}
         onToggleFavorite={handleToggleFavorite}
         onOpenEditor={handleOpenEditor}
-        onMakeTransparent={handleMakeTransparent}
-        onToggleTransparencyView={handleToggleTransparencyView}
-        showTransparent={showTransparent}
-        processingTransparency={processingTransparency}
-        transparencyTolerance={transparencyTolerance}
-        onToleranceChange={setTransparencyTolerance}
-        transparencyMode={transparencyMode}
-        onModeChange={setTransparencyMode}
-        imageVersions={imageVersions}
-        processingSquish={processingSquish}
-        squishIntensity={squishIntensity}
-        squishFrameCount={squishFrameCount}
-        squishAnimationType={squishAnimationType}
-        squishAnimations={squishAnimations}
-        loadingSquishAnimations={loadingSquishAnimations}
-        onSquishIntensityChange={(imageId, intensity) =>
-          setSquishIntensity((prev) => ({ ...prev, [imageId]: intensity }))
-        }
-        onSquishFrameCountChange={(imageId, count) =>
-          setSquishFrameCount((prev) => ({ ...prev, [imageId]: count }))
-        }
-        onSquishAnimationTypeChange={(imageId, type) =>
-          setSquishAnimationType((prev) => ({ ...prev, [imageId]: type }))
-        }
-        onGenerateSquish={handleGenerateSquish}
-        onFetchSquishAnimations={fetchSquishAnimations}
-        onDeleteSquishAnimation={deleteSquishAnimation}
         selectedVersion={selectedVersion}
         onSelectedVersionChange={(imageId: string, version: string) =>
           setSelectedVersion((prev) => ({ ...prev, [imageId]: version }))
         }
-        processingAI={processingAI}
-        suggestingPrompt={suggestingPrompt}
-        aiPrompt={aiPrompt}
-        aiGridSize={aiGridSize}
+        squishAnimations={squishAnimations}
         aiAnimations={aiAnimations}
-        loadingAIAnimations={loadingAIAnimations}
-        onAIPromptChange={(imageId, prompt) =>
-          setAIPrompt((prev) => ({ ...prev, [imageId]: prompt }))
-        }
-        onAIGridSizeChange={(imageId, size) =>
-          setAIGridSize((prev) => ({ ...prev, [imageId]: size }))
-        }
-        onSuggestAnimation={handleSuggestAnimation}
-        onGenerateAIAnimation={handleGenerateAIAnimation}
-        onFetchAIAnimations={fetchAIAnimations}
-        onDeleteAIAnimation={deleteAIAnimation}
       />
     </div>
   );

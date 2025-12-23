@@ -19,16 +19,10 @@ export async function GET(
         isFavorite: images.isFavorite,
         transparentFilePath: images.transparentFilePath,
         createdAt: images.createdAt,
-        generation: {
-          batch: {
-            id: batches.id,
-            name: batches.name,
-          },
-          batchPrompt: {
-            id: batchPrompts.id,
-            promptText: batchPrompts.promptText,
-          },
-        },
+        batchId: batches.id,
+        batchName: batches.name,
+        batchPromptId: batchPrompts.id,
+        batchPromptText: batchPrompts.promptText,
       })
       .from(images)
       .leftJoin(generations, eq(images.generationId, generations.id))
@@ -44,7 +38,28 @@ export async function GET(
       );
     }
 
-    return NextResponse.json(result[0]);
+    const row = result[0];
+    const response = {
+      id: row.id,
+      filePath: row.filePath,
+      fileName: row.fileName,
+      mediaType: row.mediaType,
+      isFavorite: row.isFavorite,
+      transparentFilePath: row.transparentFilePath,
+      createdAt: row.createdAt,
+      generation: {
+        batch: row.batchId ? {
+          id: row.batchId,
+          name: row.batchName,
+        } : null,
+        batchPrompt: row.batchPromptId ? {
+          id: row.batchPromptId,
+          promptText: row.batchPromptText,
+        } : null,
+      },
+    };
+
+    return NextResponse.json(response);
   } catch (error) {
     console.error('Error fetching image:', error);
     return NextResponse.json(
