@@ -86,6 +86,15 @@ export default function GalleryPage() {
   // Modal state
   const [selectedImageIndex, setSelectedImageIndex] = useState<number | null>(null);
 
+  // Fetch animations when modal opens
+  useEffect(() => {
+    if (selectedImageIndex !== null && images[selectedImageIndex]) {
+      const image = images[selectedImageIndex];
+      fetchSquishAnimations(image.id);
+      fetchAIAnimations(image.id);
+    }
+  }, [selectedImageIndex, images, fetchSquishAnimations, fetchAIAnimations]);
+
   // Wrapper to update images after transparency is applied
   const makeTransparent = async (
     e: React.MouseEvent | React.KeyboardEvent,

@@ -15,13 +15,6 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 
 export interface GalleryImage {
   id: string;
@@ -115,13 +108,21 @@ export function ImageGalleryModal({
   useEffect(() => {
     if (!currentImage) return;
     const version = selectedVersion[currentImage.id] || 'original';
-    if (!version.startsWith('animation-')) return;
+    if (!version.startsWith('squish-') && !version.startsWith('ai-')) return;
 
-    const animationId = version.replace('animation-', '');
-    // Check both squish and AI animations
-    const squishAnimation = squishAnimations[currentImage.id]?.find((a: any) => a.id === animationId);
-    const aiAnimation = aiAnimations[currentImage.id]?.find((a: any) => a.id === animationId);
-    const animation = squishAnimation || aiAnimation;
+    let animationId: string;
+    let animation: any;
+
+    if (version.startsWith('squish-')) {
+      animationId = version.replace('squish-', '');
+      animation = squishAnimations[currentImage.id]?.find((a: any) => a.id === animationId);
+    } else if (version.startsWith('ai-')) {
+      animationId = version.replace('ai-', '');
+      animation = aiAnimations[currentImage.id]?.find((a: any) => a.id === animationId);
+    } else {
+      return; // Invalid version format
+    }
+
     if (!animation || !canvasRef.current) return;
 
     const canvas = canvasRef.current;
@@ -227,7 +228,7 @@ export function ImageGalleryModal({
           {currentImage && (
             <>
               {/* Show canvas for animations, img for static versions */}
-              {selectedVersion[currentImage.id]?.startsWith('animation-') ? (
+              {(selectedVersion[currentImage.id]?.startsWith('squish-') || selectedVersion[currentImage.id]?.startsWith('ai-')) ? (
                 <canvas
                   ref={canvasRef}
                   className={`max-w-full max-h-full w-auto h-auto object-contain bg-[url("https://www.transparenttextures.com/patterns/checkerboard.png")]`}
@@ -265,32 +266,74 @@ export function ImageGalleryModal({
 
               {/* Controls Overlay */}
               <div className="absolute top-4 left-4 flex flex-col gap-4">
-                {/* Version Selector */}
-                <div className="w-64 pointer-events-auto">
-                  <Select
-                    value={selectedVersion[currentImage.id] || 'original'}
-                    onValueChange={(value) => onSelectedVersionChange(currentImage.id, value)}
-                  >
-                    <SelectTrigger className="bg-black/40 border-white/10 text-white hover:bg-black/50">
-                      <SelectValue placeholder="Select version" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="original">Original</SelectItem>
-                      {currentImage.transparentFilePath && (
-                        <SelectItem value="transparent">Transparent</SelectItem>
-                      )}
-                      {squishAnimations[currentImage.id]?.map((animation: any) => (
-                        <SelectItem key={animation.id} value={`animation-${animation.id}`}>
-                          Squish - {animation.frameCount}f @ {animation.intensity}%
-                        </SelectItem>
-                      ))}
-                      {aiAnimations[currentImage.id]?.map((animation: any) => (
-                        <SelectItem key={animation.id} value={`animation-${animation.id}`}>
-                          AI - {animation.metadata?.gridSize || 2}×{animation.metadata?.gridSize || 2} ({animation.frameCount}f)
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                {/* Version Selector - Button Grid */}
+                <div className="flex flex-col gap-2 pointer-events-auto max-w-xs">
+                  <div className="flex flex-wrap gap-2">
+                    {/* Original Version */}
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className={`h-8 px-3 text-xs rounded-lg ${
+                        (selectedVersion[currentImage.id] || 'original') === 'original'
+                          ? 'bg-white/20 text-white border border-white/30'
+                          : 'bg-black/40 text-white/70 hover:bg-black/50 hover:text-white'
+                      }`}
+                      onClick={() => onSelectedVersionChange(currentImage.id, 'original')}
+                    >
+                      Original
+                    </Button>
+
+                    {/* Transparent Version */}
+                    {currentImage.transparentFilePath && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className={`h-8 px-3 text-xs rounded-lg ${
+                          selectedVersion[currentImage.id] === 'transparent'
+                            ? 'bg-white/20 text-white border border-white/30'
+                            : 'bg-black/40 text-white/70 hover:bg-black/50 hover:text-white'
+                        }`}
+                        onClick={() => onSelectedVersionChange(currentImage.id, 'transparent')}
+                      >
+                        Transparent
+                      </Button>
+                    )}
+
+                    {/* Squish Animations */}
+                    {squishAnimations[currentImage.id]?.map((animation: any) => (
+                      <Button
+                        key={`squish-${animation.id}`}
+                        variant="ghost"
+                        size="sm"
+                        className={`h-8 px-3 text-xs rounded-lg ${
+                          selectedVersion[currentImage.id] === `squish-${animation.id}`
+                            ? 'bg-white/20 text-white border border-white/30'
+                            : 'bg-black/40 text-white/70 hover:bg-black/50 hover:text-white'
+                        }`}
+                        onClick={() => onSelectedVersionChange(currentImage.id, `squish-${animation.id}`)}
+                      >
+                        Squish {animation.frameCount}f @{animation.intensity}%
+                      </Button>
+                    ))}
+
+                    {/* AI Animations */}
+                    {aiAnimations[currentImage.id]?.map((animation: any) => (
+                      <Button
+                        key={`ai-${animation.id}`}
+                        variant="ghost"
+                        size="sm"
+                        className={`h-8 px-3 text-xs rounded-lg ${
+                          selectedVersion[currentImage.id] === `ai-${animation.id}`
+                            ? 'bg-white/20 text-white border border-white/30'
+                            : 'bg-black/40 text-white/70 hover:bg-black/50 hover:text-white'
+                        }`}
+                        onClick={() => onSelectedVersionChange(currentImage.id, `ai-${animation.id}`)}
+                        title={animation.aiPrompt}
+                      >
+                        AI {animation.metadata?.gridSize || 2}×{animation.metadata?.gridSize || 2}
+                      </Button>
+                    ))}
+                  </div>
                 </div>
 
                 <div className="flex gap-2">
@@ -320,12 +363,14 @@ export function ImageGalleryModal({
                     className="h-12 w-12 rounded-full bg-black/20 text-white hover:bg-black/40"
                     asChild
                   >
-                    <a 
+                    <a
                       href={
-                        selectedVersion[currentImage.id]?.startsWith('animation-')
-                          ? `/api/squish-animations/${selectedVersion[currentImage.id].replace('animation-', '')}/file`
+                        selectedVersion[currentImage.id]?.startsWith('squish-')
+                          ? `/api/squish-animations/${selectedVersion[currentImage.id].replace('squish-', '')}/file`
+                          : selectedVersion[currentImage.id]?.startsWith('ai-')
+                          ? `/api/squish-animations/${selectedVersion[currentImage.id].replace('ai-', '')}/file`
                           : `/api/images/${currentImage.id}/file${selectedVersion[currentImage.id] === 'transparent' ? '?version=transparent' : ''}`
-                      } 
+                      }
                       download={currentImage.fileName}
                       title="Download"
                     >
@@ -345,7 +390,7 @@ export function ImageGalleryModal({
                     {currentImage.generation.batch && (
                       <p>Batch: <span className="text-white">{currentImage.generation.batch?.name}</span></p>
                     )}
-                    {selectedVersion[currentImage.id]?.startsWith('animation-') && (
+                    {(selectedVersion[currentImage.id]?.startsWith('squish-') || selectedVersion[currentImage.id]?.startsWith('ai-')) && (
                       <p className="text-blue-400 font-medium">Viewing Animation</p>
                     )}
                   </div>

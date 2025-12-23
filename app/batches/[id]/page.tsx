@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useMemo } from "react";
+import { useState, useCallback, useMemo, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { Loader2 } from "lucide-react";
 import { useSettings } from "@/components/providers/settings-provider";
@@ -60,16 +60,27 @@ export default function BatchDetailPage() {
     squishAnimations,
     selectedVersion,
     setSelectedVersion,
+    fetchSquishAnimations,
   } = useSquishAnimation();
 
   const {
     aiAnimations,
+    fetchAIAnimations,
   } = useAIAnimation();
 
   // Local state
   const [executing, setExecuting] = useState(false);
   const [creatingVersion, setCreatingVersion] = useState(false);
   const [selectedImageIndex, setSelectedImageIndex] = useState<number | null>(null);
+
+  // Fetch animations when modal opens
+  useEffect(() => {
+    if (selectedImageIndex !== null && images[selectedImageIndex]) {
+      const image = images[selectedImageIndex];
+      fetchSquishAnimations(image.id);
+      fetchAIAnimations(image.id);
+    }
+  }, [selectedImageIndex, images, fetchSquishAnimations, fetchAIAnimations]);
 
   // Handlers
   const handleExecute = useCallback(async () => {

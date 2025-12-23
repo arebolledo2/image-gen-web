@@ -92,7 +92,7 @@ export function useAIAnimation() {
 
       // Auto-select the newly created animation
       if (data.animation?.id && onVersionChange) {
-        onVersionChange(`animation-${data.animation.id}`);
+        onVersionChange(`ai-${data.animation.id}`);
       }
 
       alert('AI animation generated successfully!');

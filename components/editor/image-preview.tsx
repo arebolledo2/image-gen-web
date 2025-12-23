@@ -27,13 +27,17 @@ export function ImagePreview({
   const [isPlaying, setIsPlaying] = useState(true);
 
   // Determine if we're viewing an animation
-  const isAnimation = selectedVersion.startsWith('animation-');
+  const isAnimation = selectedVersion.startsWith('squish-') || selectedVersion.startsWith('ai-');
 
   let currentAnimation = null;
   if (isAnimation) {
-    const animationId = selectedVersion.replace('animation-', '');
-    currentAnimation = squishAnimations?.find((a: any) => a.id === animationId) ||
-                      aiAnimations?.find((a: any) => a.id === animationId);
+    if (selectedVersion.startsWith('squish-')) {
+      const animationId = selectedVersion.replace('squish-', '');
+      currentAnimation = squishAnimations?.find((a: any) => a.id === animationId);
+    } else if (selectedVersion.startsWith('ai-')) {
+      const animationId = selectedVersion.replace('ai-', '');
+      currentAnimation = aiAnimations?.find((a: any) => a.id === animationId);
+    }
   }
 
   return (

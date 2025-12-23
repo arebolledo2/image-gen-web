@@ -233,12 +233,12 @@ export default function EditorPage() {
                 <SelectItem value="transparent">Transparent</SelectItem>
               )}
               {squishAnimations[image.id]?.map((animation: any) => (
-                <SelectItem key={animation.id} value={`animation-${animation.id}`}>
+                <SelectItem key={animation.id} value={`squish-${animation.id}`}>
                   Squish - {animation.frameCount}f @ {animation.intensity}%
                 </SelectItem>
               ))}
               {aiAnimations[image.id]?.map((animation: any) => (
-                <SelectItem key={animation.id} value={`animation-${animation.id}`}>
+                <SelectItem key={animation.id} value={`ai-${animation.id}`}>
                   AI - {animation.metadata?.gridSize || 2}×{animation.metadata?.gridSize || 2} ({animation.frameCount}f)
                 </SelectItem>
               ))}
@@ -264,8 +264,10 @@ export default function EditorPage() {
             >
               <a
                 href={
-                  currentVersion.startsWith('animation-')
-                    ? `/api/squish-animations/${currentVersion.replace('animation-', '')}/file`
+                  currentVersion.startsWith('squish-')
+                    ? `/api/squish-animations/${currentVersion.replace('squish-', '')}/file`
+                    : currentVersion.startsWith('ai-')
+                    ? `/api/squish-animations/${currentVersion.replace('ai-', '')}/file`
                     : `/api/images/${image.id}/file${currentVersion === 'transparent' ? '?version=transparent' : ''}`
                 }
                 download={image.fileName}

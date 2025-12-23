@@ -57,7 +57,7 @@ export function useSquishAnimation() {
 
       // Auto-select the newly created animation
       if (data.animation?.id) {
-        setSelectedVersion(prev => ({ ...prev, [image.id]: `animation-${data.animation.id}` }));
+        setSelectedVersion(prev => ({ ...prev, [image.id]: `squish-${data.animation.id}` }));
       }
 
       alert('Squish animation generated successfully!');
