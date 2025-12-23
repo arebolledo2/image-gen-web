@@ -809,11 +809,38 @@ export function ImageGalleryModal({
                     {currentImage.generation.batch && (
                       <p>Batch: <span className="text-white">{currentImage.generation.batch?.name}</span></p>
                     )}
+                    {selectedVersion[currentImage.id]?.startsWith('animation-') && (
+                      <p className="text-blue-400 font-medium">Viewing Animation</p>
+                    )}
                   </div>
+                  
+                  {/* Show AI Animation Prompt if viewing one */}
+                  {selectedVersion[currentImage.id]?.startsWith('animation-') && (
+                    (() => {
+                      const animationId = selectedVersion[currentImage.id].replace('animation-', '');
+                      const aiAnimation = aiAnimations[currentImage.id]?.find((a: any) => a.id === animationId);
+                      if (aiAnimation) {
+                        return (
+                          <div className="space-y-1">
+                            <p className="text-blue-400 font-medium flex items-center gap-1">
+                              <Sparkles className="h-3 w-3" />
+                              AI Animation Prompt:
+                            </p>
+                            <p className="text-white italic bg-blue-900/20 p-2 rounded border border-blue-500/20 max-h-32 overflow-y-auto whitespace-pre-wrap leading-relaxed">
+                              {aiAnimation.fullAiPrompt || aiAnimation.aiPrompt}
+                            </p>
+                          </div>
+                        );
+                      }
+                      return null;
+                    })()
+                  )}
+
+                  {/* Original Image Prompt */}
                   {currentImage.generation.batchPrompt?.promptText && (
                     <div className="space-y-1">
-                      <p className="text-gray-400 font-medium">Prompt:</p>
-                      <p className="text-white italic bg-black/30 p-2 rounded border border-white/5 max-h-32 overflow-y-auto whitespace-pre-wrap leading-relaxed">
+                      <p className="text-gray-400 font-medium">Original Prompt:</p>
+                      <p className="text-white italic bg-black/30 p-2 rounded border border-white/5 max-h-24 overflow-y-auto whitespace-pre-wrap leading-relaxed">
                         {currentImage.generation.batchPrompt.promptText}
                       </p>
                     </div>

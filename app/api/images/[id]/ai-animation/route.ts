@@ -180,6 +180,7 @@ Remember: Consistency and stability are MORE important than dramatic motion. Sma
       animationType: 'bounce', // Default, not really used for AI
       generatedBy: 'ai',
       aiPrompt: prompt,
+      fullAiPrompt: geminiPrompt,
       metadata: {
         width: totalWidth,
         height: totalHeight,
@@ -198,6 +199,7 @@ Remember: Consistency and stability are MORE important than dramatic motion. Sma
         frameCount,
         gridSize,
         aiPrompt: prompt,
+        fullAiPrompt: geminiPrompt,
         metadata: animation.metadata,
       },
     });

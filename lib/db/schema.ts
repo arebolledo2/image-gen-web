@@ -148,6 +148,7 @@ export const squishAnimations = pgTable('squish_animations', {
   animationType: animationTypeEnum('animation_type').default('bounce').notNull(),
   generatedBy: animationGeneratorEnum('generated_by').default('manual').notNull(),
   aiPrompt: text('ai_prompt'), // AI generation prompt (null for manual)
+  fullAiPrompt: text('full_ai_prompt'), // Full constructed prompt sent to AI
   metadata: json('metadata').$type<{
     width?: number;
     height?: number;
