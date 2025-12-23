@@ -7,7 +7,9 @@ import {
   ChevronRight,
   Heart,
   Edit,
-  HelpCircle
+  HelpCircle,
+  Copy,
+  Check
 } from "lucide-react";
 import {
   Dialog,
@@ -63,6 +65,7 @@ export function ImageGalleryModal({
   squishAnimations,
   aiAnimations,
 }: ImageGalleryModalProps) {
+  const [copied, setCopied] = useState(false);
   const lastScrollTime = useRef(0);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const animationFrameRef = useRef<number | null>(null);
@@ -79,6 +82,34 @@ export function ImageGalleryModal({
       onNavigate(selectedIndex - 1);
     }
   }, [selectedIndex, images.length, onNavigate]);
+
+  const handleCopyFileName = useCallback((image: GalleryImage) => {
+    const version = selectedVersion[image.id] || 'original';
+    let textToCopy = image.fileName;
+
+    if (version === 'transparent' && image.transparentFilePath) {
+      // Extract filename from path
+      textToCopy = image.transparentFilePath.split('/').pop() || image.fileName;
+    } else if (version.startsWith('squish-')) {
+      const animationId = version.replace('squish-', '');
+      const animation = squishAnimations[image.id]?.find((a: any) => a.id === animationId);
+      const path = animation?.spritesheetPath || animation?.filePath;
+      if (path) {
+        textToCopy = path.split(/[/\\]/).pop() || textToCopy;
+      }
+    } else if (version.startsWith('ai-')) {
+      const animationId = version.replace('ai-', '');
+      const animation = aiAnimations[image.id]?.find((a: any) => a.id === animationId);
+      const path = animation?.spritesheetPath || animation?.filePath;
+      if (path) {
+        textToCopy = path.split(/[/\\]/).pop() || textToCopy;
+      }
+    }
+
+    navigator.clipboard.writeText(textToCopy);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  }, [selectedVersion, squishAnimations, aiAnimations]);
 
   const handleWheel = useCallback((e: React.WheelEvent) => {
     const now = Date.now();
@@ -377,6 +408,16 @@ export function ImageGalleryModal({
                     >
                       <Download className="h-8 w-8" />
                     </a>
+                  </Button>
+
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className={`h-12 w-12 rounded-full bg-black/20 hover:bg-black/40 transition-colors ${copied ? 'text-green-500' : 'text-white'}`}
+                    onClick={() => handleCopyFileName(currentImage)}
+                    title="Copy Filename"
+                  >
+                    {copied ? <Check className="h-8 w-8" /> : <Copy className="h-8 w-8" />}
                   </Button>
                 </div>
 

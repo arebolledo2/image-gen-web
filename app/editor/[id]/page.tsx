@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
-import { Heart, Download, Loader2, Sparkles, Move, Scissors } from "lucide-react";
+import { Heart, Download, Loader2, Sparkles, Move, Scissors, Copy, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Tabs,
@@ -34,6 +34,7 @@ export default function EditorPage() {
   const imageId = params.id as string;
 
   const [image, setImage] = useState<GalleryImage | null>(null);
+  const [copied, setCopied] = useState(false);
   const [loading, setLoading] = useState(true);
   const [isSampling, setIsSampling] = useState(false);
   const [internalVersion, setInternalVersion] = useState<number>(Date.now());
@@ -165,6 +166,35 @@ export default function EditorPage() {
   };
 
   // Handle favorite toggle
+  const handleCopyFileName = () => {
+    if (!image) return;
+    
+    const version = selectedVersion[image.id] || 'original';
+    let textToCopy = image.fileName;
+
+    if (version === 'transparent' && image.transparentFilePath) {
+      textToCopy = image.transparentFilePath.split('/').pop() || image.fileName;
+    } else if (version.startsWith('squish-')) {
+      const animationId = version.replace('squish-', '');
+      const animation = squishAnimations[image.id]?.find((a: any) => a.id === animationId);
+      const path = animation?.spritesheetPath || animation?.filePath;
+      if (path) {
+        textToCopy = path.split(/[/\\]/).pop() || textToCopy;
+      }
+    } else if (version.startsWith('ai-')) {
+      const animationId = version.replace('ai-', '');
+      const animation = aiAnimations[image.id]?.find((a: any) => a.id === animationId);
+      const path = animation?.spritesheetPath || animation?.filePath;
+      if (path) {
+        textToCopy = path.split(/[/\\]/).pop() || textToCopy;
+      }
+    }
+
+    navigator.clipboard.writeText(textToCopy);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
   const toggleFavorite = async () => {
     if (!image) return;
 
@@ -259,11 +289,11 @@ export default function EditorPage() {
             </Select>
 
             {/* Action Buttons */}
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
               <Button
                 variant="outline"
                 size="sm"
-                className={`flex-1 gap-2 h-9 ${image.isFavorite ? 'text-red-500' : ''}`}
+                className={`flex-1 min-w-[100px] gap-2 h-9 ${image.isFavorite ? 'text-red-500' : ''}`}
                 onClick={toggleFavorite}
               >
                 <Heart className={`h-4 w-4 ${image.isFavorite ? 'fill-current' : ''}`} />
@@ -273,9 +303,29 @@ export default function EditorPage() {
               <Button
                 variant="outline"
                 size="sm"
-                className="flex-1 gap-2 h-9"
-                asChild
+                className={`flex-1 min-w-[100px] gap-2 h-9 transition-colors ${copied ? 'text-green-500 border-green-500' : ''}`}
+                onClick={handleCopyFileName}
               >
+                {copied ? (
+                  <>
+                    <Check className="h-4 w-4" />
+                    <span className="hidden lg:inline">Copied</span>
+                  </>
+                ) : (
+                  <>
+                    <Copy className="h-4 w-4" />
+                    <span className="hidden lg:inline">Copy Name</span>
+                  </>
+                )}
+              </Button>
+
+              <div className="w-full">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="w-full gap-2 h-9"
+                  asChild
+                >
                 <a
                   href={
                     currentVersion.startsWith('squish-')
@@ -287,9 +337,10 @@ export default function EditorPage() {
                   download={image.fileName}
                 >
                   <Download className="h-4 w-4" />
-                  <span className="hidden lg:inline">Download</span>
+                  <span className="hidden lg:inline">Download Image</span>
                 </a>
               </Button>
+              </div>
             </div>
           </div>
 
