@@ -164,10 +164,10 @@ export default function EditorPage() {
   // Handle horizontal flip
   const handleFlipHorizontal = async () => {
     if (!image) return;
-    await flipHorizontal(image, (updatedImage) => {
+    await flipHorizontal(image, currentVersion, (updatedImage) => {
       setImage(updatedImage);
       setInternalVersion(Date.now());
-      setSelectedVersion((prev) => ({ ...prev, [image.id]: 'flipped' }));
+      // Keep the current version selected (flip doesn't change version)
     });
   };
 

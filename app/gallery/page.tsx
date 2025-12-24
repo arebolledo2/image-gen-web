@@ -175,7 +175,6 @@ export default function GalleryPage() {
     observer.current = new IntersectionObserver(entries => {
       if (entries[0].isIntersecting && hasMore) {
         const nextOffset = images.length;
-        setOffset(nextOffset);
         fetchImages(nextOffset, false, favoritesOnly, debouncedSearch);
       }
     });

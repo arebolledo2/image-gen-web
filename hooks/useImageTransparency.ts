@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import type { GalleryImage } from '@/components/image-gallery-modal';
+import path from 'path';
 
 export function useImageTransparency() {
   const [showTransparent, setShowTransparent] = useState<Record<string, boolean>>({});
@@ -33,9 +34,9 @@ export function useImageTransparency() {
       const isEdit = isTransparentEdit || isRegularEdit;
 
       let editId: string | null = null;
-      if (isTransparentEdit) {
+      if (isTransparentEdit && currentVersion) {
         editId = currentVersion.replace('edit-transparent-', '');
-      } else if (isRegularEdit) {
+      } else if (isRegularEdit && currentVersion) {
         editId = currentVersion.replace('edit-', '');
       }
 
@@ -111,6 +112,7 @@ export function useImageTransparency() {
 
   const flipHorizontal = async (
     image: GalleryImage,
+    currentVersion?: string,
     onSuccess?: (updatedImage: GalleryImage) => void
   ) => {
     if (processingFlip[image.id]) return;
@@ -118,9 +120,12 @@ export function useImageTransparency() {
     setProcessingFlip(prev => ({ ...prev, [image.id]: true }));
 
     try {
+      const sourceVersion = currentVersion || 'transparent';
+
       const response = await fetch(`/api/images/${image.id}/flip`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sourceVersion }),
       });
 
       if (!response.ok) {
@@ -143,9 +148,11 @@ export function useImageTransparency() {
           flippedFilePath: data.flippedFilePath
         });
       }
+
+      alert(`Image flipped successfully! File: ${path.basename(data.flippedFilePath)}`);
     } catch (error) {
       console.error('Error flipping image:', error);
-      alert('Failed to flip image');
+      alert(error instanceof Error ? error.message : 'Failed to flip image');
     } finally {
       setProcessingFlip(prev => ({ ...prev, [image.id]: false }));
     }
