@@ -1,18 +1,18 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, ArrowLeft, Edit, Trash2, Sparkles } from "lucide-react";
+import { Loader2, ArrowLeft, Edit, Trash2 } from "lucide-react";
 import { AIAssistButton } from "@/components/agents/ai-assist-button";
 
 interface Prompt {
   id: string;
   name: string;
   template: string;
-  variables: Record<string, any>;
+  variables: Record<string, unknown>;
   tags: string[];
   createdAt: string;
   style: {
@@ -34,11 +34,7 @@ export default function PromptDetailPage({ params }: { params: { id: string } })
   const [variations, setVariations] = useState<string[]>([]);
   const [loadingVariations, setLoadingVariations] = useState(false);
 
-  useEffect(() => {
-    fetchPrompt();
-  }, [params.id]);
-
-  const fetchPrompt = async () => {
+  const fetchPrompt = useCallback(async () => {
     try {
       const response = await fetch(`/api/prompts/${params.id}`);
       if (!response.ok) {
@@ -53,7 +49,11 @@ export default function PromptDetailPage({ params }: { params: { id: string } })
     } finally {
       setLoading(false);
     }
-  };
+  }, [params.id, router]);
+
+  useEffect(() => {
+    fetchPrompt();
+  }, [fetchPrompt]);
 
   const handleDelete = async () => {
     if (!confirm("Are you sure you want to delete this prompt?")) {

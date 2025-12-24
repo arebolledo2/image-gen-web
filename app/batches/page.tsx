@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -12,9 +13,9 @@ interface Batch {
   name: string;
   description: string | null;
   status: string;
-  provider: 'gemini' | 'comfyui';
+  provider: 'gemini' | 'gemini3' | 'comfyui';
   createdAt: string;
-  batchPrompts: any[];
+  batchPrompts: unknown[];
   generations: {
     images: {
       id: string;
@@ -112,15 +113,17 @@ export default function BatchesPage() {
                   <div className="aspect-[16/9] bg-muted relative flex border-b">
                     {previewImages.length > 0 ? (
                       <div className="flex w-full h-full">
-                        {previewImages.map((img, i) => (
+                        {previewImages.map((img) => (
                           <div 
                             key={img.id} 
                             className="relative flex-1 border-r last:border-r-0 overflow-hidden"
                           >
-                            <img
+                            <Image
                               src={`/api/images/${img.id}/file`}
                               alt={img.fileName}
-                              className="w-full h-full object-cover"
+                              fill
+                              className="object-cover"
+                              unoptimized
                             />
                           </div>
                         ))}

@@ -18,6 +18,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const saved = localStorage.getItem("prompt-style") as PromptStyle;
     if (saved && (saved === "terse" || saved === "verbose")) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setPromptStyleState(saved);
     }
   }, []);

@@ -20,7 +20,6 @@ export default function GalleryPage() {
   const [loading, setLoading] = useState(true);
   const [fetchingMore, setFetchingMore] = useState(false);
   const [hasMore, setHasMore] = useState(true);
-  const [offset, setOffset] = useState(0);
   const [favoritesOnly, setFavoritesOnly] = useState(false);
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
@@ -38,47 +37,23 @@ export default function GalleryPage() {
   const {
     showTransparent,
     processingTransparency,
-    transparencyTolerance,
-    transparencyMode,
     imageVersions,
     makeTransparent: makeTransparentBase,
     toggleTransparencyView,
-    setTolerance,
-    setMode,
     setShowTransparent,
   } = useImageTransparency();
 
   // Use squish animation hook
   const {
-    processingSquish,
-    squishIntensity,
-    squishFrameCount,
-    squishAnimationType,
     squishAnimations,
-    loadingSquishAnimations,
     selectedVersion,
-    setSquishIntensity,
-    setSquishFrameCount,
-    setSquishAnimationType,
     setSelectedVersion,
     fetchSquishAnimations,
-    generateSquishAnimation,
-    deleteSquishAnimation,
   } = useSquishAnimation();
 
   const {
-    processingAI,
-    suggestingPrompt,
-    aiPrompt,
-    aiGridSize,
     aiAnimations,
-    loadingAIAnimations,
-    setAIPrompt,
-    setAIGridSize,
     fetchAIAnimations,
-    suggestAnimation,
-    generateAIAnimation,
-    deleteAIAnimation,
   } = useAIAnimation();
 
   const [globalTransparency, setGlobalTransparency] = useState(false);

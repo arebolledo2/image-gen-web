@@ -19,9 +19,11 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 
   // Load theme from localStorage on mount
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setMounted(true);
     const storedTheme = localStorage.getItem("theme") as Theme | null;
     if (storedTheme && ["light", "dark", "system"].includes(storedTheme)) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setThemeState(storedTheme);
     }
   }, []);
@@ -47,6 +49,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
       root.classList.remove("dark");
     }
 
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setIsDark(actualTheme === "dark");
     localStorage.setItem("theme", theme);
   }, [theme, mounted]);

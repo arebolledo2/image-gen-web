@@ -30,7 +30,6 @@ export default function BatchDetailPage() {
     hasMore, 
     lastImageElementRef,
     updateImage,
-    setImages,
   } = useImageGallery(params.id, !!batch);
   
   const {
@@ -44,7 +43,7 @@ export default function BatchDetailPage() {
 
   // Global transparency toggle for batch page
   const [globalTransparency, setGlobalTransparency] = useState(false);
-  const toggleGlobalTransparency = () => {
+  const toggleGlobalTransparency = useCallback(() => {
     const newValue = !globalTransparency;
     setGlobalTransparency(newValue);
     const newShowTransparent: Record<string, boolean> = {};
@@ -54,7 +53,7 @@ export default function BatchDetailPage() {
       }
     });
     setShowTransparent(newShowTransparent);
-  };
+  }, [globalTransparency, images, setShowTransparent]);
 
   const {
     squishAnimations,

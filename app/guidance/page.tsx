@@ -80,7 +80,7 @@ export default function GuidancePage() {
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Guidance</h1>
           <p className="text-muted-foreground">
-            Specific instructions for prompt construction (e.g., "4x4 sprite sheet")
+            Specific instructions for prompt construction (e.g., &quot;4x4 sprite sheet&quot;)
           </p>
         </div>
         <Button onClick={() => setShowNewForm(true)}>
