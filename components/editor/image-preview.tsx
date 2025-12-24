@@ -56,9 +56,19 @@ export function ImagePreview({
             />
           ) : (
             <img
-              src={`/api/images/${imageId}/file${selectedVersion === 'transparent' ? `?version=transparent&t=${imageVersion || ''}` : ''}`}
+              src={`/api/images/${imageId}/file${
+                selectedVersion === 'transparent'
+                  ? `?version=transparent&t=${imageVersion || ''}`
+                  : selectedVersion === 'flipped'
+                  ? `?version=flipped&t=${imageVersion || ''}`
+                  : ''
+              }`}
               alt={fileName}
-              className={`max-w-full max-h-full w-auto h-auto object-contain ${isSampling ? 'cursor-crosshair' : ''} ${selectedVersion === 'transparent' ? 'bg-[url("https://www.transparenttextures.com/patterns/checkerboard.png")]' : ''}`}
+              className={`max-w-full max-h-full w-auto h-auto object-contain ${isSampling ? 'cursor-crosshair' : ''} ${
+                selectedVersion === 'transparent' || selectedVersion === 'flipped'
+                  ? 'bg-[url("https://www.transparenttextures.com/patterns/checkerboard.png")]'
+                  : ''
+              }`}
               onClick={onImageClick}
             />
           )}

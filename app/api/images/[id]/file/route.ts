@@ -27,6 +27,8 @@ export async function GET(
     let filePath = image.filePath;
     if (version === 'transparent' && image.transparentFilePath) {
       filePath = image.transparentFilePath;
+    } else if (version === 'flipped' && image.flippedFilePath) {
+      filePath = image.flippedFilePath;
     }
 
     const fileBuffer = await readImage(filePath);

@@ -26,6 +26,7 @@ export interface GalleryImage {
   mediaType: string;
   isFavorite: boolean;
   transparentFilePath: string | null;
+  flippedFilePath: string | null;
   createdAt: string;
   generation: {
     batch: {
@@ -90,6 +91,8 @@ export function ImageGalleryModal({
     if (version === 'transparent' && image.transparentFilePath) {
       // Extract filename from path
       textToCopy = image.transparentFilePath.split('/').pop() || image.fileName;
+    } else if (version === 'flipped' && image.flippedFilePath) {
+      textToCopy = image.flippedFilePath.split('/').pop() || image.fileName;
     } else if (version.startsWith('squish-')) {
       const animationId = version.replace('squish-', '');
       const animation = squishAnimations[image.id]?.find((a: any) => a.id === animationId);
@@ -268,9 +271,19 @@ export function ImageGalleryModal({
                 />
               ) : (
                 <img
-                  src={`/api/images/${currentImage.id}/file${selectedVersion[currentImage.id] === 'transparent' ? '?version=transparent' : ''}`}
+                  src={`/api/images/${currentImage.id}/file${
+                    selectedVersion[currentImage.id] === 'transparent'
+                      ? '?version=transparent'
+                      : selectedVersion[currentImage.id] === 'flipped'
+                      ? '?version=flipped'
+                      : ''
+                  }`}
                   alt={currentImage.fileName}
-                  className={`max-w-full max-h-full w-auto h-auto object-contain ${selectedVersion[currentImage.id] === 'transparent' ? 'bg-[url("https://www.transparenttextures.com/patterns/checkerboard.png")]' : ''}`}
+                  className={`max-w-full max-h-full w-auto h-auto object-contain ${
+                    selectedVersion[currentImage.id] === 'transparent' || selectedVersion[currentImage.id] === 'flipped'
+                      ? 'bg-[url("https://www.transparenttextures.com/patterns/checkerboard.png")]'
+                      : ''
+                  }`}
                 />
               )}
               
@@ -328,6 +341,22 @@ export function ImageGalleryModal({
                         onClick={() => onSelectedVersionChange(currentImage.id, 'transparent')}
                       >
                         Transparent
+                      </Button>
+                    )}
+
+                    {/* Flipped Version */}
+                    {currentImage.flippedFilePath && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className={`h-8 px-3 text-xs rounded-lg ${
+                          selectedVersion[currentImage.id] === 'flipped'
+                            ? 'bg-white/20 text-white border border-white/30'
+                            : 'bg-black/40 text-white/70 hover:bg-black/50 hover:text-white'
+                        }`}
+                        onClick={() => onSelectedVersionChange(currentImage.id, 'flipped')}
+                      >
+                        Flipped
                       </Button>
                     )}
 
@@ -401,7 +430,13 @@ export function ImageGalleryModal({
                           ? `/api/squish-animations/${selectedVersion[currentImage.id].replace('squish-', '')}/file`
                           : selectedVersion[currentImage.id]?.startsWith('ai-')
                           ? `/api/squish-animations/${selectedVersion[currentImage.id].replace('ai-', '')}/file`
-                          : `/api/images/${currentImage.id}/file${selectedVersion[currentImage.id] === 'transparent' ? '?version=transparent' : ''}`
+                          : `/api/images/${currentImage.id}/file${
+                              selectedVersion[currentImage.id] === 'transparent'
+                                ? '?version=transparent'
+                                : selectedVersion[currentImage.id] === 'flipped'
+                                ? '?version=flipped'
+                                : ''
+                            }`
                       }
                       download={currentImage.fileName}
                       title="Download"

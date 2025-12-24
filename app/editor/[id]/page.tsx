@@ -47,10 +47,12 @@ export default function EditorPage() {
   const {
     showTransparent,
     processingTransparency,
+    processingFlip,
     transparencyTolerance,
     transparencyMode,
     imageVersions,
     makeTransparent,
+    flipHorizontal,
     setTolerance,
     setMode,
   } = useImageTransparency();
@@ -134,6 +136,16 @@ export default function EditorPage() {
     });
   };
 
+  // Handle horizontal flip
+  const handleFlipHorizontal = async () => {
+    if (!image) return;
+    await flipHorizontal(image, (updatedImage) => {
+      setImage(updatedImage);
+      setInternalVersion(Date.now());
+      setSelectedVersion((prev) => ({ ...prev, [image.id]: 'flipped' }));
+    });
+  };
+
   // Handle image click for color picking
   const handleImageClick = (e: React.MouseEvent<HTMLImageElement>) => {
     if (!image || !isSampling) return;
@@ -168,12 +180,14 @@ export default function EditorPage() {
   // Handle favorite toggle
   const handleCopyFileName = () => {
     if (!image) return;
-    
+
     const version = selectedVersion[image.id] || 'original';
     let textToCopy = image.fileName;
 
     if (version === 'transparent' && image.transparentFilePath) {
       textToCopy = image.transparentFilePath.split('/').pop() || image.fileName;
+    } else if (version === 'flipped' && image.flippedFilePath) {
+      textToCopy = image.flippedFilePath.split('/').pop() || image.fileName;
     } else if (version.startsWith('squish-')) {
       const animationId = version.replace('squish-', '');
       const animation = squishAnimations[image.id]?.find((a: any) => a.id === animationId);
@@ -275,6 +289,9 @@ export default function EditorPage() {
                 {image.transparentFilePath && (
                   <SelectItem value="transparent">Transparent</SelectItem>
                 )}
+                {image.flippedFilePath && (
+                  <SelectItem value="flipped">Flipped</SelectItem>
+                )}
                 {squishAnimations[image.id]?.map((animation: any) => (
                   <SelectItem key={animation.id} value={`squish-${animation.id}`}>
                     Squish - {animation.frameCount}f @ {animation.intensity}%
@@ -332,7 +349,13 @@ export default function EditorPage() {
                       ? `/api/squish-animations/${currentVersion.replace('squish-', '')}/file`
                       : currentVersion.startsWith('ai-')
                       ? `/api/squish-animations/${currentVersion.replace('ai-', '')}/file`
-                      : `/api/images/${image.id}/file${currentVersion === 'transparent' ? '?version=transparent' : ''}`
+                      : `/api/images/${image.id}/file${
+                          currentVersion === 'transparent'
+                            ? '?version=transparent'
+                            : currentVersion === 'flipped'
+                            ? '?version=flipped'
+                            : ''
+                        }`
                   }
                   download={image.fileName}
                 >
@@ -365,11 +388,15 @@ export default function EditorPage() {
                 mode={transparencyMode[image.id] || 'global'}
                 tolerance={transparencyTolerance[image.id] || 30}
                 processing={processingTransparency[image.id] || false}
+                processingFlip={processingFlip[image.id] || false}
+                hasTransparent={!!image.transparentFilePath}
+                hasFlipped={!!image.flippedFilePath}
                 isSampling={isSampling}
                 onModeChange={(mode) => setMode(image.id, mode)}
                 onToleranceChange={(tolerance) => setTolerance(image.id, tolerance)}
                 onApplyCorners={handleApplyTransparency}
                 onToggleSampling={() => setIsSampling(!isSampling)}
+                onFlipHorizontal={handleFlipHorizontal}
               />
             </TabsContent>
 

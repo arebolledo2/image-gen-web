@@ -4,6 +4,7 @@ import type { GalleryImage } from '@/components/image-gallery-modal';
 export function useImageTransparency() {
   const [showTransparent, setShowTransparent] = useState<Record<string, boolean>>({});
   const [processingTransparency, setProcessingTransparency] = useState<Record<string, boolean>>({});
+  const [processingFlip, setProcessingFlip] = useState<Record<string, boolean>>({});
   const [transparencyTolerance, setTransparencyTolerance] = useState<Record<string, number>>({});
   const [transparencyMode, setTransparencyMode] = useState<Record<string, 'global' | 'flood'>>({});
   const [imageVersions, setImageVersions] = useState<Record<string, number>>({});
@@ -80,13 +81,57 @@ export function useImageTransparency() {
     setTransparencyMode(prev => ({ ...prev, [imageId]: mode }));
   };
 
+  const flipHorizontal = async (
+    image: GalleryImage,
+    onSuccess?: (updatedImage: GalleryImage) => void
+  ) => {
+    if (processingFlip[image.id]) return;
+
+    setProcessingFlip(prev => ({ ...prev, [image.id]: true }));
+
+    try {
+      const response = await fetch(`/api/images/${image.id}/flip`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to flip image');
+      }
+
+      const data = await response.json();
+
+      if (!data.success) {
+        throw new Error(data.message || 'Failed to flip image');
+      }
+
+      // Update version to bust cache
+      setImageVersions(prev => ({ ...prev, [image.id]: Date.now() }));
+
+      // Call success callback with updated image
+      if (onSuccess) {
+        onSuccess({
+          ...image,
+          flippedFilePath: data.flippedFilePath
+        });
+      }
+    } catch (error) {
+      console.error('Error flipping image:', error);
+      alert('Failed to flip image');
+    } finally {
+      setProcessingFlip(prev => ({ ...prev, [image.id]: false }));
+    }
+  };
+
   return {
     showTransparent,
     processingTransparency,
+    processingFlip,
     transparencyTolerance,
     transparencyMode,
     imageVersions,
     makeTransparent,
+    flipHorizontal,
     toggleTransparencyView,
     setTolerance,
     setMode,
