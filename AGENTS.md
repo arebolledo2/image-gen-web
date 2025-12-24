@@ -401,20 +401,6 @@ const className = cn(
 )
 ```
 
-### Git Commits
-
-Follow conventional commit format with emoji prefix:
-```
-🎉 Initial setup
-✨ Add feature
-🐛 Fix bug
-♻️ Refactor code
-🎨 Improve UI
-🧪 Add tests
-📝 Update docs
-🚀 Deploy
-```
-
 ## Key Files Reference
 
 - `README.md` - Project overview and getting started
