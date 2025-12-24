@@ -14,7 +14,9 @@ export function useImageTransparency() {
     image: GalleryImage,
     samplePoint?: { x: number, y: number },
     forceOriginal?: boolean,
-    onSuccess?: (updatedImage: GalleryImage) => void
+    onSuccess?: (updatedImage: GalleryImage) => void,
+    currentVersion?: string,
+    onVersionChange?: (version: string) => void
   ) => {
     e?.stopPropagation();
     if (processingTransparency[image.id]) return;
@@ -25,7 +27,15 @@ export function useImageTransparency() {
     setProcessingTransparency(prev => ({ ...prev, [image.id]: true }));
 
     try {
-      const response = await fetch(`/api/images/${image.id}/transparent`, {
+      // Detect if we're working with an edit
+      const isEdit = currentVersion?.startsWith('edit-') && !currentVersion.startsWith('edit-transparent-');
+      const editId = isEdit ? currentVersion.replace('edit-', '') : null;
+
+      const endpoint = isEdit
+        ? `/api/image-edits/${editId}/transparent`
+        : `/api/images/${image.id}/transparent`;
+
+      const response = await fetch(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ tolerance, mode, samplePoint, forceOriginal }),
@@ -50,15 +60,25 @@ export function useImageTransparency() {
       // Update version to bust cache
       setImageVersions(prev => ({ ...prev, [image.id]: Date.now() }));
 
-      // Automatically switch to transparent view
-      setShowTransparent(prev => ({ ...prev, [image.id]: true }));
+      // If edit, switch to transparent edit version
+      if (isEdit && onVersionChange && editId) {
+        onVersionChange(`edit-transparent-${editId}`);
+      } else {
+        // Automatically switch to transparent view for regular images
+        setShowTransparent(prev => ({ ...prev, [image.id]: true }));
+      }
 
       // Call success callback with updated image
       if (onSuccess) {
-        onSuccess({
-          ...image,
-          transparentFilePath: data.transparentFilePath
-        });
+        if (isEdit) {
+          // For edits, the callback will refresh the edits list
+          onSuccess(image);
+        } else {
+          onSuccess({
+            ...image,
+            transparentFilePath: data.transparentFilePath
+          });
+        }
       }
     } catch (error) {
       console.error('Error making image transparent:', error);

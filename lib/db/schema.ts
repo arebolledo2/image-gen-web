@@ -161,6 +161,25 @@ export const squishAnimations = pgTable('squish_animations', {
   createdAt: timestamp('created_at').defaultNow().notNull(),
 });
 
+// Image Edits table
+export const imageEdits = pgTable('image_edits', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  imageId: uuid('image_id').notNull(),
+  sourceVersion: text('source_version').notNull(), // 'original', 'transparent', 'flipped', 'squish-{uuid}', 'ai-{uuid}', 'edit-{uuid}'
+  editedFilePath: text('edited_file_path').notNull(),
+  transparentEditPath: text('transparent_edit_path'), // nullable transparent version of the edit
+  userPrompt: text('user_prompt').notNull(),
+  fullAiPrompt: text('full_ai_prompt').notNull(),
+  generatedName: text('generated_name').notNull(),
+  metadata: json('metadata').$type<{
+    width?: number;
+    height?: number;
+    sourceFilePath?: string;
+    [key: string]: any;
+  }>(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+});
+
 // Relations
 export const stylesRelations = relations(styles, ({ one, many }) => ({
   parentStyle: one(styles, {
@@ -265,11 +284,19 @@ export const imagesRelations = relations(images, ({ one, many }) => ({
     references: [generations.id],
   }),
   squishAnimations: many(squishAnimations),
+  imageEdits: many(imageEdits),
 }));
 
 export const squishAnimationsRelations = relations(squishAnimations, ({ one }) => ({
   image: one(images, {
     fields: [squishAnimations.imageId],
+    references: [images.id],
+  }),
+}));
+
+export const imageEditsRelations = relations(imageEdits, ({ one }) => ({
+  image: one(images, {
+    fields: [imageEdits.imageId],
     references: [images.id],
   }),
 }));
@@ -295,3 +322,5 @@ export type Image = typeof images.$inferSelect;
 export type NewImage = typeof images.$inferInsert;
 export type SquishAnimation = typeof squishAnimations.$inferSelect;
 export type NewSquishAnimation = typeof squishAnimations.$inferInsert;
+export type ImageEdit = typeof imageEdits.$inferSelect;
+export type NewImageEdit = typeof imageEdits.$inferInsert;

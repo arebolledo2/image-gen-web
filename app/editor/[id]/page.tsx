@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Fragment, useEffect, useState } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
-import { Heart, Download, Loader2, Sparkles, Move, Scissors, Copy, Check } from "lucide-react";
+import { Heart, Download, Loader2, Sparkles, Move, Scissors, Copy, Check, Wand2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Tabs,
@@ -21,10 +21,12 @@ import { EditorLayout } from "@/components/editor/editor-layout";
 import { TransparencyPanel } from "@/components/editor/transparency-panel";
 import { SquishAnimationPanel } from "@/components/editor/squish-animation-panel";
 import { AIAnimationPanel } from "@/components/editor/ai-animation-panel";
+import { AIEditPanel } from "@/components/editor/ai-edit-panel";
 import { ImagePreview } from "@/components/editor/image-preview";
 import { useImageTransparency } from "@/hooks/useImageTransparency";
 import { useSquishAnimation } from "@/hooks/use-squish-animation";
 import { useAIAnimation } from "@/hooks/use-ai-animation";
+import { useImageEdits } from "@/hooks/use-image-edits";
 import type { GalleryImage } from "@/components/image-gallery-modal";
 
 export default function EditorPage() {
@@ -87,6 +89,17 @@ export default function EditorPage() {
     deleteAIAnimation,
   } = useAIAnimation();
 
+  const {
+    processingEdit,
+    editPrompt,
+    imageEdits,
+    loadingEdits,
+    setEditPrompt,
+    fetchImageEdits,
+    generateImageEdit,
+    deleteImageEdit,
+  } = useImageEdits();
+
   // Fetch image data
   useEffect(() => {
     const fetchImage = async () => {
@@ -112,6 +125,7 @@ export default function EditorPage() {
     if (image) {
       fetchSquishAnimations(image.id);
       fetchAIAnimations(image.id);
+      fetchImageEdits(image.id);
     }
   }, [image?.id]);
 
@@ -129,11 +143,22 @@ export default function EditorPage() {
   // Handle transparency application
   const handleApplyTransparency = async () => {
     if (!image) return;
-    await makeTransparent(null, image, undefined, true, (updatedImage) => {
-      setImage(updatedImage);
-      setInternalVersion(Date.now());
-      setSelectedVersion((prev) => ({ ...prev, [image.id]: 'transparent' }));
-    });
+    await makeTransparent(
+      null,
+      image,
+      undefined,
+      true,
+      (updatedImage) => {
+        setImage(updatedImage);
+        setInternalVersion(Date.now());
+        // Refresh edits if working with an edit
+        if (currentVersion.startsWith('edit-') && !currentVersion.startsWith('edit-transparent-')) {
+          fetchImageEdits(image.id);
+        }
+      },
+      currentVersion,
+      (version) => setSelectedVersion((prev) => ({ ...prev, [image.id]: version }))
+    );
   };
 
   // Handle horizontal flip
@@ -169,11 +194,22 @@ export default function EditorPage() {
     const imageY = Math.floor((y - offsetY) / scale);
 
     if (imageX >= 0 && imageX < naturalWidth && imageY >= 0 && imageY < naturalHeight) {
-      makeTransparent(e, image, { x: imageX, y: imageY }, false, (updatedImage) => {
-        setImage(updatedImage);
-        setInternalVersion(Date.now());
-        setSelectedVersion((prev) => ({ ...prev, [image.id]: 'transparent' }));
-      });
+      makeTransparent(
+        e,
+        image,
+        { x: imageX, y: imageY },
+        false,
+        (updatedImage) => {
+          setImage(updatedImage);
+          setInternalVersion(Date.now());
+          // Refresh edits if working with an edit
+          if (currentVersion.startsWith('edit-') && !currentVersion.startsWith('edit-transparent-')) {
+            fetchImageEdits(image.id);
+          }
+        },
+        currentVersion,
+        (version) => setSelectedVersion((prev) => ({ ...prev, [image.id]: version }))
+      );
     }
   };
 
@@ -199,6 +235,20 @@ export default function EditorPage() {
       const animationId = version.replace('ai-', '');
       const animation = aiAnimations[image.id]?.find((a: any) => a.id === animationId);
       const path = animation?.spritesheetPath || animation?.filePath;
+      if (path) {
+        textToCopy = path.split(/[/\\]/).pop() || textToCopy;
+      }
+    } else if (version.startsWith('edit-transparent-')) {
+      const editId = version.replace('edit-transparent-', '');
+      const edit = imageEdits[image.id]?.find((e: any) => e.id === editId);
+      const path = edit?.transparentEditPath;
+      if (path) {
+        textToCopy = path.split(/[/\\]/).pop() || textToCopy;
+      }
+    } else if (version.startsWith('edit-')) {
+      const editId = version.replace('edit-', '');
+      const edit = imageEdits[image.id]?.find((e: any) => e.id === editId);
+      const path = edit?.editedFilePath;
       if (path) {
         textToCopy = path.split(/[/\\]/).pop() || textToCopy;
       }
@@ -302,6 +352,18 @@ export default function EditorPage() {
                     AI - {animation.metadata?.gridSize || 2}×{animation.metadata?.gridSize || 2} ({animation.frameCount}f)
                   </SelectItem>
                 ))}
+                {imageEdits[image.id]?.map((edit: any) => (
+                  <Fragment key={edit.id}>
+                    <SelectItem value={`edit-${edit.id}`}>
+                      Edit - {edit.generatedName}
+                    </SelectItem>
+                    {edit.transparentEditPath && (
+                      <SelectItem value={`edit-transparent-${edit.id}`}>
+                        Edit - {edit.generatedName} (Transparent)
+                      </SelectItem>
+                    )}
+                  </Fragment>
+                ))}
               </SelectContent>
             </Select>
 
@@ -349,6 +411,10 @@ export default function EditorPage() {
                       ? `/api/squish-animations/${currentVersion.replace('squish-', '')}/file`
                       : currentVersion.startsWith('ai-')
                       ? `/api/squish-animations/${currentVersion.replace('ai-', '')}/file`
+                      : currentVersion.startsWith('edit-transparent-')
+                      ? `/api/image-edits/${currentVersion.replace('edit-transparent-', '')}/file?version=transparent`
+                      : currentVersion.startsWith('edit-')
+                      ? `/api/image-edits/${currentVersion.replace('edit-', '')}/file`
                       : `/api/images/${image.id}/file${
                           currentVersion === 'transparent'
                             ? '?version=transparent'
@@ -368,7 +434,7 @@ export default function EditorPage() {
           </div>
 
           <Tabs defaultValue="transparency" className="w-full flex-1 flex flex-col min-h-0">
-            <TabsList className="grid w-full grid-cols-3 mb-4 shrink-0 h-10">
+            <TabsList className="grid w-full grid-cols-4 mb-4 shrink-0 h-10">
               <TabsTrigger value="transparency" title="Transparency" className="px-0">
                 <Scissors className="h-3.5 w-3.5 shrink-0" />
                 <span className="ml-1.5 text-xs truncate">Cut</span>
@@ -380,6 +446,10 @@ export default function EditorPage() {
               <TabsTrigger value="ai" title="AI Animation" className="px-0">
                 <Sparkles className="h-3.5 w-3.5 shrink-0" />
                 <span className="ml-1.5 text-xs truncate">AI</span>
+              </TabsTrigger>
+              <TabsTrigger value="ai-edit" title="AI Edit" className="px-0">
+                <Wand2 className="h-3.5 w-3.5 shrink-0" />
+                <span className="ml-1.5 text-xs truncate">Edit</span>
               </TabsTrigger>
             </TabsList>
 
@@ -455,6 +525,33 @@ export default function EditorPage() {
                 }}
               />
             </TabsContent>
+
+            <TabsContent value="ai-edit" className="space-y-4 flex-1 overflow-y-auto min-h-0 p-1">
+              <AIEditPanel
+                prompt={editPrompt[image.id] || ''}
+                processing={processingEdit[image.id] || false}
+                loading={loadingEdits[image.id] || false}
+                edits={imageEdits[image.id] || []}
+                sourceVersion={currentVersion}
+                onPromptChange={(prompt) =>
+                  setEditPrompt((prev) => ({ ...prev, [image.id]: prompt }))
+                }
+                onGenerate={async () => {
+                  await generateImageEdit(image, currentVersion, (version) => {
+                    setSelectedVersion((prev) => ({ ...prev, [image.id]: version }));
+                  });
+                  await fetchImageEdits(image.id);
+                }}
+                onRefresh={() => fetchImageEdits(image.id)}
+                onDelete={async (editId) => {
+                  await deleteImageEdit(image.id, editId);
+                  await fetchImageEdits(image.id);
+                }}
+                onEditSelect={(editId) => {
+                  setSelectedVersion((prev) => ({ ...prev, [image.id]: `edit-${editId}` }));
+                }}
+              />
+            </TabsContent>
           </Tabs>
         </div>
       }
@@ -466,6 +563,7 @@ export default function EditorPage() {
         imageVersion={internalVersion}
         squishAnimations={squishAnimations[image.id] || []}
         aiAnimations={aiAnimations[image.id] || []}
+        imageEdits={imageEdits[image.id] || []}
         isSampling={isSampling}
         hasTransparent={!!image.transparentFilePath}
         onVersionChange={(version) => {

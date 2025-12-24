@@ -11,6 +11,7 @@ interface ImagePreviewProps {
   imageVersion: number;
   squishAnimations: any[];
   aiAnimations: any[];
+  imageEdits?: any[];
   isSampling?: boolean;
   hasTransparent?: boolean;
   onVersionChange?: (version: string) => void;
@@ -24,13 +25,16 @@ export function ImagePreview({
   imageVersion,
   squishAnimations,
   aiAnimations,
+  imageEdits = [],
   isSampling = false,
   hasTransparent = false,
   onVersionChange,
   onImageClick,
 }: ImagePreviewProps) {
-  // Determine if we're viewing an animation
+  // Determine if we're viewing an animation or edit
   const isAnimation = selectedVersion.startsWith('squish-') || selectedVersion.startsWith('ai-');
+  const isTransparentEdit = selectedVersion.startsWith('edit-transparent-');
+  const isEdit = selectedVersion.startsWith('edit-');
 
   let currentAnimation = null;
   if (isAnimation) {
@@ -42,6 +46,16 @@ export function ImagePreview({
       currentAnimation = aiAnimations?.find((a: any) => a.id === animationId);
     }
   }
+
+  // Get edit ID for both transparent and regular edits
+  let editId: string | null = null;
+  if (isTransparentEdit) {
+    editId = selectedVersion.replace('edit-transparent-', '');
+  } else if (isEdit) {
+    editId = selectedVersion.replace('edit-', '');
+  }
+
+  const currentEdit = editId ? imageEdits?.find((e: any) => e.id === editId) : null;
 
   return (
     <div className="h-full w-full flex flex-col p-8 bg-muted/5">
@@ -56,16 +70,22 @@ export function ImagePreview({
             />
           ) : (
             <img
-              src={`/api/images/${imageId}/file${
-                selectedVersion === 'transparent'
-                  ? `?version=transparent&t=${imageVersion || ''}`
-                  : selectedVersion === 'flipped'
-                  ? `?version=flipped&t=${imageVersion || ''}`
-                  : ''
-              }`}
+              src={
+                isTransparentEdit && currentEdit?.transparentEditPath
+                  ? `/api/image-edits/${editId}/file?version=transparent&t=${imageVersion || ''}`
+                  : isEdit
+                  ? `/api/image-edits/${editId}/file?t=${imageVersion || ''}`
+                  : `/api/images/${imageId}/file${
+                      selectedVersion === 'transparent'
+                        ? `?version=transparent&t=${imageVersion || ''}`
+                        : selectedVersion === 'flipped'
+                        ? `?version=flipped&t=${imageVersion || ''}`
+                        : ''
+                    }`
+              }
               alt={fileName}
               className={`max-w-full max-h-full w-auto h-auto object-contain ${isSampling ? 'cursor-crosshair' : ''} ${
-                selectedVersion === 'transparent' || selectedVersion === 'flipped'
+                selectedVersion === 'transparent' || selectedVersion === 'flipped' || isEdit || isTransparentEdit
                   ? 'bg-[url("https://www.transparenttextures.com/patterns/checkerboard.png")]'
                   : ''
               }`}
