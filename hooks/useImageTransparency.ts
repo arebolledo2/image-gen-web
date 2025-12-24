@@ -27,9 +27,17 @@ export function useImageTransparency() {
     setProcessingTransparency(prev => ({ ...prev, [image.id]: true }));
 
     try {
-      // Detect if we're working with an edit
-      const isEdit = currentVersion?.startsWith('edit-') && !currentVersion.startsWith('edit-transparent-');
-      const editId = isEdit ? currentVersion.replace('edit-', '') : null;
+      // Detect if we're working with an edit (including transparent edits)
+      const isTransparentEdit = currentVersion?.startsWith('edit-transparent-');
+      const isRegularEdit = currentVersion?.startsWith('edit-') && !isTransparentEdit;
+      const isEdit = isTransparentEdit || isRegularEdit;
+
+      let editId: string | null = null;
+      if (isTransparentEdit) {
+        editId = currentVersion.replace('edit-transparent-', '');
+      } else if (isRegularEdit) {
+        editId = currentVersion.replace('edit-', '');
+      }
 
       const endpoint = isEdit
         ? `/api/image-edits/${editId}/transparent`
