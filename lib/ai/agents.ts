@@ -160,7 +160,7 @@ export interface CreatePromptAgentParams {
 export async function createPromptAgent(params: CreatePromptAgentParams): Promise<PromptSuggestion> {
   const { assetType, styleName, styleKeywords, description, isTransparent = true } = params;
 
-  const backgroundInstruction = isTransparent 
+  const backgroundInstruction = isTransparent
     ? 'ALWAYS include "solid bright magenta background #FF00FF single tone with no gradients" for sprite transparency'
     : 'Include a background description that fits the subject and style, but DO NOT use a magenta background.';
 
@@ -265,7 +265,7 @@ export interface ComposePromptParams {
     description?: string | null;
     isTransparent?: boolean;
   };
-  style: {
+  style?: {
     name: string;
     description?: string | null;
     palette: string[] | {
@@ -314,45 +314,52 @@ export async function composeConstructedPromptAgent(params: ComposePromptParams)
 - Follow the structure: [SUBJECT], [FEATURES], [COLORS], [STYLE], [VIEW], [ANIMATION], [OUTLINE], [BACKGROUND]`;
 
   const systemPrompt = `You are an expert at creating technical prompts for AI image generation, specifically for game assets.
-Your task is to take a high-level Subject, a Style, and multiple Guidance instructions and compose them into a single, cohesive, high-quality prompt.
+Your task is to take a high-level Subject, ${style ? 'a Style, ' : ''}and${guidance.length > 0 ? ' multiple ' : ' '}Guidance instructions and compose them into a single, cohesive, high-quality prompt.
 
 CRITICAL RULES:
 1. ${backgroundInstruction}
 2. Be specific about view angle if implied by guidance or subject.
 3. Request consistent sizing for sprite sheets if "sprite sheet" is mentioned in guidance.
-4. Integrate the style's palette and rendering cues naturally.
-5. ${styleInstruction}
+${style ? '4. Integrate the style\'s palette and rendering cues naturally.\n' : ''}5. ${styleInstruction}
 6. ONLY output the final prompt text. Do not include any conversational filler, introductions, or explanations.`;
 
-  const paletteText = Array.isArray(style.palette) 
-    ? style.palette.join(', ')
-    : `${style.palette.primary.join(', ')}, ${style.palette.accent.join(', ')}`;
+  let userPrompt = `Compose a prompt with these components:
+Subject: ${subject.name} ${subject.description ? `(${subject.description})` : ''}`;
 
-  const materialsText = Array.isArray(style.renderingCues)
-    ? style.renderingCues.join(', ')
-    : style.renderingCues.materials.join(', ');
+  if (style) {
+    const paletteText = Array.isArray(style.palette)
+      ? style.palette.join(', ')
+      : `${style.palette.primary.join(', ')}, ${style.palette.accent.join(', ')}`;
 
-  const effectsText = Array.isArray(style.renderingCues)
-    ? '' // When it's a flat array, cues are mixed together in materialsText
-    : style.renderingCues.effects.join(', ');
+    const materialsText = Array.isArray(style.renderingCues)
+      ? style.renderingCues.join(', ')
+      : style.renderingCues.materials.join(', ');
 
-  const artisticText = style.artisticDirection 
-    ? `
+    const effectsText = Array.isArray(style.renderingCues)
+      ? '' // When it's a flat array, cues are mixed together in materialsText
+      : style.renderingCues.effects.join(', ');
+
+    const artisticText = style.artisticDirection
+      ? `
 - Visual Style: ${style.artisticDirection.visualStyle}
 - Lighting: ${style.artisticDirection.lighting}
 - Perspective: ${style.artisticDirection.cameraPerspective}
 - Level of Detail: ${style.artisticDirection.levelOfDetail}`
-    : '';
+      : '';
 
-  const userPrompt = `Compose a prompt with these components:
-Subject: ${subject.name} ${subject.description ? `(${subject.description})` : ''}
+    userPrompt += `
 Style: ${style.name}
 Style Details:${artisticText}
 - Palette: ${paletteText}
 - Materials: ${materialsText}
-${effectsText ? `- Effects: ${effectsText}` : ''}
+${effectsText ? `- Effects: ${effectsText}` : ''}`;
+  }
+
+  if (guidance.length > 0) {
+    userPrompt += `
 Guidance:
 ${guidance.map(g => `- ${g.name}: ${g.description}`).join('\n')}`;
+  }
 
   const { text } = await generateText({
     model: google('gemini-2.5-flash'),
@@ -484,4 +491,85 @@ CRITICAL RULES:
   });
 
   return text.trim();
+}
+
+/**
+ * Parameters for editing an existing style
+ */
+export interface EditStyleParams {
+  /** The current style to modify */
+  currentStyle: {
+    name: string;
+    description?: string | null;
+    palette: {
+      primary: string[];
+      accent: string[];
+      background: string;
+    };
+    renderingCues: {
+      materials: string[];
+      effects: string[];
+      finish: string;
+    };
+  };
+  /** User's request for how to modify the style (e.g., "make it more vibrant", "add golden accents") */
+  userRequest: string;
+}
+
+/**
+ * Edit an existing style based on a user request.
+ *
+ * The agent modifies the style according to the user's natural language request
+ * while maintaining the overall structure and coherence of the style definition.
+ *
+ * @param params - The current style and user's modification request
+ * @returns Promise resolving to the modified style definition
+ * @throws Error if AI generation fails or returns invalid data
+ *
+ * @example
+ * ```typescript
+ * const modifiedStyle = await editStyleAgent({
+ *   currentStyle: {
+ *     name: 'Neon Synth',
+ *     palette: { primary: ['#00FFFF'], accent: ['#FF00FF'], background: '#0A0A1F' },
+ *     renderingCues: { materials: ['chrome'], effects: ['glow'], finish: 'glossy' }
+ *   },
+ *   userRequest: 'make the colors warmer and add a sunset theme'
+ * });
+ * // Returns modified style with warmer palette colors
+ * ```
+ */
+export async function editStyleAgent(params: EditStyleParams): Promise<StyleSuggestion> {
+  const { currentStyle, userRequest } = params;
+
+  const systemPrompt = `You are a professional art director and style designer for game sprites and assets.
+Your task is to modify an existing style definition according to a user's request while maintaining consistency and quality.
+
+CRITICAL RULES:
+1. All colors MUST be valid hex color codes (e.g., #FF5733).
+2. Preserve the overall structure and coherence of the style.
+3. Make targeted changes based on the user's request - don't completely overhaul unless requested.
+4. Keep elements that aren't mentioned in the request relatively unchanged.
+5. Ensure the modified style still works cohesively as a complete art direction.
+
+The current style has:
+- Name: ${currentStyle.name}
+- Description: ${currentStyle.description || 'No description'}
+- Palette: Primary ${currentStyle.palette.primary.join(', ')}, Accent ${currentStyle.palette.accent.join(', ')}, Background ${currentStyle.palette.background}
+- Materials: ${currentStyle.renderingCues.materials.join(', ')}
+- Effects: ${currentStyle.renderingCues.effects.join(', ')}
+- Finish: ${currentStyle.renderingCues.finish}
+
+Modify this style according to the user's request and return a complete, updated style definition.`;
+
+  const { experimental_output } = await generateText({
+    model: google('gemini-2.5-flash'),
+    system: systemPrompt,
+    experimental_output: Output.object({
+      schema: styleSchema,
+    }),
+    prompt: `Modify the style based on this request: ${userRequest}`,
+  });
+
+  return experimental_output;
 }

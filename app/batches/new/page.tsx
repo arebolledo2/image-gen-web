@@ -9,10 +9,11 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Plus, X, Palette, Box, Compass, Sparkles, Wand2 } from "lucide-react";
+import { Loader2, Plus, X, Palette, Box, Compass, Sparkles, Wand2, EyeOff } from "lucide-react";
 import { AIAssistButton } from "@/components/agents/ai-assist-button";
 import { RESOLUTION_PRESETS, DEFAULT_RESOLUTION } from "@/lib/config/resolution-presets";
 import { useSettings } from "@/components/providers/settings-provider";
+import { Switch } from "@/components/ui/switch";
 
 interface Entity {
   id: string;
@@ -42,7 +43,7 @@ export default function NewBatchPage() {
   const { promptStyle } = useSettings();
   const [loading, setLoading] = useState(false);
   const [dataLoading, setDataLoading] = useState(true);
-  
+
   const [styles, setStyles] = useState<Entity[]>([]);
   const [subjects, setSubjects] = useState<SubjectEntity[]>([]);
   const [guidanceList, setGuidanceList] = useState<Entity[]>([]);
@@ -53,18 +54,19 @@ export default function NewBatchPage() {
   const [provider, setProvider] = useState<'gemini' | 'gemini3' | 'comfyui'>('gemini');
   const [defaultCount, setDefaultCount] = useState(1);
   const [resolution, setResolution] = useState<string>(DEFAULT_RESOLUTION);
-  
+
   // Selection mode: 'preset' or 'construct'
   const [mode, setMode] = useState<'preset' | 'construct'>('preset');
-  
+
   // For 'preset' mode
   const [selectedPresetId, setSelectedPresetId] = useState("");
-  
+
   // For 'construct' mode
   const [styleId, setStyleId] = useState("");
+  const [omitStyle, setOmitStyle] = useState(false);
   const [selectedSubjectIds, setSelectedSubjectIds] = useState<string[]>([]);
   const [selectedGuidanceIds, setSelectedGuidanceIds] = useState<string[]>([]);
-  
+
   // Preview and final prompts
   const [composing, setComposing] = useState(false);
   const [previewPrompts, setPreviewPrompts] = useState<{ subjectName: string; promptText: string; promptId?: string }[]>([]);
@@ -100,7 +102,7 @@ export default function NewBatchPage() {
   };
 
   const toggleGuidance = (id: string) => {
-    setSelectedGuidanceIds(prev => 
+    setSelectedGuidanceIds(prev =>
       prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]
     );
   };
@@ -114,7 +116,7 @@ export default function NewBatchPage() {
   const [metadataLoading, setMetadataLoading] = useState(false);
   const handleGenerateMetadata = async () => {
     if (prompts.length === 0) return;
-    
+
     setMetadataLoading(true);
     try {
       const combinedPrompt = prompts.map(p => p.promptText).join('\n');
@@ -143,7 +145,7 @@ export default function NewBatchPage() {
         setPreviewPrompts([{ subjectName: 'Preset', promptText: preset.promptText, promptId: preset.id }]);
       }
     } else {
-      if (!styleId || selectedSubjectIds.length === 0) return;
+      if ((!omitStyle && !styleId) || selectedSubjectIds.length === 0) return;
       setComposing(true);
       try {
         const promises = selectedSubjectIds.map(async (subId) => {
@@ -152,7 +154,7 @@ export default function NewBatchPage() {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-              styleId,
+              styleId: omitStyle ? undefined : styleId,
               subjectId: subId,
               guidanceIds: selectedGuidanceIds,
               promptStyle
@@ -250,11 +252,11 @@ export default function NewBatchPage() {
   };
 
   if (dataLoading) {
-      return (
-        <div className="flex items-center justify-center min-h-[400px]">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
-        </div>
-      );
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
   }
 
   return (
@@ -275,7 +277,7 @@ export default function NewBatchPage() {
           </CardHeader>
           <CardContent className="space-y-6">
             <div className="flex gap-1 p-1 bg-muted rounded-lg w-fit">
-              <Button 
+              <Button
                 type="button"
                 variant={mode === 'preset' ? "default" : "ghost"}
                 size="sm"
@@ -284,7 +286,7 @@ export default function NewBatchPage() {
               >
                 Use Preset
               </Button>
-              <Button 
+              <Button
                 type="button"
                 variant={mode === 'construct' ? "default" : "ghost"}
                 size="sm"
@@ -317,8 +319,31 @@ export default function NewBatchPage() {
               <div className="space-y-6">
                 <div className="grid md:grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label className="flex items-center gap-2"><Palette className="h-4 w-4"/> Style</Label>
-                    <Select value={styleId} onValueChange={setStyleId}>
+                    <div className="flex items-center justify-between">
+                      <Label className="flex items-center gap-2"><Palette className="h-4 w-4" /> Style</Label>
+                      <div className="flex items-center space-x-2">
+                        <Switch
+                          id="omitStyle"
+                          checked={omitStyle}
+                          onCheckedChange={(checked: boolean) => {
+                            setOmitStyle(checked);
+                            if (checked) setStyleId("");
+                          }}
+                        />
+                        <label
+                          htmlFor="omitStyle"
+                          className="text-sm font-medium flex items-center gap-1 text-muted-foreground cursor-pointer"
+                        >
+                          <EyeOff className="h-3 w-3" />
+                          Omit Style
+                        </label>
+                      </div>
+                    </div>
+                    <Select
+                      value={styleId}
+                      onValueChange={setStyleId}
+                      disabled={omitStyle}
+                    >
                       <SelectTrigger>
                         <SelectValue placeholder="Select style..." />
                       </SelectTrigger>
@@ -330,7 +355,7 @@ export default function NewBatchPage() {
                     </Select>
                   </div>
                   <div className="space-y-2">
-                    <Label className="flex items-center gap-2"><Box className="h-4 w-4"/> Subjects</Label>
+                    <Label className="flex items-center gap-2"><Box className="h-4 w-4" /> Subjects</Label>
                     <div className="flex flex-wrap gap-2 p-2 border rounded-md min-h-[42px] max-h-[200px] overflow-y-auto">
                       {subjects.map((s) => (
                         <Badge
@@ -348,7 +373,7 @@ export default function NewBatchPage() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label className="flex items-center gap-2"><Compass className="h-4 w-4"/> Guidance</Label>
+                  <Label className="flex items-center gap-2"><Compass className="h-4 w-4" /> Guidance</Label>
                   <div className="flex flex-wrap gap-2">
                     {guidanceList.map((g) => (
                       <Badge
@@ -365,11 +390,11 @@ export default function NewBatchPage() {
               </div>
             )}
 
-            <Button 
-                type="button" 
-                className="w-full" 
-                onClick={handleConstructPreview}
-                disabled={composing || (mode === 'preset' && !selectedPresetId) || (mode === 'construct' && (!styleId || selectedSubjectIds.length === 0))}
+            <Button
+              type="button"
+              className="w-full"
+              onClick={handleConstructPreview}
+              disabled={composing || (mode === 'preset' && !selectedPresetId) || (mode === 'construct' && ((!omitStyle && !styleId) || selectedSubjectIds.length === 0))}
             >
               {composing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Wand2 className="mr-2 h-4 w-4" />}
               {mode === 'preset' ? "Preview Preset" : `Construct Previews (${selectedSubjectIds.length})`}

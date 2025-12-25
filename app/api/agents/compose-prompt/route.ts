@@ -10,43 +10,51 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { styleId, subjectId, guidanceIds, promptStyle } = body;
 
-    if (!styleId || !subjectId) {
+    if (!subjectId) {
       return NextResponse.json(
-        { error: 'styleId and subjectId are required' },
+        { error: 'subjectId is required' },
         { status: 400 }
       );
     }
 
-    const [style] = await db.select().from(styles).where(eq(styles.id, styleId));
     const [subject] = await db.select().from(subjects).where(eq(subjects.id, subjectId));
-    
-    if (!style || !subject) {
-        return NextResponse.json({ error: 'Style or Subject not found' }, { status: 404 });
+
+    if (!subject) {
+      return NextResponse.json({ error: 'Subject not found' }, { status: 404 });
+    }
+
+    // Fetch style only if styleId is provided
+    let style = null;
+    if (styleId) {
+      [style] = await db.select().from(styles).where(eq(styles.id, styleId));
+      if (!style) {
+        return NextResponse.json({ error: 'Style not found' }, { status: 404 });
+      }
     }
 
     const selectedGuidance = guidanceIds && guidanceIds.length > 0
-        ? await db.query.guidance.findMany({
-            where: (guidance, { inArray }) => inArray(guidance.id, guidanceIds)
-          })
-        : [];
+      ? await db.query.guidance.findMany({
+        where: (guidance, { inArray }) => inArray(guidance.id, guidanceIds)
+      })
+      : [];
 
     const promptText = await composeConstructedPromptAgent({
-        subject: {
-            name: subject.name,
-            description: subject.description,
-            isTransparent: subject.isTransparent
-        },
-        style: {
-            name: style.name,
-            description: style.description,
-            palette: style.palette,
-            renderingCues: style.renderingCues
-        },
-        guidance: selectedGuidance.map(g => ({
-            name: g.name,
-            description: g.description
-        })),
-        promptStyle
+      subject: {
+        name: subject.name,
+        description: subject.description,
+        isTransparent: subject.isTransparent
+      },
+      style: style ? {
+        name: style.name,
+        description: style.description,
+        palette: style.palette,
+        renderingCues: style.renderingCues
+      } : undefined,
+      guidance: selectedGuidance.map(g => ({
+        name: g.name,
+        description: g.description
+      })),
+      promptStyle
     });
 
     return NextResponse.json({ promptText });

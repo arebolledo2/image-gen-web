@@ -5,6 +5,7 @@ import {
   suggestPromptVariations,
   composeConstructedPromptAgent,
   createBatchMetadataAgent,
+  editStyleAgent,
 } from '../agents';
 
 // Mock the AI SDK
@@ -61,7 +62,7 @@ describe('createStyleAgent', () => {
     expect(result).toEqual(mockStyle);
     expect(generateText).toHaveBeenCalledWith(
       expect.objectContaining({
-          model: expect.objectContaining({ model: 'gemini-2.5-flash' }),
+        model: expect.objectContaining({ model: 'gemini-2.5-flash' }),
         prompt: 'Create a style based on: futuristic neon style',
       })
     );
@@ -337,7 +338,7 @@ describe('composeConstructedPromptAgent', () => {
 
   it('should compose a prompt from all components', async () => {
     const mockComposedPrompt = 'Robot Turret, metal armor, cyan and blue colors, futuristic style, top-down view, magenta background';
-    
+
     vi.mocked(generateText).mockResolvedValue({
       text: mockComposedPrompt,
       finishReason: 'stop',
@@ -489,6 +490,140 @@ describe('createBatchMetadataAgent', () => {
     expect(generateText).toHaveBeenCalledWith(
       expect.objectContaining({
         system: expect.stringContaining('catchy, professional name'),
+      })
+    );
+  });
+});
+
+describe('editStyleAgent', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('should modify a style based on user request', async () => {
+    const mockModifiedStyle = {
+      name: 'Sunset Synth',
+      description: 'A warm sunset-themed neon aesthetic',
+      palette: {
+        primary: ['#FF6B35', '#FF8C42'],
+        accent: ['#FFD700', '#FF4500'],
+        background: '#1A0A1F',
+      },
+      artisticDirection: {
+        visualStyle: 'Cyberpunk 3D',
+        lighting: 'Warm cinematic',
+        cameraPerspective: 'Top-down',
+        levelOfDetail: 'High',
+      },
+      renderingCues: {
+        materials: ['chrome', 'metal'],
+        effects: ['glow', 'sunset haze'],
+        finish: 'glossy',
+      },
+    };
+
+    vi.mocked(generateText).mockResolvedValue({
+      experimental_output: mockModifiedStyle,
+      text: '',
+      finishReason: 'stop',
+      usage: { promptTokens: 100, completionTokens: 200 },
+    } as any);
+
+    const result = await editStyleAgent({
+      currentStyle: {
+        name: 'Neon Synth',
+        description: 'Cool neon style',
+        palette: {
+          primary: ['#00FFFF'],
+          accent: ['#FF00FF'],
+          background: '#0A0A1F',
+        },
+        renderingCues: {
+          materials: ['chrome'],
+          effects: ['glow'],
+          finish: 'glossy',
+        },
+      },
+      userRequest: 'make the colors warmer with a sunset theme',
+    });
+
+    expect(result).toEqual(mockModifiedStyle);
+  });
+
+  it('should include current style data in the system prompt', async () => {
+    vi.mocked(generateText).mockResolvedValue({
+      experimental_output: {
+        name: 'Test',
+        description: 'Test',
+        palette: { primary: ['#FF0000'], accent: ['#00FF00'], background: '#0000FF' },
+        artisticDirection: { visualStyle: '', lighting: '', cameraPerspective: '', levelOfDetail: '' },
+        renderingCues: { materials: [], effects: [], finish: 'matte' },
+      },
+      text: '',
+      finishReason: 'stop',
+      usage: { promptTokens: 0, completionTokens: 0 },
+    } as any);
+
+    await editStyleAgent({
+      currentStyle: {
+        name: 'Original Style',
+        palette: {
+          primary: ['#AABBCC'],
+          accent: ['#DDEEFF'],
+          background: '#112233',
+        },
+        renderingCues: {
+          materials: ['wood', 'stone'],
+          effects: ['dust'],
+          finish: 'rough',
+        },
+      },
+      userRequest: 'add more metallic elements',
+    });
+
+    expect(generateText).toHaveBeenCalledWith(
+      expect.objectContaining({
+        system: expect.stringContaining('Original Style'),
+      })
+    );
+    expect(generateText).toHaveBeenCalledWith(
+      expect.objectContaining({
+        system: expect.stringContaining('#AABBCC'),
+      })
+    );
+    expect(generateText).toHaveBeenCalledWith(
+      expect.objectContaining({
+        system: expect.stringContaining('wood, stone'),
+      })
+    );
+  });
+
+  it('should include user request in the prompt', async () => {
+    vi.mocked(generateText).mockResolvedValue({
+      experimental_output: {
+        name: 'Test',
+        description: 'Test',
+        palette: { primary: ['#FF0000'], accent: ['#00FF00'], background: '#0000FF' },
+        artisticDirection: { visualStyle: '', lighting: '', cameraPerspective: '', levelOfDetail: '' },
+        renderingCues: { materials: [], effects: [], finish: 'matte' },
+      },
+      text: '',
+      finishReason: 'stop',
+      usage: { promptTokens: 0, completionTokens: 0 },
+    } as any);
+
+    await editStyleAgent({
+      currentStyle: {
+        name: 'Test',
+        palette: { primary: ['#FFFFFF'], accent: ['#000000'], background: '#AAAAAA' },
+        renderingCues: { materials: [], effects: [], finish: 'matte' },
+      },
+      userRequest: 'make it more vibrant and colorful',
+    });
+
+    expect(generateText).toHaveBeenCalledWith(
+      expect.objectContaining({
+        prompt: expect.stringContaining('make it more vibrant and colorful'),
       })
     );
   });

@@ -5,9 +5,18 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, ArrowLeft, Trash2, Palette, ChevronRight, Copy, Pencil, Save, X, Plus } from "lucide-react";
+import { Loader2, ArrowLeft, Trash2, Palette, ChevronRight, Copy, Pencil, Save, X, Plus, Sparkles } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 
 interface Style {
   id: string;
@@ -55,6 +64,11 @@ export default function StyleDetailPage({ params }: { params: Promise<{ id: stri
   const [editMaterials, setEditMaterials] = useState<string[]>([]);
   const [editEffects, setEditEffects] = useState<string[]>([]);
   const [editFinish, setEditFinish] = useState("");
+
+  // AI Assist state
+  const [aiDialogOpen, setAiDialogOpen] = useState(false);
+  const [aiRequest, setAiRequest] = useState("");
+  const [aiLoading, setAiLoading] = useState(false);
 
   useEffect(() => {
     fetchStyle();
@@ -194,6 +208,60 @@ export default function StyleDetailPage({ params }: { params: Promise<{ id: stri
     setEditing(false);
   };
 
+  const handleAiAssist = async () => {
+    if (!aiRequest.trim()) return;
+
+    setAiLoading(true);
+    try {
+      const response = await fetch("/api/agents/edit-style", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          currentStyle: {
+            name: editName,
+            description: editDescription,
+            palette: {
+              primary: editPrimaryColors,
+              accent: editAccentColors,
+              background: editBackground,
+            },
+            renderingCues: {
+              materials: editMaterials,
+              effects: editEffects,
+              finish: editFinish,
+            },
+          },
+          userRequest: aiRequest,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to get AI suggestions");
+      }
+
+      const data = await response.json();
+      const newStyle = data.style;
+
+      // Update edit state with AI suggestions
+      setEditName(newStyle.name);
+      setEditDescription(newStyle.description || "");
+      setEditPrimaryColors(newStyle.palette.primary);
+      setEditAccentColors(newStyle.palette.accent);
+      setEditBackground(newStyle.palette.background);
+      setEditMaterials(newStyle.renderingCues.materials);
+      setEditEffects(newStyle.renderingCues.effects);
+      setEditFinish(newStyle.renderingCues.finish);
+
+      setAiDialogOpen(false);
+      setAiRequest("");
+    } catch (error) {
+      console.error("Error with AI assist:", error);
+      alert("Failed to get AI suggestions");
+    } finally {
+      setAiLoading(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
@@ -267,8 +335,54 @@ export default function StyleDetailPage({ params }: { params: Promise<{ id: stri
       {editing && (
         <Card>
           <CardHeader>
-            <CardTitle>Edit Style</CardTitle>
-            <CardDescription>Modify all style details including colors and rendering cues</CardDescription>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle>Edit Style</CardTitle>
+                <CardDescription>Modify all style details including colors and rendering cues</CardDescription>
+              </div>
+              <Dialog open={aiDialogOpen} onOpenChange={setAiDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button variant="outline" size="sm">
+                    <Sparkles className="mr-2 h-4 w-4" />
+                    AI Assist
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>AI Style Assist</DialogTitle>
+                    <DialogDescription>
+                      Describe how you want to modify the style and AI will update it for you.
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="py-4">
+                    <Textarea
+                      value={aiRequest}
+                      onChange={(e) => setAiRequest(e.target.value)}
+                      placeholder="e.g., make the colors warmer, add a sunset theme, make it more vibrant..."
+                      rows={3}
+                    />
+                  </div>
+                  <DialogFooter>
+                    <Button variant="outline" onClick={() => setAiDialogOpen(false)} disabled={aiLoading}>
+                      Cancel
+                    </Button>
+                    <Button onClick={handleAiAssist} disabled={aiLoading || !aiRequest.trim()}>
+                      {aiLoading ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Generating...
+                        </>
+                      ) : (
+                        <>
+                          <Sparkles className="mr-2 h-4 w-4" />
+                          Apply AI Changes
+                        </>
+                      )}
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
+            </div>
           </CardHeader>
           <CardContent className="space-y-6">
             <div className="space-y-2">

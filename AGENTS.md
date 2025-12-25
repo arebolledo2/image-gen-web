@@ -106,7 +106,7 @@ lib/
 
 ### AI Agents
 
-Three primary agent functions (in `lib/ai/`):
+Four primary agent functions (in `lib/ai/`):
 
 1. **Prompt Composition** (`composePrompt`)
    - Combines style + subject + guidance into full prompt
@@ -116,7 +116,11 @@ Three primary agent functions (in `lib/ai/`):
    - Creates palette and rendering cues from description
    - API: `POST /api/agents/create-style`
 
-3. **Prompt Template Creation** (`createPrompt`)
+3. **Style Editing** (`editStyle`)
+   - Modifies an existing style based on a user request
+   - API: `POST /api/agents/edit-style`
+
+4. **Prompt Template Creation** (`createPrompt`)
    - Generates prompt templates from descriptions
    - API: `POST /api/agents/create-prompt`
 
