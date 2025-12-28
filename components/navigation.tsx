@@ -11,6 +11,8 @@ const navItems = [
   { href: "/", label: "Dashboard" },
   { href: "/gallery", label: "Gallery" },
   { href: "/batches", label: "Batches" },
+  { href: "/audio-gallery", label: "Audio Gallery" },
+  { href: "/audio-batches", label: "Audio Batches" },
   { href: "/styles", label: "Styles" },
   { href: "/subjects", label: "Subjects" },
   { href: "/guidance", label: "Guidance" },

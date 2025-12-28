@@ -3,9 +3,10 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "concurrently \"npm run dev:next\" \"npm run dev:inngest\"",
+    "dev": "concurrently \"npm run dev:next\" \"npm run dev:inngest\" \"npm run dev:audio\"",
     "dev:next": "next dev",
     "dev:inngest": "npx inngest-cli@latest dev",
+    "dev:audio": "cd ../audio-gen && launch.bat",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
