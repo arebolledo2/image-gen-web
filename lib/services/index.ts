@@ -30,3 +30,5 @@ export { guidanceService, GuidanceService } from './guidance.service';
 export { promptsService, PromptsService } from './prompts.service';
 export { batchesService, BatchesService } from './batches.service';
 export { imagesService, ImagesService } from './images.service';
+export { audioBatchesService, AudioBatchesService } from './audio-batches.service';
+export { audioFilesService, AudioFilesService } from './audio-files.service';
