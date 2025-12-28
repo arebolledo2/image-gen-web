@@ -41,7 +41,7 @@ describe('Gemini3Provider', () => {
     provider = new Gemini3Provider();
     process.env.GEMINI_API_KEY = 'test-api-key';
     // Mock console.error to avoid cluttering test output
-    vi.spyOn(console, 'error').mockImplementation(() => {});
+    vi.spyOn(console, 'error').mockImplementation(() => { });
   });
 
   it('should have the correct name', () => {
@@ -99,7 +99,7 @@ describe('Gemini3Provider', () => {
     expect(saveImage).toHaveBeenCalled();
     expect(db.update).toHaveBeenCalled();
     expect(db.insert).toHaveBeenCalled();
-    
+
     // Check if correct resolution was mapped
     expect(mockFetch).toHaveBeenCalledWith(
       expect.any(String),
@@ -130,6 +130,31 @@ describe('Gemini3Provider', () => {
       expect.any(String),
       expect.objectContaining({
         body: expect.stringContaining('"imageSize":"2K"')
+      })
+    );
+  });
+
+  it('should map 4K resolution correctly', async () => {
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        candidates: [{ content: { parts: [{ inlineData: { data: 'd' } }] } }]
+      }),
+    });
+
+    await provider.generateImage({
+      prompt: 'test',
+      batchId: 'b',
+      batchPromptId: 'bp',
+      runNumber: 1,
+      generationId: 'g',
+      parameters: { resolution: '4096x4096' },
+    });
+
+    expect(mockFetch).toHaveBeenCalledWith(
+      expect.any(String),
+      expect.objectContaining({
+        body: expect.stringContaining('"imageSize":"4K"')
       })
     );
   });

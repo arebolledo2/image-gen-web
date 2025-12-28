@@ -4,6 +4,8 @@ import { generations, images } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
 import { saveImage } from '@/lib/storage/local-storage';
 
+import { RESOLUTION_PRESETS, DEFAULT_RESOLUTION } from '@/lib/config/resolution-presets';
+
 export class Gemini3Provider implements ImageProvider {
   name: 'gemini3' = 'gemini3';
 
@@ -19,7 +21,7 @@ export class Gemini3Provider implements ImageProvider {
     try {
       const apiKey = this.getApiKey();
       const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-image-preview?key=${apiKey}`;
-      
+
       const response = await fetch(endpoint);
       return response.ok;
     } catch (error) {
@@ -41,21 +43,12 @@ export class Gemini3Provider implements ImageProvider {
       const model = 'gemini-3-pro-image-preview';
       const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
 
-      // Map resolution presets to Gemini 3 imageSize
-      // Default RESOLUTION_PRESETS: 1024x1024, 1344x768, 768x1344
-      // Gemini 3 imageSize: "1K", "2K", "4K"
-      let imageSize = '1K';
-      const resolutionId = parameters.resolution || '1024x1024';
-      if (resolutionId.includes('2K') || resolutionId.includes('2048')) {
-        imageSize = '2K';
-      } else if (resolutionId.includes('4K') || resolutionId.includes('4096')) {
-        imageSize = '4K';
-      }
+      // Map resolution presets to Gemini 3 imageSize and aspectRatio
+      const resolutionId = parameters.resolution || DEFAULT_RESOLUTION;
+      const preset = RESOLUTION_PRESETS.find(p => p.id === resolutionId);
 
-      // Map aspect ratio
-      let aspectRatio = '1:1';
-      if (resolutionId === '1344x768') aspectRatio = '16:9';
-      if (resolutionId === '768x1344') aspectRatio = '9:16';
+      const imageSize = preset?.geminiImageSize || '1K';
+      const aspectRatio = preset?.aspectRatio || '1:1';
 
       const body = {
         contents: [
@@ -87,14 +80,14 @@ export class Gemini3Provider implements ImageProvider {
       }
 
       const result = await response.json();
-      
+
       if (!result.candidates || result.candidates.length === 0) {
         throw new Error('No candidates in Gemini 3 response');
       }
 
       const candidate = result.candidates[0];
       const parts = candidate.content?.parts || [];
-      
+
       const imageParts = parts.filter((part: any) => part.inlineData && part.inlineData.data);
       const textParts = parts.filter((part: any) => part.text).map((part: any) => part.text);
 
@@ -126,10 +119,10 @@ export class Gemini3Provider implements ImageProvider {
           fileName: filePath.split('/').pop() || 'unknown',
           mediaType,
           fileSize: uint8Array.length,
-          metadata: { 
-            prompt, 
+          metadata: {
+            prompt,
             runNumber: options.runNumber,
-            thoughtSignature: part.thoughtSignature 
+            thoughtSignature: part.thoughtSignature
           },
         }).returning();
 
