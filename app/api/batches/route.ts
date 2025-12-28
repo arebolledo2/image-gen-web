@@ -1,26 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/db';
-import { batches, batchPrompts } from '@/lib/db/schema';
-import { desc } from 'drizzle-orm';
+import { batchesService } from '@/lib/services';
 
 // GET /api/batches - List all batches
 export async function GET() {
   try {
-    const allBatches = await db.query.batches.findMany({
-      orderBy: [desc(batches.createdAt)],
-      with: {
-        batchPrompts: true,
-        generations: {
-          with: {
-            images: {
-              limit: 3,
-            },
-          },
-          limit: 3, // Get a few generations to ensure we find images
-        },
-      },
-    });
-
+    const allBatches = await batchesService.getAllBatchesWithDetails();
     return NextResponse.json({ batches: allBatches });
   } catch (error) {
     console.error('Error fetching batches:', error);
@@ -52,39 +36,20 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Create batch
-    const [batch] = await db.insert(batches).values({
+    // Create batch using service (with transaction support!)
+    const batch = await batchesService.createBatch({
       name,
       description,
-      provider: provider || 'gemini',
-      status: 'draft',
-      defaults: defaults || {},
-    }).returning();
-
-    // Create batch prompts
-    const batchPromptsData = prompts.map((prompt: any, index: number) => ({
-      batchId: batch.id,
-      promptId: prompt.promptId || null,
-      promptText: prompt.promptText,
-      overrides: prompt.overrides || {},
-      order: index,
-    }));
-
-    await db.insert(batchPrompts).values(batchPromptsData);
-
-    // Fetch complete batch with prompts
-    const completeBatch = await db.query.batches.findFirst({
-      where: (batches, { eq }) => eq(batches.id, batch.id),
-      with: {
-        batchPrompts: true,
-      },
+      provider,
+      defaults,
+      prompts,
     });
 
-    return NextResponse.json({ batch: completeBatch }, { status: 201 });
+    return NextResponse.json({ batch }, { status: 201 });
   } catch (error) {
     console.error('Error creating batch:', error);
     return NextResponse.json(
-      { error: 'Failed to create batch' },
+      { error: error instanceof Error ? error.message : 'Failed to create batch' },
       { status: 500 }
     );
   }

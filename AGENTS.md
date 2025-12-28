@@ -45,9 +45,17 @@ Next.js 15 (App Router)
 
 **Database-First Approach**: All data persisted in PostgreSQL with Drizzle ORM. Schema defined in `lib/db/schema/`.
 
+**Service Layer Architecture**: Business logic and database operations encapsulated in services (`lib/services/`):
+- Transaction support for atomic multi-step operations
+- Reusable business logic across API routes
+- Versioning logic centralized in services
+- Type-safe operations with full TypeScript inference
+- Easier testing in isolation from HTTP layer
+
 **Serverless-Ready Architecture**:
 - Web UI: React interface for managing resources
-- API Layer: Next.js Route Handlers for database operations and background jobs
+- API Layer: Next.js Route Handlers using services for business logic
+- Service Layer: Encapsulated database operations with transaction support
 - Database: Relational schema tracking styles, prompts, batches, and images
 - Queue System: Inngest handles asynchronous image generation
 
@@ -83,6 +91,7 @@ lib/
 ├── db/               # Database schema and utilities
 ├── providers/        # Database providers
 ├── queue/            # Inngest job definitions
+├── services/         # Service layer (business logic & transactions)
 └── storage/          # Image storage utilities
 ```
 
@@ -103,6 +112,44 @@ lib/
 - Styles can be versioned via `parent_style_id`
 - Batches contain multiple prompts via `batch_prompts`
 - Images track parent batch and prompt for provenance
+
+### Service Layer
+
+**Services** (defined in `lib/services/`):
+- `stylesService`: Style CRUD with versioning support
+- `subjectsService`: Subject management with versioning
+- `guidanceService`: Guidance modifiers with versioning
+- `promptsService`: Prompt composition with transactional guidance associations
+- `batchesService`: Batch operations with atomic transactions
+- `imagesService`: Image and transformation operations
+
+**Key Features**:
+- **Transaction Support**: Multi-step operations are atomic (all-or-nothing)
+- **Versioning Logic**: Automatic version tracking for styles, subjects, and guidance
+- **Type Safety**: Full TypeScript inference from database schema
+- **Reusability**: Business logic shared across API routes
+- **Testability**: Services can be tested independently
+
+**Example Usage**:
+```typescript
+import { batchesService } from '@/lib/services';
+
+// Create batch with prompts atomically
+const batch = await batchesService.createBatch({
+  name: 'My Batch',
+  prompts: [
+    { promptText: 'A cyberpunk city' },
+    { promptText: 'A neon samurai' }
+  ]
+});
+// If any step fails, entire operation is rolled back
+
+// Get batch with full details
+const details = await batchesService.getBatchWithDetails(batch.id);
+// Returns: batch + prompts + generations + images + lineage
+```
+
+See `lib/services/README.md` for comprehensive documentation.
 
 ### AI Agents
 
@@ -151,10 +198,21 @@ See `API.md` for detailed API documentation.
 ### Modifying Database Schema
 | What | Files |
 |------|-------|
-| Table definitions | `lib/db/schema/*.ts` |
+| Table definitions | `lib/db/schema.ts` |
 | Database utilities | `lib/db/` |
 | Migrations | `drizzle/migrations/` (auto-generated) |
 | Apply schema | `npm run db:push` |
+
+### Modifying Business Logic (Services)
+| What | Files |
+|------|-------|
+| Style operations | `lib/services/styles.service.ts` |
+| Subject operations | `lib/services/subjects.service.ts` |
+| Guidance operations | `lib/services/guidance.service.ts` |
+| Prompt operations | `lib/services/prompts.service.ts` |
+| Batch operations | `lib/services/batches.service.ts` |
+| Image operations | `lib/services/images.service.ts` |
+| Service documentation | `lib/services/README.md` |
 
 ### Modifying AI Agent Behavior
 | What | Files |
@@ -198,8 +256,9 @@ See `API.md` for detailed API documentation.
 | What | Files |
 |------|-------|
 | Route handler | `app/api/[resource]/route.ts` |
-| Database queries | `lib/db/` |
-| Validation | Zod schemas in route handlers |
+| Business logic | Add methods to appropriate service in `lib/services/` |
+| Database queries | Inside service methods only |
+| Validation | Zod schemas (future: `lib/validation/`) |
 
 ### Adding Tests
 | What | Files |
@@ -281,51 +340,102 @@ npm start
 
 ### API Route Pattern
 
+**Current Pattern (Using Services)**:
 ```typescript
 // app/api/styles/route.ts
 import { NextRequest, NextResponse } from 'next/server'
-import { db } from '@/lib/db'
+import { stylesService } from '@/lib/services'
 
 export async function GET() {
   try {
-    const styles = await db.query.styles.findMany()
+    const styles = await stylesService.getLatestStyles()
     return NextResponse.json({ styles })
   } catch (error) {
-    return NextResponse.json({ error: 'Failed to fetch' }, { status: 500 })
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : 'Failed to fetch' },
+      { status: 500 }
+    )
   }
 }
 
 export async function POST(request: NextRequest) {
-  const body = await request.json()
-  // Validate and process
-  const style = await db.insert(styles).values(body)
-  return NextResponse.json({ style }, { status: 201 })
+  try {
+    const body = await request.json()
+    // Validate required fields
+    if (!body.name || !body.palette || !body.renderingCues) {
+      return NextResponse.json(
+        { error: 'Name, palette, and renderingCues are required' },
+        { status: 400 }
+      )
+    }
+
+    // Use service for business logic (handles versioning, transactions)
+    const style = body.parentStyleId
+      ? await stylesService.createStyleVersion(body.parentStyleId, body)
+      : await stylesService.createStyle(body)
+
+    return NextResponse.json({ style }, { status: 201 })
+  } catch (error) {
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : 'Failed to create' },
+      { status: 500 }
+    )
+  }
 }
 ```
 
-### Database Query Pattern
+**Benefits**:
+- Services handle transaction logic automatically
+- Versioning logic centralized in services
+- Business rules enforced consistently
+- Easier to test routes (mock services instead of DB)
 
+### Service Layer Pattern (Recommended)
+
+**Use services for all database operations**:
+```typescript
+import { stylesService, batchesService } from '@/lib/services'
+
+// CRUD operations
+const style = await stylesService.findById(styleId)
+const allStyles = await stylesService.getLatestStyles()
+const newStyle = await stylesService.createStyle({
+  name: 'Cyberpunk Neon',
+  palette: { primary: ['#FF00FF', '#00FFFF'], ... },
+  renderingCues: { materials: ['Metal'], ... }
+})
+
+// Versioning
+const v2 = await stylesService.createStyleVersion(parentId, { ... })
+const versions = await stylesService.getStyleVersions(styleId)
+
+// Transactions (automatic)
+const batch = await batchesService.createBatch({
+  name: 'My Batch',
+  prompts: [
+    { promptText: 'A cyberpunk city' },
+    { promptText: 'A neon samurai' }
+  ]
+})
+// All inserts are wrapped in a transaction automatically
+
+// Complex queries
+const details = await batchesService.getBatchWithDetails(batchId)
+// Returns: batch + prompts + generations + images + lineage
+```
+
+### Direct Database Pattern (Legacy - Avoid)
+
+**Only use direct DB access in services, not in routes**:
 ```typescript
 import { db } from '@/lib/db'
-import { styles, prompts } from '@/lib/db/schema'
+import { styles } from '@/lib/db/schema'
 import { eq } from 'drizzle-orm'
 
-// Query
+// This pattern should only be used INSIDE service methods
 const style = await db.query.styles.findFirst({
   where: eq(styles.id, styleId)
 })
-
-// Insert
-const newStyle = await db.insert(styles).values({
-  name: 'Cyberpunk Neon',
-  palette: ['#FF00FF', '#00FFFF'],
-  renderingCues: ['High contrast', 'Film grain']
-})
-
-// Update
-await db.update(styles)
-  .set({ version: existingStyle.version + 1 })
-  .where(eq(styles.id, styleId))
 ```
 
 ### Inngest Function Pattern
@@ -410,6 +520,7 @@ const className = cn(
 - `README.md` - Project overview and getting started
 - `API.md` - Detailed API documentation
 - `SETUP_GUIDE.md` - Comprehensive setup instructions
+- `lib/services/README.md` - Service layer documentation
 - `package.json` - Dependencies and scripts
 - `next.config.ts` - Next.js configuration
 - `drizzle.config.ts` - Database configuration
@@ -451,21 +562,31 @@ const { promptText } = await response.json()
 ### Querying Images with Provenance
 
 ```typescript
+import { imagesService } from '@/lib/services'
+
 // Get all images from a specific batch
-const images = await db.query.images.findMany({
-  where: eq(images.batchId, batchId),
-  with: {
-    batch: true,
-    prompt: true
-  }
+const images = await imagesService.getImagesByBatch(batchId)
+
+// Get only favorite images
+const favorites = await imagesService.getImagesByBatch(batchId, {
+  favoritesOnly: true
 })
+
+// Get image with full details
+const imageDetails = await imagesService.getImageWithDetails(imageId)
+// Returns: image + generation + batch + transformations + edits
+
+// Get batch statistics
+const stats = await imagesService.getImageStatistics(batchId)
+// Returns: { total, favorites, withTransparent, withFlipped, withAnimations, withEdits }
 ```
 
 ## Notes
 
 - This project uses App Router (not Pages Router)
 - Server Components by default, `'use client'` for interactivity
-- Database operations should use Drizzle ORM
+- **Always use services for database operations** - Never access `db` directly in routes
+- Services provide transaction support for multi-step operations
 - All async operations use standard `async/await`
 - Inngest handles all background processing reliably
 - Image storage configuration may vary based on deployment environment
