@@ -5,6 +5,7 @@ import { relations } from 'drizzle-orm';
 export const batchStatusEnum = pgEnum('batch_status', ['draft', 'queued', 'running', 'completed', 'failed']);
 export const generationStatusEnum = pgEnum('generation_status', ['pending', 'running', 'success', 'failed']);
 export const providerEnum = pgEnum('provider', ['gemini', 'gemini3', 'comfyui']);
+export const audioProviderEnum = pgEnum('audio_provider', ['audiocraft']);
 export const animationTypeEnum = pgEnum('animation_type', ['bounce', 'squash_stretch']);
 export const animationGeneratorEnum = pgEnum('animation_generator', ['manual', 'ai']);
 
@@ -180,6 +181,73 @@ export const imageEdits = pgTable('image_edits', {
   createdAt: timestamp('created_at').defaultNow().notNull(),
 });
 
+// Audio Batches table
+export const audioBatches = pgTable('audio_batches', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  name: text('name').notNull(),
+  version: integer('version').notNull().default(1),
+  parentAudioBatchId: uuid('parent_audio_batch_id'),
+  description: text('description'),
+  status: batchStatusEnum('status').default('draft').notNull(),
+  provider: audioProviderEnum('provider').default('audiocraft').notNull(),
+  defaults: json('defaults').$type<{
+    duration?: number;      // seconds (1-10)
+    count?: number;         // variations per prompt (1-5)
+    temperature?: number;   // 0.5-2.0
+    topK?: number;          // 0-250
+    cfgCoef?: number;       // classifier-free guidance coefficient
+  }>(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+  completedAt: timestamp('completed_at'),
+});
+
+// Audio Batch Prompts (join table)
+export const audioBatchPrompts = pgTable('audio_batch_prompts', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  audioBatchId: uuid('audio_batch_id').notNull(),
+  promptText: text('prompt_text').notNull(),
+  overrides: json('overrides').$type<{
+    duration?: number;
+    count?: number;
+    temperature?: number;
+    topK?: number;
+    cfgCoef?: number;
+  }>(),
+  order: integer('order').notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+});
+
+// Audio Generations table
+export const audioGenerations = pgTable('audio_generations', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  audioBatchId: uuid('audio_batch_id').notNull(),
+  audioBatchPromptId: uuid('audio_batch_prompt_id').notNull(),
+  status: generationStatusEnum('status').default('pending').notNull(),
+  runNumber: integer('run_number').notNull(), // for count > 1
+  metadata: json('metadata'), // full API response metadata
+  error: text('error'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  completedAt: timestamp('completed_at'),
+});
+
+// Audio Files table
+export const audioFiles = pgTable('audio_files', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  audioGenerationId: uuid('audio_generation_id').notNull(),
+  filePath: text('file_path').notNull(),
+  fileName: text('file_name').notNull(),
+  mediaType: text('media_type').notNull(), // 'audio/wav', 'audio/mp3'
+  fileSize: integer('file_size'),
+  duration: integer('duration'), // milliseconds
+  sampleRate: integer('sample_rate'), // Hz (e.g., 16000)
+  metadata: json('metadata').$type<{
+    [key: string]: any;
+  }>(),
+  isFavorite: boolean('is_favorite').default(false).notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+});
+
 // Relations
 export const stylesRelations = relations(styles, ({ one, many }) => ({
   parentStyle: one(styles, {
@@ -301,6 +369,46 @@ export const imageEditsRelations = relations(imageEdits, ({ one }) => ({
   }),
 }));
 
+export const audioBatchesRelations = relations(audioBatches, ({ one, many }) => ({
+  parentAudioBatch: one(audioBatches, {
+    fields: [audioBatches.parentAudioBatchId],
+    references: [audioBatches.id],
+    relationName: 'audioBatchLineage',
+  }),
+  childAudioBatches: many(audioBatches, {
+    relationName: 'audioBatchLineage',
+  }),
+  audioBatchPrompts: many(audioBatchPrompts),
+  audioGenerations: many(audioGenerations),
+}));
+
+export const audioBatchPromptsRelations = relations(audioBatchPrompts, ({ one, many }) => ({
+  audioBatch: one(audioBatches, {
+    fields: [audioBatchPrompts.audioBatchId],
+    references: [audioBatches.id],
+  }),
+  audioGenerations: many(audioGenerations),
+}));
+
+export const audioGenerationsRelations = relations(audioGenerations, ({ one, many }) => ({
+  audioBatch: one(audioBatches, {
+    fields: [audioGenerations.audioBatchId],
+    references: [audioBatches.id],
+  }),
+  audioBatchPrompt: one(audioBatchPrompts, {
+    fields: [audioGenerations.audioBatchPromptId],
+    references: [audioBatchPrompts.id],
+  }),
+  audioFiles: many(audioFiles),
+}));
+
+export const audioFilesRelations = relations(audioFiles, ({ one }) => ({
+  audioGeneration: one(audioGenerations, {
+    fields: [audioFiles.audioGenerationId],
+    references: [audioGenerations.id],
+  }),
+}));
+
 // Type exports
 export type Style = typeof styles.$inferSelect;
 export type NewStyle = typeof styles.$inferInsert;
@@ -324,3 +432,11 @@ export type SquishAnimation = typeof squishAnimations.$inferSelect;
 export type NewSquishAnimation = typeof squishAnimations.$inferInsert;
 export type ImageEdit = typeof imageEdits.$inferSelect;
 export type NewImageEdit = typeof imageEdits.$inferInsert;
+export type AudioBatch = typeof audioBatches.$inferSelect;
+export type NewAudioBatch = typeof audioBatches.$inferInsert;
+export type AudioBatchPrompt = typeof audioBatchPrompts.$inferSelect;
+export type NewAudioBatchPrompt = typeof audioBatchPrompts.$inferInsert;
+export type AudioGeneration = typeof audioGenerations.$inferSelect;
+export type NewAudioGeneration = typeof audioGenerations.$inferInsert;
+export type AudioFile = typeof audioFiles.$inferSelect;
+export type NewAudioFile = typeof audioFiles.$inferInsert;
