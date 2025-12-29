@@ -1,17 +1,20 @@
 "use client";
 
-import { use, useEffect, useState } from "react";
+import { use, useEffect, useState, useCallback } from "react";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Play, Music, ArrowLeft, Trash2 } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
+import { Loader2, Play, Music, ArrowLeft, Trash2, Edit2, Check, X, Copy } from "lucide-react";
+import { AIAssistButton } from "@/components/agents/ai-assist-button";
 
 interface AudioBatchDetails {
   id: string;
   name: string;
+  version: number;
   description: string | null;
   status: string;
   provider: string;
@@ -43,7 +46,13 @@ export default function AudioBatchDetailPage({ params }: { params: Promise<{ id:
   const [batch, setBatch] = useState<AudioBatchDetails | null>(null);
   const [loading, setLoading] = useState(true);
   const [executing, setExecuting] = useState(false);
+  const [creatingVersion, setCreatingVersion] = useState(false);
   const [deleting, setDeleting] = useState(false);
+
+  // Edit states
+  const [editingPromptId, setEditingPromptId] = useState<string | null>(null);
+  const [editPromptText, setEditPromptText] = useState("");
+  const [savingPrompt, setSavingPrompt] = useState(false);
 
   useEffect(() => {
     fetchBatch();
@@ -57,6 +66,7 @@ export default function AudioBatchDetailPage({ params }: { params: Promise<{ id:
       setBatch(data.audioBatch);
     } catch (error) {
       console.error('Error fetching audio batch:', error);
+      toast.error('Failed to fetch batch');
     } finally {
       setLoading(false);
     }
@@ -83,6 +93,28 @@ export default function AudioBatchDetailPage({ params }: { params: Promise<{ id:
     }
   };
 
+  const handleCreateVersion = async () => {
+    if (!batch) return;
+
+    setCreatingVersion(true);
+    try {
+      const response = await fetch(`/api/audio-batches/${batch.id}/version`, {
+        method: 'POST',
+      });
+
+      if (!response.ok) throw new Error('Failed to create version');
+
+      const data = await response.json();
+      toast.success('New version created!');
+      router.push(`/audio-batches/${data.audioBatch.id}`);
+    } catch (error) {
+      console.error('Error creating version:', error);
+      toast.error('Failed to create version');
+    } finally {
+      setCreatingVersion(false);
+    }
+  };
+
   const handleDelete = async () => {
     if (!batch) return;
     if (!confirm(`Are you sure you want to delete "${batch.name}"?`)) return;
@@ -103,20 +135,68 @@ export default function AudioBatchDetailPage({ params }: { params: Promise<{ id:
     }
   };
 
+  const handleEditPrompt = (prompt: { id: string, promptText: string }) => {
+    setEditingPromptId(prompt.id);
+    setEditPromptText(prompt.promptText);
+  };
+
+  const handleSavePrompt = async (promptId: string) => {
+    setSavingPrompt(true);
+    try {
+      const response = await fetch(`/api/audio-batch-prompts/${promptId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ promptText: editPromptText }),
+      });
+
+      if (!response.ok) throw new Error('Failed to update prompt');
+
+      setEditingPromptId(null);
+      toast.success('Prompt updated');
+      fetchBatch();
+    } catch (error) {
+      console.error('Error updating prompt:', error);
+      toast.error('Failed to update prompt');
+    } finally {
+      setSavingPrompt(false);
+    }
+  };
+
+  const handleAdjustPrompt = useCallback(async (
+    promptId: string,
+    suggestion: string,
+    currentText: string
+  ): Promise<string> => {
+    const response = await fetch('/api/agents/adjust-prompt', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        basePrompt: currentText,
+        suggestion,
+        promptStyle: "audio" // Specific style for audio
+      })
+    });
+
+    if (!response.ok) throw new Error('Failed to adjust prompt');
+    const data = await response.json();
+    setEditPromptText(data.promptText);
+    return data.promptText;
+  }, []);
+
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'completed':
-        return 'bg-green-500';
+        return 'bg-green-500 text-white border-0';
       case 'running':
-        return 'bg-blue-500';
+        return 'bg-blue-500 text-white border-0';
       case 'failed':
-        return 'bg-red-500';
+        return 'bg-red-500 text-white border-0';
       case 'queued':
-        return 'bg-yellow-500';
+        return 'bg-yellow-500 text-white border-0';
       case 'draft':
-        return 'bg-gray-500';
+        return 'bg-gray-500 text-white border-0';
       default:
-        return 'bg-gray-500';
+        return 'bg-gray-500 text-white border-0';
     }
   };
 
@@ -148,13 +228,14 @@ export default function AudioBatchDetailPage({ params }: { params: Promise<{ id:
   return (
     <div className="max-w-4xl mx-auto space-y-6 px-4">
       <div className="flex items-center gap-4">
-        <Button variant="ghost" size="icon" onClick={() => router.back()}>
+        <Button variant="ghost" size="icon" onClick={() => router.push('/audio-batches')}>
           <ArrowLeft className="h-4 w-4" />
         </Button>
         <div className="flex-1">
           <div className="flex items-center gap-3">
             <h1 className="text-3xl font-bold tracking-tight">{batch.name}</h1>
-            <Badge className={`${getStatusColor(batch.status)} text-white border-0`}>
+            <Badge variant="outline">v{batch.version}</Badge>
+            <Badge className={getStatusColor(batch.status)}>
               {batch.status}
             </Badge>
           </div>
@@ -173,6 +254,14 @@ export default function AudioBatchDetailPage({ params }: { params: Promise<{ id:
               Execute
             </Button>
           )}
+          <Button onClick={handleCreateVersion} disabled={creatingVersion} variant="outline">
+            {creatingVersion ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : (
+              <Copy className="mr-2 h-4 w-4" />
+            )}
+            Create Version
+          </Button>
           <Button variant="destructive" onClick={handleDelete} disabled={deleting}>
             {deleting ? (
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -247,16 +336,71 @@ export default function AudioBatchDetailPage({ params }: { params: Promise<{ id:
           <CardTitle>Prompts</CardTitle>
           <CardDescription>Audio generation prompts in this batch</CardDescription>
         </CardHeader>
-        <CardContent className="space-y-3">
+        <CardContent className="space-y-4">
           {batch.audioBatchPrompts.map((prompt, index) => (
-            <div key={prompt.id} className="flex gap-3 p-3 bg-muted rounded-lg">
-              <div className="flex-shrink-0 w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center text-sm font-medium">
-                {index + 1}
-              </div>
-              <div className="flex-1">
-                <p className="text-sm">{prompt.promptText}</p>
-              </div>
-            </div>
+            <Card key={prompt.id} className="overflow-hidden border-muted">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 bg-muted/30">
+                <CardTitle className="text-base">Prompt {index + 1}</CardTitle>
+                {batch.status === 'draft' && editingPromptId !== prompt.id && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleEditPrompt(prompt)}
+                  >
+                    <Edit2 className="h-4 w-4 mr-2" />
+                    Edit
+                  </Button>
+                )}
+              </CardHeader>
+              <CardContent className="pt-4">
+                {editingPromptId === prompt.id ? (
+                  <div className="space-y-4">
+                    <div className="flex justify-end">
+                      <AIAssistButton
+                        label="AI Adjust"
+                        title="Adjust Prompt"
+                        description="Make a quick suggestion to adjust this audio prompt."
+                        placeholder="e.g., make it more atmospheric, add more bass..."
+                        onGenerate={async (suggestion) => {
+                          await handleAdjustPrompt(prompt.id, suggestion, editPromptText);
+                        }}
+                      />
+                    </div>
+                    <Textarea
+                      value={editPromptText}
+                      onChange={(e) => setEditPromptText(e.target.value)}
+                      className="min-h-[100px] text-sm"
+                      placeholder="Enter audio prompt description..."
+                    />
+                    <div className="flex justify-end gap-2">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => setEditingPromptId(null)}
+                        disabled={savingPrompt}
+                      >
+                        <X className="h-4 w-4 mr-2" />
+                        Cancel
+                      </Button>
+                      <Button
+                        size="sm"
+                        onClick={() => handleSavePrompt(prompt.id)}
+                        disabled={savingPrompt}
+                      >
+                        {savingPrompt ? (
+                          <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                        ) : (
+                          <Check className="h-4 w-4 mr-2" />
+                        )}
+                        Save
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <p className="text-sm whitespace-pre-wrap">{prompt.promptText}</p>
+                )}
+              </CardContent>
+            </Card>
           ))}
         </CardContent>
       </Card>

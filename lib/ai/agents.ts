@@ -460,22 +460,39 @@ Description: "A multi-legged combat automaton with polished obsidian plating and
 export async function adjustPromptAgent(
   basePrompt: string,
   suggestion: string,
-  promptStyle: 'terse' | 'verbose' = 'terse'
+  promptStyle: 'terse' | 'verbose' | 'audio' = 'terse'
 ): Promise<string> {
-  const styleInstruction = promptStyle === 'verbose'
-    ? `OUTPUT STYLE: VERBOSE
+  const isAudio = promptStyle === 'audio';
+
+  const styleInstruction = isAudio
+    ? `AUDIO SOUND DESIGN STYLE:
+- Focus on tone, texture, impact, and game-readiness.
+- Keep it concise and direct (1-2 sentences).
+- Use clear descriptive terms for sound (punchy, clean, resonant, crunchy).
+- AVOID image-specific terms like "isometric", "magenta", "transparent background", or "view angle".`
+    : promptStyle === 'verbose'
+      ? `OUTPUT STYLE: VERBOSE
 - Use full, descriptive sentences.
 - Use periods to separate ideas.
 - Use new lines (line breaks) to separate logical sections of the prompt.
 - Aim for a narrative, detailed description of the scene and asset.
 - AVOID redundancy: Ensure information is integrated naturally and not repeated across different sections.`
-    : `OUTPUT STYLE: TERSE
+      : `OUTPUT STYLE: TERSE
 - Use brief descriptions.
 - Use lots of commas to separate ideas.
 - Keep it to a single paragraph.
 - Follow the structure: [SUBJECT], [FEATURES], [COLORS], [STYLE], [VIEW], [ANIMATION], [OUTLINE], [BACKGROUND]`;
 
-  const systemPrompt = `You are an expert at refining and adjusting AI image generation prompts for game assets.
+  const systemPrompt = isAudio
+    ? `You are an expert sound designer for video games.
+Your task is to refine an existing audio generation prompt based on a user's suggestion.
+Keep the prompt focused on sound characteristics (tone, texture, impact) and maintain the original intent while incorporating the new suggestion.
+
+CRITICAL RULES:
+1. ${styleInstruction}
+2. ONLY output the final adjusted prompt text.
+3. DO NOT include any image-related instructions (no colors, no perspectives, no transparency).`
+    : `You are an expert at refining and adjusting AI image generation prompts for game assets.
 Your task is to take an existing prompt and modify it according to a user's suggestion while maintaining the overall intent and quality.
 
 CRITICAL RULES:
