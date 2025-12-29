@@ -26,7 +26,7 @@ export interface AudioGenerationResult {
   duration: number;       // Duration in milliseconds
   sampleRate: number;     // Sample rate in Hz (e.g., 16000)
   fileSize: number;       // File size in bytes
-  mediaType: string;      // MIME type (e.g., 'audio/wav')
+  mediaType: string;      // MIME type (e.g., 'audio/mpeg')
   metadata?: Record<string, any>; // Additional metadata from provider
 }
 

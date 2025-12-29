@@ -132,7 +132,7 @@ export class AudioCraftProvider implements AudioProvider {
         audioGenerationId: generationId,
         filePath: relativeFilePath,
         fileName: fileName,
-        mediaType: 'audio/wav',
+        mediaType: 'audio/mpeg',
         fileSize: result.file_size,
         duration: Math.round(result.duration * 1000), // Convert to milliseconds
         sampleRate: result.sample_rate,
@@ -164,7 +164,7 @@ export class AudioCraftProvider implements AudioProvider {
         duration: Math.round(result.duration * 1000),
         sampleRate: result.sample_rate,
         fileSize: result.file_size,
-        mediaType: 'audio/wav',
+        mediaType: 'audio/mpeg',
         metadata: result.metadata,
       };
     } catch (error) {

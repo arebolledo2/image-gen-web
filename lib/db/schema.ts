@@ -237,7 +237,7 @@ export const audioFiles = pgTable('audio_files', {
   audioGenerationId: uuid('audio_generation_id').notNull(),
   filePath: text('file_path').notNull(),
   fileName: text('file_name').notNull(),
-  mediaType: text('media_type').notNull(), // 'audio/wav', 'audio/mp3'
+  mediaType: text('media_type').notNull(), // 'audio/mpeg', 'audio/wav'
   fileSize: integer('file_size'),
   duration: integer('duration'), // milliseconds
   sampleRate: integer('sample_rate'), // Hz (e.g., 16000)
