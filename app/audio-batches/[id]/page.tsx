@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Loader2, Play, Music, ArrowLeft, Trash2, Edit2, Check, X, Copy } from "lucide-react";
 import { AIAssistButton } from "@/components/agents/ai-assist-button";
+import { useAudioBatchData } from "@/hooks/use-audio-batch-data";
 
 interface AudioBatchDetails {
   id: string;
@@ -43,8 +44,7 @@ interface AudioBatchDetails {
 export default function AudioBatchDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const resolvedParams = use(params);
   const router = useRouter();
-  const [batch, setBatch] = useState<AudioBatchDetails | null>(null);
-  const [loading, setLoading] = useState(true);
+  const { batch, loading, refetchBatch } = useAudioBatchData(resolvedParams.id);
   const [executing, setExecuting] = useState(false);
   const [creatingVersion, setCreatingVersion] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -53,24 +53,6 @@ export default function AudioBatchDetailPage({ params }: { params: Promise<{ id:
   const [editingPromptId, setEditingPromptId] = useState<string | null>(null);
   const [editPromptText, setEditPromptText] = useState("");
   const [savingPrompt, setSavingPrompt] = useState(false);
-
-  useEffect(() => {
-    fetchBatch();
-  }, [resolvedParams.id]);
-
-  const fetchBatch = async () => {
-    try {
-      const response = await fetch(`/api/audio-batches/${resolvedParams.id}`);
-      if (!response.ok) throw new Error('Failed to fetch batch');
-      const data = await response.json();
-      setBatch(data.audioBatch);
-    } catch (error) {
-      console.error('Error fetching audio batch:', error);
-      toast.error('Failed to fetch batch');
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const handleExecute = async () => {
     if (!batch) return;
@@ -84,7 +66,7 @@ export default function AudioBatchDetailPage({ params }: { params: Promise<{ id:
       if (!response.ok) throw new Error('Failed to execute batch');
 
       toast.success('Audio batch queued for execution!');
-      fetchBatch();
+      refetchBatch();
     } catch (error) {
       console.error('Error executing batch:', error);
       toast.error('Failed to execute batch');
@@ -153,7 +135,7 @@ export default function AudioBatchDetailPage({ params }: { params: Promise<{ id:
 
       setEditingPromptId(null);
       toast.success('Prompt updated');
-      fetchBatch();
+      refetchBatch();
     } catch (error) {
       console.error('Error updating prompt:', error);
       toast.error('Failed to update prompt');

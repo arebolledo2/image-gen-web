@@ -24,7 +24,7 @@ export function useBatchData(batchId: string | string[] | undefined) {
 
   const fetchBatch = async () => {
     if (!batchId) return;
-    
+
     try {
       const response = await fetch(`/api/batches/${batchId}`);
       const data = await response.json();
@@ -41,6 +41,21 @@ export function useBatchData(batchId: string | string[] | undefined) {
       fetchBatch();
     }
   }, [batchId]);
+
+  // Poll for updates when batch is queued or running
+  useEffect(() => {
+    if (!batch) return;
+
+    const shouldPoll = batch.status === 'queued' || batch.status === 'running';
+
+    if (!shouldPoll) return;
+
+    const pollInterval = setInterval(() => {
+      fetchBatch();
+    }, 3000); // Poll every 3 seconds
+
+    return () => clearInterval(pollInterval);
+  }, [batch?.status, batch?.id]);
 
   return { batch, loading, refetchBatch: fetchBatch };
 }
