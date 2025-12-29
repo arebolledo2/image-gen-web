@@ -25,7 +25,7 @@ export default function NewAudioBatchPage() {
 
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
-  const [defaultDuration, setDefaultDuration] = useState(5);
+  const [defaultDuration, setDefaultDuration] = useState(1);
   const [defaultCount, setDefaultCount] = useState(1);
   const [defaultTemperature, setDefaultTemperature] = useState(1.0);
 
@@ -150,9 +150,9 @@ export default function NewAudioBatchPage() {
               <Slider
                 value={[defaultDuration]}
                 onValueChange={(value) => setDefaultDuration(value[0])}
-                min={1}
+                min={0.5}
                 max={10}
-                step={1}
+                step={0.5}
                 className="w-full"
               />
               <p className="text-xs text-muted-foreground">Length of generated audio in seconds</p>
@@ -166,7 +166,7 @@ export default function NewAudioBatchPage() {
                 value={[defaultCount]}
                 onValueChange={(value) => setDefaultCount(value[0])}
                 min={1}
-                max={5}
+                max={25}
                 step={1}
                 className="w-full"
               />

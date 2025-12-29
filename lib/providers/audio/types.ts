@@ -14,6 +14,7 @@ export interface AudioGenerationOptions {
   temperature?: number;   // Sampling temperature (0.5-2.0)
   topK?: number;          // Top-k sampling (0-250)
   cfgCoef?: number;       // Classifier-free guidance coefficient (1.0-10.0)
+  audioBatchId?: string;  // Audio batch ID for tracking
 }
 
 /**

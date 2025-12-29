@@ -24,6 +24,7 @@ export const audioGenerationFunction = inngest.createFunction(
           temperature: parameters?.temperature,
           topK: parameters?.topK,
           cfgCoef: parameters?.cfgCoef,
+          audioBatchId,
         }, audioGenerationId);
       });
 

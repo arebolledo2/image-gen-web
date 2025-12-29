@@ -48,10 +48,10 @@ export class AudioBatchesService extends BaseService<typeof audioBatches, AudioB
       with: {
         parentAudioBatch: true,
         childAudioBatches: {
-          orderBy: [desc(audioBatches.version)],
+          orderBy: (batches, { desc }) => [desc(batches.version)],
         },
         audioBatchPrompts: {
-          orderBy: [(bp) => bp.order],
+          orderBy: (prompts, { asc }) => [asc(prompts.order)],
         },
         audioGenerations: {
           with: {

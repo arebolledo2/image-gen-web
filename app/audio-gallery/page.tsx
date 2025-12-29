@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
+import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -16,18 +17,21 @@ interface AudioFileWithDetails {
   filePath: string;
   duration: number; // milliseconds
   isFavorite: boolean;
-  audioGeneration: {
+  audioGeneration?: {
     audioBatch: {
       id: string;
       name: string;
     };
-    audioBatchPrompt: {
+    audioBatchPrompt?: {
       promptText: string;
-    };
-  };
+    } | null;
+  } | null;
 }
 
 export default function AudioGalleryPage() {
+  const searchParams = useSearchParams();
+  const batchId = searchParams.get('batchId');
+
   const [audioFiles, setAudioFiles] = useState<AudioFileWithDetails[]>([]);
   const [loading, setLoading] = useState(true);
   const [favoritesOnly, setFavoritesOnly] = useState(false);
@@ -51,6 +55,9 @@ export default function AudioGalleryPage() {
       if (debouncedSearch) {
         url.searchParams.append('search', debouncedSearch);
       }
+      if (batchId) {
+        url.searchParams.append('batchId', batchId);
+      }
 
       const response = await fetch(url.toString());
       const data = await response.json();
@@ -60,7 +67,7 @@ export default function AudioGalleryPage() {
     } finally {
       setLoading(false);
     }
-  }, [favoritesOnly, debouncedSearch]);
+  }, [favoritesOnly, debouncedSearch, batchId]);
 
   useEffect(() => {
     fetchAudioFiles();
@@ -207,7 +214,7 @@ export default function AudioGalleryPage() {
                   <div className="flex items-start justify-between gap-2">
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium truncate">
-                        {audioFile.audioGeneration.audioBatchPrompt.promptText}
+                        {audioFile.audioGeneration?.audioBatchPrompt?.promptText || 'Audio Generation'}
                       </p>
                       <p className="text-xs text-muted-foreground truncate">
                         {audioFile.fileName}
@@ -218,11 +225,13 @@ export default function AudioGalleryPage() {
                     </Badge>
                   </div>
 
-                  <Link href={`/audio-batches/${audioFile.audioGeneration.audioBatch.id}`}>
-                    <p className="text-xs text-muted-foreground hover:underline truncate">
-                      Batch: {audioFile.audioGeneration.audioBatch.name}
-                    </p>
-                  </Link>
+                  {audioFile.audioGeneration?.audioBatch && (
+                    <Link href={`/audio-batches/${audioFile.audioGeneration.audioBatch.id}`}>
+                      <p className="text-xs text-muted-foreground hover:underline truncate">
+                        Batch: {audioFile.audioGeneration.audioBatch.name}
+                      </p>
+                    </Link>
+                  )}
                 </div>
 
                 {/* Actions */}

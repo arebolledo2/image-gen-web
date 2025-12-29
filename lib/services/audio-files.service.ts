@@ -65,6 +65,7 @@ export class AudioFilesService extends BaseService<typeof audioFiles, AudioFile,
       with: {
         audioGeneration: {
           with: {
+            audioBatch: true,
             audioBatchPrompt: true,
           },
         },

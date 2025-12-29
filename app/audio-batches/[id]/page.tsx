@@ -24,7 +24,7 @@ interface AudioBatchDetails {
     promptText: string;
     order: number;
   }[];
-  audioGenerations: {
+  audioGenerations?: {
     id: string;
     status: string;
     audioFiles: {
@@ -139,10 +139,10 @@ export default function AudioBatchDetailPage({ params }: { params: Promise<{ id:
     );
   }
 
-  const audioFiles = batch.audioGenerations.flatMap(gen => gen.audioFiles);
-  const totalGenerations = batch.audioGenerations.length;
-  const completedGenerations = batch.audioGenerations.filter(g => g.status === 'success').length;
-  const failedGenerations = batch.audioGenerations.filter(g => g.status === 'failed').length;
+  const audioFiles = batch.audioGenerations?.flatMap(gen => gen.audioFiles) || [];
+  const totalGenerations = batch.audioGenerations?.length || 0;
+  const completedGenerations = batch.audioGenerations?.filter(g => g.status === 'success').length || 0;
+  const failedGenerations = batch.audioGenerations?.filter(g => g.status === 'failed').length || 0;
 
   return (
     <div className="max-w-4xl mx-auto space-y-6 px-4">

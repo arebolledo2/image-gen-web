@@ -94,6 +94,8 @@ export class AudioCraftProvider implements AudioProvider {
           temperature: options.temperature || 1.0,
           top_k: options.topK || 250,
           cfg_coef: options.cfgCoef || 3.0,
+          batch_id: options.audioBatchId || generationId,
+          generation_id: generationId,
         }),
       });
 
@@ -105,7 +107,13 @@ export class AudioCraftProvider implements AudioProvider {
       const result = await response.json();
 
       // Move the generated file to our output directory
-      const sourceFilePath = result.file_path;
+      // The Python service returns a relative path from its working directory (audio-gen)
+      // We need to construct the absolute path
+      const audioGenDir = path.join(process.cwd(), '..', 'audio-gen');
+      const sourceFilePath = path.isAbsolute(result.file_path)
+        ? result.file_path
+        : path.join(audioGenDir, result.file_path);
+
       const fileName = `${generationId}_${result.file_name}`;
       const destFilePath = path.join(this.outputDir, fileName);
 
