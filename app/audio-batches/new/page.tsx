@@ -26,7 +26,7 @@ export default function NewAudioBatchPage() {
 
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
-  const [useAutoDuration, setUseAutoDuration] = useState(false);
+  const [useAutoDuration, setUseAutoDuration] = useState(true);
   const [defaultDuration, setDefaultDuration] = useState(1);
   const [defaultCount, setDefaultCount] = useState(1);
   const [defaultTemperature, setDefaultTemperature] = useState(1.0);

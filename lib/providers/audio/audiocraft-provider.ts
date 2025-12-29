@@ -90,11 +90,11 @@ export class AudioCraftProvider implements AudioProvider {
         },
         body: JSON.stringify({
           prompt: options.prompt,
-          duration: options.duration || 5,
-          temperature: options.temperature || 1.0,
-          top_k: options.topK || 250,
-          cfg_coef: options.cfgCoef || 3.0,
-          batch_id: options.audioBatchId || generationId,
+          duration: options.duration ?? 5,
+          temperature: options.temperature ?? 1.0,
+          top_k: options.topK ?? 250,
+          cfg_coef: options.cfgCoef ?? 3.0,
+          batch_id: options.audioBatchId ?? generationId,
           generation_id: generationId,
         }),
       });
