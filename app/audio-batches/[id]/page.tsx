@@ -191,7 +191,11 @@ export default function AudioBatchDetailPage({ params }: { params: Promise<{ id:
           <CardContent className="space-y-2 text-sm">
             <div className="flex justify-between">
               <span className="text-muted-foreground">Duration:</span>
-              <span>{batch.defaults.duration || 5}s</span>
+              <span>
+                {batch.defaults.duration === 0 || batch.defaults.duration === null || batch.defaults.duration === undefined
+                  ? 'Auto'
+                  : `${batch.defaults.duration}s`}
+              </span>
             </div>
             <div className="flex justify-between">
               <span className="text-muted-foreground">Count:</span>

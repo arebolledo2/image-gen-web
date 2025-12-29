@@ -58,10 +58,11 @@ function buildParameters(audioBatch: any, audioBatchPrompt: any): {
   } = {};
 
   // Get parameters from audioBatchPrompt override or audioBatch default
-  parameters.duration = audioBatchPrompt.overrides?.duration || audioBatch.defaults?.duration || 5;
-  parameters.temperature = audioBatchPrompt.overrides?.temperature || audioBatch.defaults?.temperature || 1.0;
-  parameters.topK = audioBatchPrompt.overrides?.topK || audioBatch.defaults?.topK || 250;
-  parameters.cfgCoef = audioBatchPrompt.overrides?.cfgCoef || audioBatch.defaults?.cfgCoef || 3.0;
+  // Use ?? instead of || to preserve 0 as a valid value (for auto-duration)
+  parameters.duration = audioBatchPrompt.overrides?.duration ?? audioBatch.defaults?.duration;
+  parameters.temperature = audioBatchPrompt.overrides?.temperature ?? audioBatch.defaults?.temperature ?? 1.0;
+  parameters.topK = audioBatchPrompt.overrides?.topK ?? audioBatch.defaults?.topK ?? 250;
+  parameters.cfgCoef = audioBatchPrompt.overrides?.cfgCoef ?? audioBatch.defaults?.cfgCoef ?? 3.0;
 
   return parameters;
 }
