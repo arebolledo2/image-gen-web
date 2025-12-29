@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Slider } from "@/components/ui/slider";
 import { Switch } from "@/components/ui/switch";
-import { Loader2, Plus, X } from "lucide-react";
+import { Loader2, Plus, X, Sparkles } from "lucide-react";
 
 interface AudioPrompt {
   promptText: string;
@@ -35,6 +35,8 @@ export default function NewAudioBatchPage() {
     { promptText: "" }
   ]);
 
+  const [generatingIndex, setGeneratingIndex] = useState<number | null>(null);
+
   const addPrompt = () => {
     setPrompts([...prompts, { promptText: "" }]);
   };
@@ -49,6 +51,31 @@ export default function NewAudioBatchPage() {
     const updated = [...prompts];
     updated[index] = { ...updated[index], promptText };
     setPrompts(updated);
+  };
+
+  const handleAiAssist = async (index: number) => {
+    const concept = prompts[index].promptText;
+    if (!concept.trim()) return;
+
+    setGeneratingIndex(index);
+    try {
+      const response = await fetch('/api/agents/create-audio-prompt', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ concept }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.prompt) {
+          updatePrompt(index, data.prompt);
+        }
+      }
+    } catch (error) {
+      console.error('Error with AI assist:', error);
+    } finally {
+      setGeneratingIndex(null);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -220,25 +247,49 @@ export default function NewAudioBatchPage() {
           </CardHeader>
           <CardContent className="space-y-4">
             {prompts.map((prompt, index) => (
-              <div key={index} className="flex gap-2">
-                <div className="flex-1">
-                  <Textarea
-                    value={prompt.promptText}
-                    onChange={(e) => updatePrompt(index, e.target.value)}
-                    placeholder={`Prompt ${index + 1} (e.g., "laser gun firing sound effect")`}
-                    rows={2}
-                  />
-                </div>
-                {prompts.length > 1 && (
+              <div key={index} className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <Label htmlFor={`prompt-${index}`}>Prompt {index + 1}</Label>
                   <Button
                     type="button"
                     variant="ghost"
-                    size="icon"
-                    onClick={() => removePrompt(index)}
+                    size="sm"
+                    className="h-8 px-2 text-xs"
+                    onClick={() => handleAiAssist(index)}
+                    disabled={generatingIndex === index || !prompt.promptText.trim()}
                   >
-                    <X className="h-4 w-4" />
+                    {generatingIndex === index ? (
+                      <Loader2 className="mr-2 h-3 w-3 animate-spin" />
+                    ) : (
+                      <Sparkles className="mr-2 h-3 w-3" />
+                    )}
+                    AI Assist
                   </Button>
-                )}
+                </div>
+                <div className="flex gap-2">
+                  <div className="flex-1">
+                    <Textarea
+                      id={`prompt-${index}`}
+                      value={prompt.promptText}
+                      onChange={(e) => updatePrompt(index, e.target.value)}
+                      placeholder={`e.g., "laser turret" - AI will expand this into a detailed prompt`}
+                      rows={3}
+                    />
+                  </div>
+                  {prompts.length > 1 && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => removePrompt(index)}
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  )}
+                </div>
+                <p className="text-[10px] text-muted-foreground italic">
+                  Enter a simple concept, then click AI Assist to generate a detailed audio prompt
+                </p>
               </div>
             ))}
           </CardContent>

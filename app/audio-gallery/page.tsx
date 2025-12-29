@@ -107,8 +107,8 @@ export default function AudioGalleryPage() {
   };
 
   const formatDuration = (ms: number) => {
-    const seconds = Math.floor(ms / 1000);
-    return `${seconds}s`;
+    const seconds = ms / 1000;
+    return `${seconds.toFixed(1)}s`;
   };
 
   if (loading) {
