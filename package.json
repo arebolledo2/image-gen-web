@@ -10,7 +10,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test": "vitest run",
+    "test": "npm run type:check && npm run lint && vitest run",
     "test:watch": "vitest",
     "test:ui": "vitest --ui",
     "test:run": "vitest run",
@@ -44,6 +44,7 @@
     "postgres": "^3.4.7",
     "react": "19.2.3",
     "react-dom": "19.2.3",
+    "sonner": "^2.0.7",
     "tailwind-merge": "^3.4.0",
     "zod": "^4.2.1"
   },

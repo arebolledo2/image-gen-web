@@ -1,7 +1,8 @@
 import { db } from '@/lib/db';
-import { batches, batchPrompts, generations, Batch, NewBatch, BatchPrompt, NewBatchPrompt, Generation } from '@/lib/db/schema';
-import { eq, desc, and, or, inArray } from 'drizzle-orm';
+import { batches, batchPrompts, generations, Batch, NewBatch, BatchPrompt, NewBatchPrompt, Generation, NewGeneration } from '@/lib/db/schema';
+import { eq, desc, and, or, inArray, asc } from 'drizzle-orm';
 import { BaseService } from './base.service';
+import type { BatchPromptOverrides, BatchDefaults } from '@/lib/types/common';
 
 /**
  * Service for managing batches with transaction support.
@@ -64,7 +65,7 @@ export class BatchesService extends BaseService<typeof batches, Batch, NewBatch>
               },
             },
           },
-          orderBy: [(bp) => bp.order],
+          orderBy: [asc(batchPrompts.order)],
         },
         generations: {
           with: {
@@ -166,7 +167,7 @@ export class BatchesService extends BaseService<typeof batches, Batch, NewBatch>
       prompts?: Array<{
         promptId?: string;
         promptText: string;
-        overrides?: Record<string, any>;
+        overrides?: BatchPromptOverrides;
       }>;
     }
   ) {
@@ -235,7 +236,7 @@ export class BatchesService extends BaseService<typeof batches, Batch, NewBatch>
     data: {
       name?: string;
       description?: string;
-      defaults?: Record<string, any>;
+      defaults?: Partial<BatchDefaults>;
     }
   ): Promise<Batch | undefined> {
     return this.update(id, data);
@@ -270,7 +271,7 @@ export class BatchesService extends BaseService<typeof batches, Batch, NewBatch>
       }
 
       // Update status and optionally set completedAt
-      const updateData: any = {
+      const updateData: Partial<NewBatch> & { updatedAt: Date; completedAt?: Date } = {
         status,
         updatedAt: new Date(),
       };
@@ -314,7 +315,9 @@ export class BatchesService extends BaseService<typeof batches, Batch, NewBatch>
 
       // Create generation records for each prompt
       for (const batchPrompt of batch.batchPrompts) {
-        const count = (batchPrompt.overrides as any)?.count ?? (batch.defaults as any)?.count ?? 1;
+        const overrides = batchPrompt.overrides as BatchPromptOverrides | null;
+        const defaults = batch.defaults as BatchDefaults | null;
+        const count = overrides?.count ?? defaults?.count ?? 1;
 
         // Create multiple generations if count > 1
         for (let i = 0; i < count; i++) {

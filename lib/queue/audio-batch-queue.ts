@@ -1,14 +1,21 @@
 import { inngest } from './client';
 import { AudioGenerationJob } from './audio-types';
 import { db } from '@/lib/db';
-import { audioGenerations } from '@/lib/db/schema';
+import { audioGenerations, AudioBatch, AudioBatchPrompt } from '@/lib/db/schema';
+import type { AudioBatchDefaults, AudioBatchPromptOverrides, AudioGenerationParameters } from '@/lib/types/common';
 
-export async function queueAudioBatchExecution(audioBatch: any) {
+interface AudioBatchWithPrompts extends AudioBatch {
+  audioBatchPrompts: AudioBatchPrompt[];
+}
+
+export async function queueAudioBatchExecution(audioBatch: AudioBatchWithPrompts) {
   // Create audio generation records upfront (status: pending)
   const jobs: AudioGenerationJob[] = [];
 
   for (const audioBatchPrompt of audioBatch.audioBatchPrompts) {
-    const count = audioBatchPrompt.overrides?.count || audioBatch.defaults?.count || 1;
+    const overrides = audioBatchPrompt.overrides as AudioBatchPromptOverrides | null;
+    const defaults = audioBatch.defaults as AudioBatchDefaults | null;
+    const count = overrides?.count || defaults?.count || 1;
 
     for (let run = 1; run <= count; run++) {
       // Create audio generation record
@@ -44,25 +51,18 @@ export async function queueAudioBatchExecution(audioBatch: any) {
   return { jobsQueued: jobs.length };
 }
 
-function buildParameters(audioBatch: any, audioBatchPrompt: any): {
-  duration?: number;
-  temperature?: number;
-  topK?: number;
-  cfgCoef?: number;
-} {
-  const parameters: {
-    duration?: number;
-    temperature?: number;
-    topK?: number;
-    cfgCoef?: number;
-  } = {};
+function buildParameters(audioBatch: AudioBatchWithPrompts, audioBatchPrompt: AudioBatchPrompt): AudioGenerationParameters {
+  const overrides = audioBatchPrompt.overrides as AudioBatchPromptOverrides | null;
+  const defaults = audioBatch.defaults as AudioBatchDefaults | null;
+
+  const parameters: AudioGenerationParameters = {};
 
   // Get parameters from audioBatchPrompt override or audioBatch default
   // Use ?? instead of || to preserve 0 as a valid value (for auto-duration)
-  parameters.duration = audioBatchPrompt.overrides?.duration ?? audioBatch.defaults?.duration;
-  parameters.temperature = audioBatchPrompt.overrides?.temperature ?? audioBatch.defaults?.temperature ?? 1.0;
-  parameters.topK = audioBatchPrompt.overrides?.topK ?? audioBatch.defaults?.topK ?? 250;
-  parameters.cfgCoef = audioBatchPrompt.overrides?.cfgCoef ?? audioBatch.defaults?.cfgCoef ?? 3.0;
+  parameters.duration = overrides?.duration ?? defaults?.duration;
+  parameters.temperature = overrides?.temperature ?? defaults?.temperature ?? 1.0;
+  parameters.topK = overrides?.topK ?? defaults?.topK ?? 250;
+  parameters.cfgCoef = overrides?.cfgCoef ?? defaults?.cfgCoef ?? 3.0;
 
   return parameters;
 }

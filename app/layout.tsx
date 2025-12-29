@@ -12,6 +12,8 @@ export const metadata: Metadata = {
   description: "Generate game sprites and assets with AI-powered batch processing",
 };
 
+import { Toaster } from "@/components/ui/sonner";
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -28,6 +30,7 @@ export default function RootLayout({
                 {children}
               </main>
             </div>
+            <Toaster />
           </SettingsProvider>
         </ThemeProvider>
       </body>

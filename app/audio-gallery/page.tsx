@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
+import { toast } from "sonner";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Card, CardContent } from "@/components/ui/card";
@@ -93,7 +94,7 @@ export default function AudioGalleryPage() {
       );
     } catch (error) {
       console.error('Error toggling favorite:', error);
-      alert('Failed to update favorite');
+      toast.error('Failed to update favorite');
     }
   };
 
@@ -243,9 +244,8 @@ export default function AudioGalleryPage() {
                     onClick={() => toggleFavorite(audioFile)}
                   >
                     <Heart
-                      className={`h-4 w-4 ${
-                        audioFile.isFavorite ? 'fill-red-500 text-red-500' : ''
-                      }`}
+                      className={`h-4 w-4 ${audioFile.isFavorite ? 'fill-red-500 text-red-500' : ''
+                        }`}
                     />
                   </Button>
                   <Button

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, use } from "react";
+import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -101,7 +102,7 @@ export default function StyleDetailPage({ params }: { params: Promise<{ id: stri
       }
     } catch (error) {
       console.error("Error fetching style:", error);
-      alert("Failed to load style");
+      toast.error("Failed to load style");
       router.push("/styles");
     } finally {
       setLoading(false);
@@ -126,7 +127,7 @@ export default function StyleDetailPage({ params }: { params: Promise<{ id: stri
       router.push("/styles");
     } catch (error) {
       console.error("Error deleting style:", error);
-      alert("Failed to delete style");
+      toast.error("Failed to delete style");
     } finally {
       setDeleting(false);
     }
@@ -147,7 +148,7 @@ export default function StyleDetailPage({ params }: { params: Promise<{ id: stri
       router.push(`/styles/${data.style.id}`);
     } catch (error) {
       console.error("Error creating version:", error);
-      alert("Failed to create version");
+      toast.error("Failed to create version");
     } finally {
       setCreatingVersion(false);
     }
@@ -181,10 +182,11 @@ export default function StyleDetailPage({ params }: { params: Promise<{ id: stri
 
       const data = await response.json();
       setStyle(data.style);
+      toast.success("Style updated successfully!");
       setEditing(false);
     } catch (error) {
       console.error("Error saving style:", error);
-      alert("Failed to save changes");
+      toast.error("Failed to save changes");
     } finally {
       setSaving(false);
     }
@@ -256,7 +258,7 @@ export default function StyleDetailPage({ params }: { params: Promise<{ id: stri
       setAiRequest("");
     } catch (error) {
       console.error("Error with AI assist:", error);
-      alert("Failed to get AI suggestions");
+      toast.error("Failed to get AI suggestions");
     } finally {
       setAiLoading(false);
     }

@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Loader2, Plus, X } from "lucide-react";
 import { AIAssistButton } from "@/components/agents/ai-assist-button";
+import { toast } from "sonner";
 
 export default function NewStylePage() {
   const router = useRouter();
@@ -119,10 +120,11 @@ export default function NewStylePage() {
       }
 
       const data = await response.json();
+      toast.success('Style created successfully!');
       router.push(`/styles/${data.style.id}`);
     } catch (error) {
       console.error('Error creating style:', error);
-      alert('Failed to create style');
+      toast.error('Failed to create style');
     } finally {
       setLoading(false);
     }

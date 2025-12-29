@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, use } from "react";
+import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -59,7 +60,7 @@ export default function SubjectDetailPage({ params }: { params: Promise<{ id: st
       setEditIsTransparent(data.subject.isTransparent);
     } catch (error) {
       console.error("Error fetching subject:", error);
-      alert("Failed to load subject");
+      toast.error("Failed to load subject");
       router.push("/subjects");
     } finally {
       setLoading(false);
@@ -84,7 +85,7 @@ export default function SubjectDetailPage({ params }: { params: Promise<{ id: st
       router.push("/subjects");
     } catch (error) {
       console.error("Error deleting subject:", error);
-      alert("Failed to delete subject");
+      toast.error("Failed to delete subject");
     } finally {
       setDeleting(false);
     }
@@ -105,7 +106,7 @@ export default function SubjectDetailPage({ params }: { params: Promise<{ id: st
       router.push(`/subjects/${data.subject.id}`);
     } catch (error) {
       console.error("Error creating version:", error);
-      alert("Failed to create version");
+      toast.error("Failed to create version");
     } finally {
       setCreatingVersion(false);
     }
@@ -130,10 +131,11 @@ export default function SubjectDetailPage({ params }: { params: Promise<{ id: st
 
       const data = await response.json();
       setSubject(data.subject);
+      toast.success("Subject updated successfully!");
       setEditing(false);
     } catch (error) {
       console.error("Error saving subject:", error);
-      alert("Failed to save changes");
+      toast.error("Failed to save changes");
     } finally {
       setSaving(false);
     }

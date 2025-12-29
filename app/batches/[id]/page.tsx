@@ -15,23 +15,24 @@ import { useImageGallery } from "@/hooks/use-image-gallery";
 import { useImageTransparency } from "@/hooks/useImageTransparency";
 import { useSquishAnimation } from "@/hooks/use-squish-animation";
 import { useAIAnimation } from "@/hooks/use-ai-animation";
+import { toast } from "sonner";
 
 export default function BatchDetailPage() {
   const params = useParams();
   const router = useRouter();
   const { promptStyle } = useSettings();
-  
+
   // Custom hooks
   const { batch, loading, refetchBatch } = useBatchData(params.id);
-  const { 
-    images, 
-    loadingImages, 
-    fetchingMore, 
-    hasMore, 
+  const {
+    images,
+    loadingImages,
+    fetchingMore,
+    hasMore,
     lastImageElementRef,
     updateImage,
   } = useImageGallery(params.id, !!batch);
-  
+
   const {
     showTransparent,
     processingTransparency,
@@ -93,11 +94,11 @@ export default function BatchDetailPage() {
         throw new Error('Failed to execute batch');
       }
 
-      alert('Batch execution started! This may take a while.');
+      toast.success('Batch execution started! This may take a while.');
       await refetchBatch();
     } catch (error) {
       console.error('Error executing batch:', error);
-      alert('Failed to execute batch');
+      toast.error('Failed to execute batch');
     } finally {
       setExecuting(false);
     }
@@ -115,7 +116,7 @@ export default function BatchDetailPage() {
       router.push('/batches');
     } catch (error) {
       console.error('Error deleting batch:', error);
-      alert('Failed to delete batch');
+      toast.error('Failed to delete batch');
     }
   }, [params.id, router]);
 
@@ -134,7 +135,7 @@ export default function BatchDetailPage() {
       router.push(`/batches/${data.batch.id}`);
     } catch (error) {
       console.error("Error creating version:", error);
-      alert("Failed to create version");
+      toast.error("Failed to create version");
     } finally {
       setCreatingVersion(false);
     }

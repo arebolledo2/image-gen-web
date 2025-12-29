@@ -1,15 +1,22 @@
 import { inngest } from './client';
 import { ImageGenerationJob } from './types';
 import { db } from '@/lib/db';
-import { generations } from '@/lib/db/schema';
+import { generations, Batch, BatchPrompt } from '@/lib/db/schema';
 import { getResolutionPreset } from '@/lib/config/resolution-presets';
+import type { ImageGenerationParameters, BatchDefaults, BatchPromptOverrides } from '@/lib/types/common';
 
-export async function queueBatchExecution(batch: any) {
+interface BatchWithPrompts extends Batch {
+  batchPrompts: BatchPrompt[];
+}
+
+export async function queueBatchExecution(batch: BatchWithPrompts) {
   // Create generation records upfront (status: pending)
   const jobs: ImageGenerationJob[] = [];
 
   for (const batchPrompt of batch.batchPrompts) {
-    const count = batchPrompt.overrides?.count || batch.defaults?.count || 1;
+    const overrides = batchPrompt.overrides as BatchPromptOverrides | null;
+    const defaults = batch.defaults as BatchDefaults | null;
+    const count = overrides?.count || defaults?.count || 1;
 
     for (let run = 1; run <= count; run++) {
       // Create generation record
@@ -45,11 +52,14 @@ export async function queueBatchExecution(batch: any) {
   return { jobsQueued: jobs.length };
 }
 
-function buildParameters(batch: any, batchPrompt: any): Record<string, any> {
-  const parameters: Record<string, any> = {};
+function buildParameters(batch: BatchWithPrompts, batchPrompt: BatchPrompt): ImageGenerationParameters {
+  const parameters: ImageGenerationParameters = {};
+
+  const overrides = batchPrompt.overrides as BatchPromptOverrides | null;
+  const defaults = batch.defaults as BatchDefaults | null;
 
   // Get resolution from batchPrompt override or batch default
-  const resolutionId = batchPrompt.overrides?.resolution || batch.defaults?.resolution;
+  const resolutionId = overrides?.resolution || defaults?.resolution;
 
   if (resolutionId) {
     const preset = getResolutionPreset(resolutionId);

@@ -3,7 +3,7 @@ export interface AudioGenerationJob {
   audioBatchId: string;
   audioBatchPromptId: string;
   audioGenerationId: string;
-  provider: 'audiocraft';
+  provider: 'audiocraft' | 'elevenlabs';
   prompt: string;
   runNumber: number;
   parameters?: {

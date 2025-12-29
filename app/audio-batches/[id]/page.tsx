@@ -1,6 +1,7 @@
 "use client";
 
 import { use, useEffect, useState } from "react";
+import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -72,11 +73,11 @@ export default function AudioBatchDetailPage({ params }: { params: Promise<{ id:
 
       if (!response.ok) throw new Error('Failed to execute batch');
 
-      alert('Audio batch queued for execution!');
+      toast.success('Audio batch queued for execution!');
       fetchBatch();
     } catch (error) {
       console.error('Error executing batch:', error);
-      alert('Failed to execute batch');
+      toast.error('Failed to execute batch');
     } finally {
       setExecuting(false);
     }
@@ -97,7 +98,7 @@ export default function AudioBatchDetailPage({ params }: { params: Promise<{ id:
       router.push('/audio-batches');
     } catch (error) {
       console.error('Error deleting batch:', error);
-      alert('Failed to delete batch');
+      toast.error('Failed to delete batch');
       setDeleting(false);
     }
   };

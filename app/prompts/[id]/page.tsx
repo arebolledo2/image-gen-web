@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
+import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -44,7 +45,7 @@ export default function PromptDetailPage({ params }: { params: { id: string } })
       setPrompt(data.prompt);
     } catch (error) {
       console.error("Error fetching prompt:", error);
-      alert("Failed to load prompt");
+      toast.error("Failed to load prompt");
       router.push("/prompts");
     } finally {
       setLoading(false);
@@ -73,7 +74,7 @@ export default function PromptDetailPage({ params }: { params: { id: string } })
       router.push("/prompts");
     } catch (error) {
       console.error("Error deleting prompt:", error);
-      alert("Failed to delete prompt");
+      toast.error("Failed to delete prompt");
     } finally {
       setDeleting(false);
     }
@@ -100,7 +101,7 @@ export default function PromptDetailPage({ params }: { params: { id: string } })
       setVariations(newVariations);
     } catch (error) {
       console.error("Error generating variations:", error);
-      alert("Failed to generate variations");
+      toast.error("Failed to generate variations");
     } finally {
       setLoadingVariations(false);
     }
@@ -108,7 +109,7 @@ export default function PromptDetailPage({ params }: { params: { id: string } })
 
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
-    alert("Copied to clipboard!");
+    toast.success("Copied to clipboard!");
   };
 
   if (loading) {

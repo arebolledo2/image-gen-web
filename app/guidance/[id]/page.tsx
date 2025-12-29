@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, use } from "react";
+import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -54,7 +55,7 @@ export default function GuidanceDetailPage({ params }: { params: Promise<{ id: s
       setEditDescription(data.guidance.description);
     } catch (error) {
       console.error("Error fetching guidance:", error);
-      alert("Failed to load guidance");
+      toast.error("Failed to load guidance");
       router.push("/guidance");
     } finally {
       setLoading(false);
@@ -79,7 +80,7 @@ export default function GuidanceDetailPage({ params }: { params: Promise<{ id: s
       router.push("/guidance");
     } catch (error) {
       console.error("Error deleting guidance:", error);
-      alert("Failed to delete guidance");
+      toast.error("Failed to delete guidance");
     } finally {
       setDeleting(false);
     }
@@ -100,7 +101,7 @@ export default function GuidanceDetailPage({ params }: { params: Promise<{ id: s
       router.push(`/guidance/${data.guidance.id}`);
     } catch (error) {
       console.error("Error creating version:", error);
-      alert("Failed to create version");
+      toast.error("Failed to create version");
     } finally {
       setCreatingVersion(false);
     }
@@ -124,10 +125,11 @@ export default function GuidanceDetailPage({ params }: { params: Promise<{ id: s
 
       const data = await response.json();
       setGuidance(data.guidance);
+      toast.success("Guidance updated successfully!");
       setEditing(false);
     } catch (error) {
       console.error("Error saving guidance:", error);
-      alert("Failed to save changes");
+      toast.error("Failed to save changes");
     } finally {
       setSaving(false);
     }

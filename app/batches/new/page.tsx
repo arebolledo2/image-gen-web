@@ -14,6 +14,7 @@ import { AIAssistButton } from "@/components/agents/ai-assist-button";
 import { RESOLUTION_PRESETS, DEFAULT_RESOLUTION } from "@/lib/config/resolution-presets";
 import { useSettings } from "@/components/providers/settings-provider";
 import { Switch } from "@/components/ui/switch";
+import { toast } from "sonner";
 
 interface Entity {
   id: string;
@@ -132,7 +133,7 @@ export default function NewBatchPage() {
       setDescription(data.description);
     } catch (error) {
       console.error('Error generating metadata:', error);
-      alert('Failed to generate metadata');
+      toast.error('Failed to generate metadata');
     } finally {
       setMetadataLoading(false);
     }
@@ -242,10 +243,11 @@ export default function NewBatchPage() {
       }
 
       const data = await response.json();
+      toast.success('Batch created successfully! Generations started.');
       router.push(`/batches/${data.batch.id}`);
     } catch (error) {
       console.error('Error creating batch:', error);
-      alert('Failed to create batch');
+      toast.error('Failed to create batch');
     } finally {
       setLoading(false);
     }

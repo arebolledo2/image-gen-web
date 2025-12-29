@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { Loader2, Plus, X, Box, Palette, Compass } from "lucide-react";
 import { useSettings } from "@/components/providers/settings-provider";
+import { toast } from "sonner";
 
 interface Entity {
   id: string;
@@ -54,7 +55,7 @@ export default function NewPromptPage() {
   };
 
   const toggleGuidance = (id: string) => {
-    setSelectedGuidanceIds(prev => 
+    setSelectedGuidanceIds(prev =>
       prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]
     );
   };
@@ -81,10 +82,11 @@ export default function NewPromptPage() {
       }
 
       const data = await response.json();
+      toast.success('Prompt preset created successfully!');
       router.push(`/prompts`); // Redirect to list as detail page might need update too
     } catch (error) {
       console.error('Error creating prompt:', error);
-      alert('Failed to create prompt');
+      toast.error('Failed to create prompt');
     } finally {
       setLoading(false);
     }
@@ -187,9 +189,9 @@ export default function NewPromptPage() {
               ))}
             </div>
             {guidanceList.length === 0 ? (
-                <p className="text-sm text-muted-foreground italic mt-2">No guidance items found. Create some in the Guidance section.</p>
+              <p className="text-sm text-muted-foreground italic mt-2">No guidance items found. Create some in the Guidance section.</p>
             ) : (
-                <p className="text-[10px] text-muted-foreground italic mt-2">AI uses guidance descriptions to refine the result</p>
+              <p className="text-[10px] text-muted-foreground italic mt-2">AI uses guidance descriptions to refine the result</p>
             )}
           </CardContent>
         </Card>

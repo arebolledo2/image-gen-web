@@ -10,6 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Slider } from "@/components/ui/slider";
 import { Switch } from "@/components/ui/switch";
 import { Loader2, Plus, X, Sparkles } from "lucide-react";
+import { toast } from "sonner";
 
 interface AudioPrompt {
   promptText: string;
@@ -82,13 +83,13 @@ export default function NewAudioBatchPage() {
     e.preventDefault();
 
     if (!name.trim()) {
-      alert('Please enter a batch name');
+      toast.error('Please enter a batch name');
       return;
     }
 
     const validPrompts = prompts.filter(p => p.promptText.trim());
     if (validPrompts.length === 0) {
-      alert('Please enter at least one prompt');
+      toast.error('Please enter at least one prompt');
       return;
     }
 
@@ -117,10 +118,11 @@ export default function NewAudioBatchPage() {
       }
 
       const data = await response.json();
+      toast.success('Audio batch created successfully!');
       router.push(`/audio-batches/${data.audioBatch.id}`);
     } catch (error) {
       console.error('Error creating audio batch:', error);
-      alert('Failed to create audio batch');
+      toast.error('Failed to create audio batch');
     } finally {
       setLoading(false);
     }

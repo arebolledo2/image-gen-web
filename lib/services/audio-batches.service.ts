@@ -1,7 +1,8 @@
 import { db } from '@/lib/db';
 import { audioBatches, audioBatchPrompts, audioGenerations, AudioBatch, NewAudioBatch, AudioBatchPrompt, NewAudioBatchPrompt, AudioGeneration, NewAudioGeneration } from '@/lib/db/schema';
-import { eq, desc, inArray } from 'drizzle-orm';
+import { eq, desc, inArray, asc } from 'drizzle-orm';
 import { BaseService } from './base.service';
+import type { AudioBatchPromptOverrides, AudioBatchDefaults } from '@/lib/types/common';
 
 /**
  * Service for managing audio batches with transaction support.
@@ -143,7 +144,7 @@ export class AudioBatchesService extends BaseService<typeof audioBatches, AudioB
       description?: string;
       prompts?: Array<{
         promptText: string;
-        overrides?: Record<string, any>;
+        overrides?: AudioBatchPromptOverrides;
       }>;
     }
   ) {
@@ -210,7 +211,7 @@ export class AudioBatchesService extends BaseService<typeof audioBatches, AudioB
     data: {
       name?: string;
       description?: string;
-      defaults?: Record<string, any>;
+      defaults?: Partial<AudioBatchDefaults>;
     }
   ): Promise<AudioBatch | undefined> {
     return this.update(id, data);
@@ -245,7 +246,7 @@ export class AudioBatchesService extends BaseService<typeof audioBatches, AudioB
       }
 
       // Update status and optionally set completedAt
-      const updateData: any = {
+      const updateData: Partial<NewAudioBatch> & { updatedAt: Date; completedAt?: Date } = {
         status,
         updatedAt: new Date(),
       };
@@ -289,7 +290,9 @@ export class AudioBatchesService extends BaseService<typeof audioBatches, AudioB
 
       // Create generation records for each prompt
       for (const audioBatchPrompt of batch.audioBatchPrompts) {
-        const count = (audioBatchPrompt.overrides as any)?.count ?? (batch.defaults as any)?.count ?? 1;
+        const overrides = audioBatchPrompt.overrides as AudioBatchPromptOverrides | null;
+        const defaults = batch.defaults as AudioBatchDefaults | null;
+        const count = overrides?.count ?? defaults?.count ?? 1;
 
         // Create multiple generations if count > 1
         for (let i = 0; i < count; i++) {
