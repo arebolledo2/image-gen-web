@@ -66,4 +66,4 @@ export interface AudioProvider {
 /**
  * Audio provider type
  */
-export type AudioProviderType = 'audiocraft';
+export type AudioProviderType = 'audiocraft' | 'elevenlabs';

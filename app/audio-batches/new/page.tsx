@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Slider } from "@/components/ui/slider";
+import { Switch } from "@/components/ui/switch";
 import { Loader2, Plus, X } from "lucide-react";
 
 interface AudioPrompt {
@@ -25,6 +26,7 @@ export default function NewAudioBatchPage() {
 
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
+  const [useAutoDuration, setUseAutoDuration] = useState(false);
   const [defaultDuration, setDefaultDuration] = useState(1);
   const [defaultCount, setDefaultCount] = useState(1);
   const [defaultTemperature, setDefaultTemperature] = useState(1.0);
@@ -73,7 +75,7 @@ export default function NewAudioBatchPage() {
           description,
           provider: 'audiocraft',
           defaults: {
-            duration: defaultDuration,
+            duration: useAutoDuration ? 0 : defaultDuration,
             count: defaultCount,
             temperature: defaultTemperature,
             topK: 250,
@@ -144,8 +146,16 @@ export default function NewAudioBatchPage() {
           </CardHeader>
           <CardContent className="space-y-6">
             <div className="space-y-2">
-              <div className="flex justify-between">
-                <Label>Duration: {defaultDuration}s</Label>
+              <div className="flex items-center justify-between">
+                <Label>Duration: {useAutoDuration ? 'Auto' : `${defaultDuration}s`}</Label>
+                <div className="flex items-center space-x-2">
+                  <Switch
+                    id="auto-duration"
+                    checked={useAutoDuration}
+                    onCheckedChange={setUseAutoDuration}
+                  />
+                  <Label htmlFor="auto-duration" className="text-sm cursor-pointer">Auto Duration</Label>
+                </div>
               </div>
               <Slider
                 value={[defaultDuration]}
@@ -153,9 +163,14 @@ export default function NewAudioBatchPage() {
                 min={0.5}
                 max={10}
                 step={0.5}
+                disabled={useAutoDuration}
                 className="w-full"
               />
-              <p className="text-xs text-muted-foreground">Length of generated audio in seconds</p>
+              <p className="text-xs text-muted-foreground">
+                {useAutoDuration
+                  ? 'Let the AI automatically determine the optimal duration based on the prompt'
+                  : 'Length of generated audio in seconds'}
+              </p>
             </div>
 
             <div className="space-y-2">

@@ -5,7 +5,11 @@ import { AudioCraftProvider } from './audiocraft-provider';
  * Audio Provider Factory
  *
  * Returns the appropriate audio provider instance based on the provider type.
- * Currently supports AudioCraft.
+ * Supports AudioCraft and ElevenLabs.
+ *
+ * Note: Both providers use the same AudioCraftProvider class which routes
+ * to the Python service. The Python service handles the actual provider selection
+ * based on its AUDIO_PROVIDER environment variable.
  */
 
 // Singleton instances
@@ -25,10 +29,13 @@ export function getAudioProvider(providerType: AudioProviderType = 'audiocraft')
   }
 
   // Create new instance based on type
+  // Note: Both audiocraft and elevenlabs use the same provider class
+  // The Python service determines which actual provider to use
   let provider: AudioProvider;
 
   switch (providerType) {
     case 'audiocraft':
+    case 'elevenlabs':
       provider = new AudioCraftProvider();
       break;
     default:
