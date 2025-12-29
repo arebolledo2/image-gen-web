@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Download, Heart, Search, Music, Play, Pause } from "lucide-react";
+import { Loader2, Download, Heart, Search, Music, Play, Pause, Copy, Check } from "lucide-react";
 
 interface AudioFileWithDetails {
   id: string;
@@ -39,6 +39,7 @@ export default function AudioGalleryPage() {
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [playingId, setPlayingId] = useState<string | null>(null);
+  const [copiedId, setCopiedId] = useState<string | null>(null);
 
   // Debounce search
   useEffect(() => {
@@ -105,6 +106,13 @@ export default function AudioGalleryPage() {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+  };
+
+  const handleCopyFileName = (audioFile: AudioFileWithDetails) => {
+    navigator.clipboard.writeText(audioFile.fileName);
+    setCopiedId(audioFile.id);
+    toast.success("Filename copied to clipboard");
+    setTimeout(() => setCopiedId(null), 2000);
   };
 
   const formatDuration = (ms: number) => {
@@ -255,6 +263,15 @@ export default function AudioGalleryPage() {
                     onClick={() => handleDownload(audioFile)}
                   >
                     <Download className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className={`flex-1 transition-colors ${copiedId === audioFile.id ? 'text-green-500' : ''}`}
+                    onClick={() => handleCopyFileName(audioFile)}
+                    title="Copy Filename"
+                  >
+                    {copiedId === audioFile.id ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
                   </Button>
                 </div>
               </CardContent>
