@@ -17,14 +17,31 @@ A powerful web orchestration platform for large-scale AI image generation, built
 
 ## Project Overview
 
-Image Gen Web is a sophisticated interface for managing the entire lifecycle of AI image generation. It goes beyond simple single-image prompts by offering a structured approach to:
+Image Gen Web is a sophisticated orchestration platform for managing AI-powered asset generation at scale. It supports both **image generation** and **audio/sound effect generation** with a unified workflow approach:
 
+### Image Generation
 - **Style Management**: Define and version complex art styles with AI-assisted crafting
-- **Prompt Engineering**: Create reusable prompt templates with dynamic variables
+- **Prompt Engineering**: Create reusable prompt templates with dynamic subject/style/guidance composition
 - **Batch Orchestration**: Group prompts and styles into batches for bulk generation
-- **AI Agents**: Built-in agents for prompt composition, style generation, and metadata creation
-- **Background Processing**: Reliable execution using Inngest for queue management
+- **Image Editing**: AI-powered editing, transformations (transparency, flipping), and squish animations
 - **Gallery & Asset Tracking**: Organize generated images with full metadata and parent tracking
+
+### Audio Generation
+- **Audio Batch Management**: Create batches of sound effects with configurable parameters
+- **AI-Assisted Prompt Creation**: Generate detailed audio prompts optimized for game SFX
+- **Provider Support**: Multiple audio generation backends (AudioCraft, ElevenLabs)
+- **Audio Gallery**: Browse, favorite, and manage generated sound effects
+
+### AI Agents
+Built-in AI agents for:
+- Prompt composition and refinement
+- Style generation and editing
+- Subject and guidance creation
+- Batch metadata generation
+- Audio prompt creation
+
+### Background Processing
+Reliable execution using Inngest for queue management with retry logic and status tracking.
 
 Whether generating game assets, marketing materials, or experimental art, this platform provides tools to generate at scale with precision.
 
@@ -69,12 +86,15 @@ Next.js 15 (App Router)
 
 ```
 app/
-├── api/              # API routes (styles, batches, prompts, etc.)
-├── batches/          # Batch management UI
+├── api/              # API routes (all resources)
+├── batches/          # Image batch management UI
+├── audio-batches/    # Audio batch management UI
 ├── editor/           # Image editing UI
 ├── gallery/          # Image gallery UI
+├── audio-gallery/    # Audio gallery UI
 ├── guidance/         # Guidance modifiers UI
 ├── prompts/          # Prompt templates UI
+├── styles/           # Style management UI
 └── subjects/         # Subject definitions UI
 
 components/
@@ -86,42 +106,35 @@ components/
 └── ui/               # shadcn/ui components
 
 lib/
-├── ai/               # AI integration (Gemini, prompt composition)
+├── ai/               # AI integration (agents.ts, image-generation.ts)
 ├── config/           # Configuration files
-├── db/               # Database schema and utilities
-├── providers/        # Database providers
-├── queue/            # Inngest job definitions
+├── db/               # Database schema (schema.ts) and utilities
+├── providers/        # Image generation providers
+├── queue/            # Inngest job definitions (image & audio)
 ├── services/         # Service layer (business logic & transactions)
-└── storage/          # Image storage utilities
+└── storage/          # Image/audio storage utilities
 ```
 
 ## Core Systems
 
-### Database Schema
-
-**Key Tables** (defined in `lib/db/schema/`):
-- `styles`: Art style definitions with versioning support
-- `prompts`: Reusable prompt templates with variables
-- `subjects`: Common subjects (characters, objects)
-- `guidance`: Instructional modifiers (lighting, composition)
-- `batches`: Generation batches grouping prompts and styles
-- `batch_prompts`: Junction table linking batches to prompts
-- `images`: Generated images with metadata and parent tracking
-
-**Relationships**:
-- Styles can be versioned via `parent_style_id`
-- Batches contain multiple prompts via `batch_prompts`
-- Images track parent batch and prompt for provenance
-
 ### Service Layer
 
 **Services** (defined in `lib/services/`):
+
+**Image Services**:
 - `stylesService`: Style CRUD with versioning support
 - `subjectsService`: Subject management with versioning
 - `guidanceService`: Guidance modifiers with versioning
 - `promptsService`: Prompt composition with transactional guidance associations
-- `batchesService`: Batch operations with atomic transactions
+- `batchesService`: Image batch operations with atomic transactions
 - `imagesService`: Image and transformation operations
+
+**Audio Services**:
+- `audioBatchesService`: Audio batch CRUD with versioning
+- `audioFilesService`: Audio file metadata and organization
+
+**Base**:
+- `baseService`: Shared transaction and query utilities
 
 **Key Features**:
 - **Transaction Support**: Multi-step operations are atomic (all-or-nothing)
@@ -149,47 +162,92 @@ const details = await batchesService.getBatchWithDetails(batch.id);
 // Returns: batch + prompts + generations + images + lineage
 ```
 
-See `lib/services/README.md` for comprehensive documentation.
-
 ### AI Agents
 
-Four primary agent functions (in `lib/ai/`):
+All AI agent functions are defined in `lib/ai/agents.ts` with corresponding API endpoints in `app/api/agents/`:
 
-1. **Prompt Composition** (`composePrompt`)
+**Image Generation Agents**:
+1. **Prompt Composition** (`composeConstructedPromptAgent`)
    - Combines style + subject + guidance into full prompt
    - API: `POST /api/agents/compose-prompt`
 
-2. **Style Generation** (`generateStyle`)
+2. **Style Generation** (`createStyleAgent`)
    - Creates palette and rendering cues from description
    - API: `POST /api/agents/create-style`
 
-3. **Style Editing** (`editStyle`)
-   - Modifies an existing style based on a user request
+3. **Style Editing** (`editStyleAgent`)
+   - Modifies an existing style based on user request
    - API: `POST /api/agents/edit-style`
 
-4. **Prompt Template Creation** (`createPrompt`)
+4. **Prompt Template Creation** (`createPromptAgent`)
    - Generates prompt templates from descriptions
    - API: `POST /api/agents/create-prompt`
+
+5. **Prompt Adjustment** (`adjustPromptAgent`)
+   - Refines existing prompts based on suggestions
+   - API: `POST /api/agents/adjust-prompt`
+
+6. **Prompt Variations** (`suggestPromptVariations`)
+   - Generates variations of a base prompt
+   - API: `POST /api/agents/suggest-variations`
+
+7. **Subject Creation** (`createSubjectAgent`)
+   - Expands simple concepts into detailed subjects
+   - API: `POST /api/agents/create-subject`
+
+**Batch Management Agents**:
+8. **Batch Metadata** (`createBatchMetadataAgent`)
+   - Generates batch names and descriptions
+   - API: `POST /api/agents/create-batch-metadata`
+
+**Audio Generation Agents**:
+9. **Audio Prompt Creation** (`createAudioPromptAgent`)
+   - Creates detailed audio prompts optimized for game SFX
+   - API: `POST /api/agents/create-audio-prompt`
 
 ### Job Queue (Inngest)
 
 **Job Functions** (defined in `lib/queue/`):
-- Batch execution with retry logic
-- Image generation with status tracking
-- Provider support: Gemini, ComfyUI
+
+**Image Generation**:
+- `batch-queue.ts` - Image batch execution with retry logic
+- `functions.ts` - Individual image generation jobs with status tracking
+- `types.ts` - Type definitions for image jobs
+
+**Audio Generation**:
+- `audio-batch-queue.ts` - Audio batch execution with retry logic
+- `audio-functions.ts` - Individual audio generation jobs
+- `audio-types.ts` - Type definitions for audio jobs
+
+**Provider Support**:
+- Image: Gemini (2.0 & 3.0), ComfyUI
+- Audio: AudioCraft, ElevenLabs
 
 **Development**: Inngest dev server runs with `npm run dev`
 
 ### API Routes
 
 RESTful API in `app/api/`:
+
+**Image Generation**:
 - `/api/styles` - Style CRUD operations
-- `/api/batches` - Batch management and execution
-- `/api/prompts` - Prompt template management
 - `/api/subjects` - Subject definitions
 - `/api/guidance` - Guidance modifiers
-- `/api/images` - Image metadata access
-- `/api/agents/*` - AI agent endpoints
+- `/api/prompts` - Prompt template management
+- `/api/batches` - Image batch management and execution
+- `/api/images` - Image metadata and operations
+- `/api/squish-animations` - Squish animation generation
+- `/api/image-edits` - AI-powered image editing
+
+**Audio Generation**:
+- `/api/audio-batches` - Audio batch management and execution
+- `/api/audio` - Audio file metadata access
+
+**AI Agents**:
+- `/api/agents/*` - AI agent endpoints (9 total)
+
+**Providers**:
+- `/api/providers` - Image generation provider info
 
 See `API.md` for detailed API documentation.
 
@@ -199,7 +257,7 @@ See `API.md` for detailed API documentation.
 | What | Files |
 |------|-------|
 | Table definitions | `lib/db/schema.ts` |
-| Database utilities | `lib/db/` |
+| Database utilities | `lib/db/index.ts` |
 | Migrations | `drizzle/migrations/` (auto-generated) |
 | Apply schema | `npm run db:push` |
 
@@ -210,32 +268,43 @@ See `API.md` for detailed API documentation.
 | Subject operations | `lib/services/subjects.service.ts` |
 | Guidance operations | `lib/services/guidance.service.ts` |
 | Prompt operations | `lib/services/prompts.service.ts` |
-| Batch operations | `lib/services/batches.service.ts` |
+| Image batch operations | `lib/services/batches.service.ts` |
 | Image operations | `lib/services/images.service.ts` |
-| Service documentation | `lib/services/README.md` |
+| Audio batch operations | `lib/services/audio-batches.service.ts` |
+| Audio file operations | `lib/services/audio-files.service.ts` |
+| Base utilities | `lib/services/base.service.ts` |
 
 ### Modifying AI Agent Behavior
 | What | Files |
 |------|-------|
-| Prompt composition logic | `lib/ai/compose-prompt.ts` |
-| Style generation logic | `lib/ai/generate-style.ts` |
-| Prompt template creation | `lib/ai/create-prompt.ts` |
-| AI agent API routes | `app/api/agents/*.ts` |
+| All AI agent functions | `lib/ai/agents.ts` |
+| Image generation utilities | `lib/ai/image-generation.ts` |
+| AI agent API routes | `app/api/agents/*/route.ts` |
 
-### Modifying Batch Processing
+### Modifying Image Batch Processing
 | What | Files |
 |------|-------|
-| Batch job definitions | `lib/queue/batch-execution.ts` |
-| Batch API routes | `app/api/batches/*.ts` |
-| Batch UI components | `components/batch/` |
-| Batch pages | `app/batches/` |
+| Image batch queue | `lib/queue/batch-queue.ts` |
+| Image generation functions | `lib/queue/functions.ts` |
+| Image batch API routes | `app/api/batches/*/route.ts` |
+| Image batch UI components | `components/batch/` |
+| Image batch pages | `app/batches/` |
+
+### Modifying Audio Batch Processing
+| What | Files |
+|------|-------|
+| Audio batch queue | `lib/queue/audio-batch-queue.ts` |
+| Audio generation functions | `lib/queue/audio-functions.ts` |
+| Audio batch API routes | `app/api/audio-batches/*/route.ts` |
+| Audio batch pages | `app/audio-batches/` |
+| Audio gallery page | `app/audio-gallery/page.tsx` |
 
 ### Modifying Style Management
 | What | Files |
 |------|-------|
-| Style API routes | `app/api/styles/*.ts` |
-| Style UI components | `components/styles/` |
-| Style versioning logic | API route handlers |
+| Style API routes | `app/api/styles/*/route.ts` |
+| Style pages | `app/styles/` |
+| Style versioning logic | `lib/services/styles.service.ts` |
 
 ### Modifying Prompts & Templates
 | What | Files |
@@ -244,13 +313,14 @@ See `API.md` for detailed API documentation.
 | Prompt UI components | `components/prompts/` |
 | Prompt pages | `app/prompts/` |
 
-### Modifying UI Components
+### Modifying Image Editing & Transformations
 | What | Files |
 |------|-------|
-| Shared components | `components/shared/` |
-| shadcn/ui components | `components/ui/` |
-| Agent components | `components/agents/` |
-| Page layouts | `app/layout.tsx`, `app/*/page.tsx` |
+| Image editing API | `app/api/images/*/route.ts` |
+| Squish animation API | `app/api/squish-animations/*/route.ts` |
+| Image edit API | `app/api/image-edits/*/route.ts` |
+| Editor UI components | `components/editor/` |
+| Editor page | `app/editor/` |
 
 ### Adding New API Endpoints
 | What | Files |
@@ -528,20 +598,71 @@ const className = cn(
 
 ## Common Tasks
 
+### Creating an Image Batch
+
+1. POST to `/api/batches` with:
+   - `name`: Batch name
+   - `provider`: `gemini`, `gemini3`, or `comfyui`
+   - `prompts`: Array of prompt objects with `promptText`
+   - `defaults`: Optional batch-level settings (aspectRatio, resolution, count)
+2. POST to `/api/batches/[id]/execute` to start generation
+3. Monitor progress via UI or database
+
+### Creating an Audio Batch
+
+1. POST to `/api/audio-batches` with:
+   - `name`: Batch name
+   - `provider`: `audiocraft` or `elevenlabs`
+   - `prompts`: Array of audio prompt text strings
+   - `defaults`: Optional settings (duration, count, temperature, topK, cfgCoef)
+2. POST to `/api/audio-batches/[id]/execute` to start generation
+3. Monitor progress via audio gallery UI
+
 ### Adding a New Style Version
 
 1. Call `/api/styles` POST with `parentStyleId`
 2. System auto-increments version number
 3. Parent style remains accessible for history
 
-### Creating a Batch
+### Creating a Subject or Guidance
 
-1. POST to `/api/batches` with:
-   - `name`: Batch name
-   - `provider`: `gemini` or `comfyui`
-   - `prompts`: Array of prompt objects
-2. POST to `/api/batches/[id]/execute` to start generation
-3. Monitor progress via UI or database
+1. Use AI agent to expand concept:
+   - POST to `/api/agents/create-subject` with `concept`
+2. Save to database:
+   - POST to `/api/subjects` with generated name and description
+3. Use in prompts via `subjectId`
+
+### Creating a Prompt with AI Composition
+
+1. Select or create style, subject, and guidance
+2. POST to `/api/prompts` with:
+   - `styleId`: UUID of style
+   - `subjectId`: UUID of subject
+   - `guidanceIds`: Array of guidance UUIDs (optional)
+3. Server composes prompt using AI agent
+4. Cached `promptText` stored in database
+
+### Image Editing & Transformations
+
+**Background Removal**:
+- POST to `/api/images/[id]/transparent` to generate transparent version
+- Removes magenta (#FF00FF) background automatically
+
+**Flipping**:
+- POST to `/api/images/[id]/flip` to create horizontally flipped version
+
+**Squish Animations**:
+- POST to `/api/squish-animations` with:
+  - `imageId`: Source image UUID
+  - `intensity`: 0-100 bounce/squash intensity
+  - `animationType`: `bounce` or `squash_stretch`
+  - `generatedBy`: `manual` or `ai`
+
+**AI Editing**:
+- POST to `/api/image-edits` with:
+  - `imageId`: Source image UUID
+  - `sourceVersion`: Which version to edit (original, transparent, etc.)
+  - `userPrompt`: Edit instructions (e.g., "add flames")
 
 ### Using AI Agents
 
@@ -589,4 +710,7 @@ const stats = await imagesService.getImageStatistics(batchId)
 - Services provide transaction support for multi-step operations
 - All async operations use standard `async/await`
 - Inngest handles all background processing reliably
+- **Dual-purpose platform**: Supports both image and audio generation workflows
+- **Image features**: Transparency removal, flipping, squish animations, AI editing
+- **Audio features**: Game SFX generation with multiple providers and parameter control
 - Image storage configuration may vary based on deployment environment
