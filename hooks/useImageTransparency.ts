@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import type { GalleryImage } from '@/components/image-gallery-modal';
 import path from 'path';
+import { toast } from 'sonner';
 
 export function useImageTransparency() {
   const [showTransparent, setShowTransparent] = useState<Record<string, boolean>>({});
@@ -58,7 +59,7 @@ export function useImageTransparency() {
 
       // Handle the case where user clicked on transparent pixel
       if (data.alreadyTransparent) {
-        alert(data.message || 'The selected pixel is already transparent. Please click on a visible area.');
+        toast.error(data.message || 'The selected pixel is already transparent. Please click on a visible area.');
         return;
       }
 
@@ -91,7 +92,7 @@ export function useImageTransparency() {
       }
     } catch (error) {
       console.error('Error making image transparent:', error);
-      alert('Failed to make image transparent');
+      toast.error('Failed to make image transparent');
     } finally {
       setProcessingTransparency(prev => ({ ...prev, [image.id]: false }));
     }
@@ -149,10 +150,10 @@ export function useImageTransparency() {
         });
       }
 
-      alert(`Image flipped successfully! File: ${path.basename(data.flippedFilePath)}`);
+      toast.success(`Image flipped successfully!`);
     } catch (error) {
       console.error('Error flipping image:', error);
-      alert(error instanceof Error ? error.message : 'Failed to flip image');
+      toast.error(error instanceof Error ? error.message : 'Failed to flip image');
     } finally {
       setProcessingFlip(prev => ({ ...prev, [image.id]: false }));
     }

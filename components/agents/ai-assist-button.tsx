@@ -15,6 +15,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Loader2, Sparkles } from "lucide-react";
+import { toast } from "sonner";
 
 interface AIAssistButtonProps {
   onGenerate: (description: string) => Promise<void>;
@@ -47,7 +48,7 @@ export function AIAssistButton({
       setInput("");
     } catch (error) {
       console.error('AI generation error:', error);
-      alert('Failed to generate. Please try again.');
+      toast.error('Failed to generate. Please try again.');
     } finally {
       setLoading(false);
     }

@@ -2,6 +2,7 @@
 
 import { useState, useCallback } from "react";
 import { type GalleryImage } from "@/components/image-gallery-modal";
+import { toast } from "sonner";
 
 export function useSquishAnimation() {
   const [processingSquish, setProcessingSquish] = useState<Record<string, boolean>>({});
@@ -60,10 +61,10 @@ export function useSquishAnimation() {
         setSelectedVersion(prev => ({ ...prev, [image.id]: `squish-${data.animation.id}` }));
       }
 
-      alert('Squish animation generated successfully!');
+      toast.success('Squish animation generated successfully!');
     } catch (error) {
       console.error('Error generating squish animation:', error);
-      alert('Failed to generate squish animation');
+      toast.error('Failed to generate squish animation');
     } finally {
       setProcessingSquish(prev => ({ ...prev, [image.id]: false }));
     }
@@ -85,7 +86,7 @@ export function useSquishAnimation() {
       await fetchSquishAnimations(imageId);
     } catch (error) {
       console.error('Error deleting squish animation:', error);
-      alert('Failed to delete squish animation');
+      toast.error('Failed to delete squish animation');
     }
   }, [fetchSquishAnimations]);
 

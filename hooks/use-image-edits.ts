@@ -2,6 +2,7 @@
 
 import { useState, useCallback } from "react";
 import { type GalleryImage } from "@/components/image-gallery-modal";
+import { toast } from "sonner";
 
 export function useImageEdits() {
   const [processingEdit, setProcessingEdit] = useState<Record<string, boolean>>({});
@@ -32,7 +33,7 @@ export function useImageEdits() {
 
     const prompt = editPrompt[image.id]?.trim();
     if (!prompt) {
-      alert('Please enter edit instructions');
+      toast.error('Please enter edit instructions');
       return;
     }
 
@@ -63,10 +64,10 @@ export function useImageEdits() {
         onVersionChange(`edit-${data.edit.id}`);
       }
 
-      alert(`Edit "${data.edit.generatedName}" generated successfully!`);
+      toast.success(`Edit "${data.edit.generatedName}" generated successfully!`);
     } catch (error) {
       console.error('Error generating AI edit:', error);
-      alert(error instanceof Error ? error.message : 'Failed to generate AI edit');
+      toast.error(error instanceof Error ? error.message : 'Failed to generate AI edit');
     } finally {
       setProcessingEdit(prev => ({ ...prev, [image.id]: false }));
     }
@@ -88,7 +89,7 @@ export function useImageEdits() {
       await fetchImageEdits(imageId);
     } catch (error) {
       console.error('Error deleting edit:', error);
-      alert('Failed to delete edit');
+      toast.error('Failed to delete edit');
     }
   }, [fetchImageEdits]);
 

@@ -57,30 +57,30 @@ export async function POST(
 
 ${prompt}
 
-CRITICAL REQUIREMENTS FOR SMOOTH, STABLE ANIMATION:
-1. Create EXACTLY ${gridSize}x${gridSize} frames arranged in a perfect square grid
-2. Each frame should show progressive motion/transformation with SMALL, INCREMENTAL changes
+ANIMATION GUIDELINES:
+1. Create a ${gridSize}x${gridSize} grid of frames arranged in a square layout
+2. Each frame should show progressive motion/transformation with incremental changes
 3. Frames should be arranged left-to-right, top-to-bottom (reading order)
-4. Maintain ABSOLUTE consistency across all frames:
-   - IDENTICAL art style, shading, and lighting in every frame
-   - EXACT same colors and color palette throughout
-   - SAME level of detail and texture quality
-   - CONSISTENT size - the sprite must be the exact same dimensions in each frame
-5. Keep the sprite PERFECTLY centered in each frame with identical positioning
-6. Ensure SMOOTH, GRADUAL transitions between frames:
-   - Changes between consecutive frames should be MINIMAL and subtle
-   - Avoid sudden jumps or drastic changes in position/appearance
-   - The first and last frames should connect seamlessly for perfect looping
-7. Preserve transparency using magenta #FF00FF background (match the reference image background)
-8. The output MUST be a single square image containing the ${gridSize}x${gridSize} grid of frames
-9. STABILITY is critical - the sprite should not shift, resize, or change style between frames
-10. Make motion smooth and fluid - each frame is a small step in the overall animation
+4. Aim for consistency across all frames:
+   - Consistent art style, shading, and lighting
+   - Similar color palette throughout
+   - Shared level of detail
+   - Consistent character size and proportions
+5. Keep the sprite centered in each frame
+6. Seek smooth transitions between frames:
+   - Changes between consecutive frames should be gradual
+   - Avoid sudden jumps in position or appearance
+   - The first and last frames should ideally connect for looping
+7. Preserve transparency using magenta #FF00FF background
+8. The output should be a single square image containing the grid of animation frames
+9. Stability is important - avoid excessive style shifts between frames
+10. Make motion feel fluid across the sequence
 
 Animation: ${prompt}
 Total frames: ${frameCount}
 Grid layout: ${gridSize} rows × ${gridSize} columns
 
-Remember: Consistency and stability are MORE important than dramatic motion. Small, smooth changes create better animations.`;
+Tip: Smooth, consistent changes usually produce the best animation results.`;
 
     // Call Gemini 3 Pro with multimodal input
     const model = 'gemini-3-pro-image-preview';
@@ -130,7 +130,7 @@ Remember: Consistency and stability are MORE important than dramatic motion. Sma
     }
 
     const candidate = result.candidates[0];
-    
+
     // Check for safety filters
     if (candidate.finishReason === 'SAFETY') {
       return NextResponse.json(
@@ -207,10 +207,10 @@ Remember: Consistency and stability are MORE important than dramatic motion. Sma
   } catch (error) {
     console.error('Error generating AI animation:', error);
     return NextResponse.json(
-      { 
+      {
         success: false,
-        error: 'Failed to generate AI animation', 
-        details: error instanceof Error ? error.message : 'Unknown error' 
+        error: 'Failed to generate AI animation',
+        details: error instanceof Error ? error.message : 'Unknown error'
       },
       { status: 500 }
     );

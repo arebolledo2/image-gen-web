@@ -2,6 +2,7 @@
 
 import { useState, useCallback } from "react";
 import { type GalleryImage } from "@/components/image-gallery-modal";
+import { toast } from "sonner";
 
 export function useAIAnimation() {
   const [processingAI, setProcessingAI] = useState<Record<string, boolean>>({});
@@ -51,7 +52,7 @@ export function useAIAnimation() {
       setAIPrompt(prev => ({ ...prev, [image.id]: data.suggestion || '' }));
     } catch (error) {
       console.error('Error suggesting animation:', error);
-      alert('Failed to suggest animation');
+      toast.error('Failed to suggest animation');
     } finally {
       setSuggestingPrompt(prev => ({ ...prev, [image.id]: false }));
     }
@@ -62,7 +63,7 @@ export function useAIAnimation() {
 
     const prompt = aiPrompt[image.id]?.trim();
     if (!prompt) {
-      alert('Please enter an animation description');
+      toast.error('Please enter an animation description');
       return;
     }
 
@@ -95,10 +96,10 @@ export function useAIAnimation() {
         onVersionChange(`ai-${data.animation.id}`);
       }
 
-      alert('AI animation generated successfully!');
+      toast.success('AI animation generated successfully!');
     } catch (error) {
       console.error('Error generating AI animation:', error);
-      alert(error instanceof Error ? error.message : 'Failed to generate AI animation');
+      toast.error(error instanceof Error ? error.message : 'Failed to generate AI animation');
     } finally {
       setProcessingAI(prev => ({ ...prev, [image.id]: false }));
     }
@@ -120,7 +121,7 @@ export function useAIAnimation() {
       await fetchAIAnimations(imageId);
     } catch (error) {
       console.error('Error deleting AI animation:', error);
-      alert('Failed to delete AI animation');
+      toast.error('Failed to delete AI animation');
     }
   }, [fetchAIAnimations]);
 

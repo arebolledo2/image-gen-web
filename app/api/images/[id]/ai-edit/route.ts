@@ -90,9 +90,9 @@ export async function POST(
 
 ${userPrompt}
 
-IMPORTANT REQUIREMENTS:
-1. Maintain the original composition and style as much as possible
-2. Apply ONLY the requested changes - don't add unrelated modifications
+GUIDELINES FOR BEST RESULTS:
+1. Maintain the original composition and style
+2. Focus on the requested changes while keeping the rest of the image consistent
 3. Preserve transparency if the source image has transparency
 4. Keep the same dimensions and aspect ratio
 5. Ensure the edited result looks natural and cohesive

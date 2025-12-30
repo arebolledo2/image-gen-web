@@ -6,6 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Textarea } from "@/components/ui/textarea";
 import { Loader2, Edit2, Check, X } from "lucide-react";
 import { AIAssistButton } from "@/components/agents/ai-assist-button";
+import { toast } from "sonner";
 
 interface BatchPrompt {
   id: string;
@@ -43,7 +44,7 @@ export const BatchPromptsList = memo(function BatchPromptsList({
       setEditingPromptId(null);
     } catch (error) {
       console.error('Error updating prompt:', error);
-      alert('Failed to update prompt');
+      toast.error('Failed to update prompt');
     } finally {
       setSavingPrompt(false);
     }
