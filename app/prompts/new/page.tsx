@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Plus, X, Box, Palette, Compass } from "lucide-react";
+import { Loader2, Box, Palette, Compass } from "lucide-react";
 import { useSettings } from "@/components/providers/settings-provider";
 import { toast } from "sonner";
 
@@ -81,7 +81,7 @@ export default function NewPromptPage() {
         throw new Error('Failed to create prompt');
       }
 
-      const data = await response.json();
+      await response.json();
       toast.success('Prompt preset created successfully!');
       router.push(`/prompts`); // Redirect to list as detail page might need update too
     } catch (error) {

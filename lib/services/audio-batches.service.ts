@@ -1,6 +1,6 @@
 import { db } from '@/lib/db';
-import { audioBatches, audioBatchPrompts, audioGenerations, AudioBatch, NewAudioBatch, AudioBatchPrompt, NewAudioBatchPrompt, AudioGeneration, NewAudioGeneration } from '@/lib/db/schema';
-import { eq, desc, inArray, asc } from 'drizzle-orm';
+import { audioBatches, audioBatchPrompts, audioGenerations, AudioBatch, NewAudioBatch, AudioGeneration, NewAudioGeneration } from '@/lib/db/schema';
+import { eq, desc, inArray } from 'drizzle-orm';
 import { BaseService } from './base.service';
 import type { AudioBatchPromptOverrides, AudioBatchDefaults } from '@/lib/types/common';
 

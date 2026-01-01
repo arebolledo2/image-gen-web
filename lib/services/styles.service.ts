@@ -1,6 +1,6 @@
 import { db } from '@/lib/db';
 import { styles, Style, NewStyle } from '@/lib/db/schema';
-import { eq, desc, isNull, sql } from 'drizzle-orm';
+import { desc } from 'drizzle-orm';
 import { BaseService } from './base.service';
 
 /**

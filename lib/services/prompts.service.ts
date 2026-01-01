@@ -1,5 +1,5 @@
 import { db } from '@/lib/db';
-import { prompts, promptGuidance, Prompt, NewPrompt, PromptGuidance, NewPromptGuidance } from '@/lib/db/schema';
+import { prompts, promptGuidance, Prompt, NewPrompt } from '@/lib/db/schema';
 import { eq, desc, inArray } from 'drizzle-orm';
 import { BaseService } from './base.service';
 

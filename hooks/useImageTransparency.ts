@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import type { GalleryImage } from '@/components/image-gallery-modal';
-import path from 'path';
 import { toast } from 'sonner';
 
 export function useImageTransparency() {

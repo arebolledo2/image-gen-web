@@ -2,7 +2,7 @@ import { google } from '@ai-sdk/google';
 import { generateText } from 'ai';
 import { db } from '@/lib/db';
 import { generations, images, batches } from '@/lib/db/schema';
-import { eq, and } from 'drizzle-orm';
+import { eq } from 'drizzle-orm';
 import { saveImage } from '@/lib/storage/local-storage';
 
 /**

@@ -8,7 +8,7 @@ import { writeFile, mkdir } from 'fs/promises';
 import { join } from 'path';
 
 export class ComfyUIProvider implements ImageProvider {
-  name: 'comfyui' = 'comfyui';
+  name = 'comfyui' as const;
   private client: ComfyUIClient;
 
   constructor() {

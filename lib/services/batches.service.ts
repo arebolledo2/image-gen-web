@@ -1,6 +1,6 @@
 import { db } from '@/lib/db';
-import { batches, batchPrompts, generations, Batch, NewBatch, BatchPrompt, NewBatchPrompt, Generation, NewGeneration } from '@/lib/db/schema';
-import { eq, desc, and, or, inArray, asc } from 'drizzle-orm';
+import { batches, batchPrompts, generations, Batch, NewBatch, BatchPrompt, Generation, NewGeneration } from '@/lib/db/schema';
+import { eq, desc, inArray, asc } from 'drizzle-orm';
 import { BaseService } from './base.service';
 import type { BatchPromptOverrides, BatchDefaults } from '@/lib/types/common';
 

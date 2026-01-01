@@ -12,7 +12,6 @@ interface ImageGalleryProps {
   images: GalleryImage[];
   loading: boolean;
   fetchingMore: boolean;
-  hasMore: boolean;
   totalImageCount: number | string;
   globalTransparency: boolean;
   showTransparent: Record<string, boolean>;
@@ -30,7 +29,6 @@ export const ImageGallery = memo(function ImageGallery({
   images,
   loading,
   fetchingMore,
-  hasMore,
   totalImageCount,
   globalTransparency,
   showTransparent,

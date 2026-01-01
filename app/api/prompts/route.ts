@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { prompts, promptGuidance, styles, subjects, guidance } from '@/lib/db/schema';
+import { prompts, promptGuidance, styles, subjects } from '@/lib/db/schema';
 import { desc, eq } from 'drizzle-orm';
 import { composeConstructedPromptAgent } from '@/lib/ai/agents';
 

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { audioBatchPrompts, audioBatches } from '@/lib/db/schema';
+import { audioBatchPrompts } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
 
 // PATCH /api/audio-batch-prompts/[id] - Update an audio batch prompt

@@ -1,34 +1,28 @@
 "use client";
 
-import { useState } from "react";
 import { AnimationCanvas } from "@/components/shared/animation-canvas";
-import { Button } from "@/components/ui/button";
+import type { SquishAnimation, ImageEdit } from "@/lib/db/schema";
 
 interface ImagePreviewProps {
   imageId: string;
   fileName: string;
   selectedVersion: string;
   imageVersion: number;
-  squishAnimations: any[];
-  aiAnimations: any[];
-  imageEdits?: any[];
+  squishAnimations: SquishAnimation[];
+  aiAnimations: SquishAnimation[];
+  imageEdits?: ImageEdit[];
   isSampling?: boolean;
-  hasTransparent?: boolean;
-  onVersionChange?: (version: string) => void;
   onImageClick?: (e: React.MouseEvent<HTMLImageElement>) => void;
 }
 
 export function ImagePreview({
   imageId,
-  fileName,
   selectedVersion,
   imageVersion,
   squishAnimations,
   aiAnimations,
   imageEdits = [],
   isSampling = false,
-  hasTransparent = false,
-  onVersionChange,
   onImageClick,
 }: ImagePreviewProps) {
   // Determine if we're viewing an animation or edit
@@ -40,10 +34,10 @@ export function ImagePreview({
   if (isAnimation) {
     if (selectedVersion.startsWith('squish-')) {
       const animationId = selectedVersion.replace('squish-', '');
-      currentAnimation = squishAnimations?.find((a: any) => a.id === animationId);
+      currentAnimation = squishAnimations?.find((a) => a.id === animationId);
     } else if (selectedVersion.startsWith('ai-')) {
       const animationId = selectedVersion.replace('ai-', '');
-      currentAnimation = aiAnimations?.find((a: any) => a.id === animationId);
+      currentAnimation = aiAnimations?.find((a) => a.id === animationId);
     }
   }
 
@@ -55,7 +49,7 @@ export function ImagePreview({
     editId = selectedVersion.replace('edit-', '');
   }
 
-  const currentEdit = editId ? imageEdits?.find((e: any) => e.id === editId) : null;
+  const currentEdit = editId ? imageEdits?.find((e) => e.id === editId) : null;
 
   return (
     <div className="h-full w-full flex flex-col p-8 bg-muted/5">

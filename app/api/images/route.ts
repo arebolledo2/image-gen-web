@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { images, generations, batches, batchPrompts } from '@/lib/db/schema';
-import { desc, eq, and, or, ilike } from 'drizzle-orm';
+import { desc, eq, and, or, ilike as ilikeFn } from 'drizzle-orm';
 
 // GET /api/images - List images with filtering
 export async function GET(request: NextRequest) {
@@ -14,7 +14,7 @@ export async function GET(request: NextRequest) {
     const offset = parseInt(searchParams.get('offset') || '0');
 
     const results = await db.query.images.findMany({
-      where: (images, { and: andFn, eq: eqFn, exists, or: orFn, ilike: ilikeFn }) => {
+      where: (images, { and: andFn, eq: eqFn, exists }) => {
         const conditions = [];
         
         if (favoritesOnly) {
@@ -44,8 +44,8 @@ export async function GET(request: NextRequest) {
                 and(
                   eq(generations.id, images.generationId),
                   or(
-                    ilike(batches.name, `%${search}%`),
-                    ilike(batchPrompts.promptText, `%${search}%`)
+                    ilikeFn(batches.name, `%${search}%`),
+                    ilikeFn(batchPrompts.promptText, `%${search}%`)
                   )
                 )
               )

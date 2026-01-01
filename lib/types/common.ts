@@ -8,10 +8,8 @@
 import type {
     Batch,
     BatchPrompt,
-    Generation,
     AudioBatch,
     AudioBatchPrompt,
-    AudioGeneration,
     SquishAnimation,
     ImageEdit,
 } from '@/lib/db/schema';

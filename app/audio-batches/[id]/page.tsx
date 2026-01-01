@@ -1,6 +1,6 @@
 "use client";
 
-import { use, useEffect, useState, useCallback } from "react";
+import { use, useState, useCallback } from "react";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -11,35 +11,6 @@ import { Textarea } from "@/components/ui/textarea";
 import { Loader2, Play, Music, ArrowLeft, Trash2, Edit2, Check, X, Copy } from "lucide-react";
 import { AIAssistButton } from "@/components/agents/ai-assist-button";
 import { useAudioBatchData } from "@/hooks/use-audio-batch-data";
-
-interface AudioBatchDetails {
-  id: string;
-  name: string;
-  version: number;
-  description: string | null;
-  status: string;
-  provider: string;
-  defaults: {
-    duration?: number;
-    count?: number;
-    temperature?: number;
-  };
-  audioBatchPrompts: {
-    id: string;
-    promptText: string;
-    order: number;
-  }[];
-  audioGenerations?: {
-    id: string;
-    status: string;
-    audioFiles: {
-      id: string;
-      fileName: string;
-      duration: number;
-      isFavorite: boolean;
-    }[];
-  }[];
-}
 
 export default function AudioBatchDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const resolvedParams = use(params);

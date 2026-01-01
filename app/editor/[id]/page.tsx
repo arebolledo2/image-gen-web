@@ -47,12 +47,10 @@ export default function EditorPage() {
 
   // Use hooks
   const {
-    showTransparent,
     processingTransparency,
     processingFlip,
     transparencyTolerance,
     transparencyMode,
-    imageVersions,
     makeTransparent,
     flipHorizontal,
     setTolerance,

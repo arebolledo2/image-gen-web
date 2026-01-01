@@ -1,6 +1,6 @@
 import { AudioProvider, AudioGenerationOptions, AudioGenerationResult } from './types';
 import { db } from '@/lib/db';
-import { audioGenerations, audioFiles } from '@/lib/db/schema';
+import { audioGenerations } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
 import { audioFilesService } from '@/lib/services';
 import * as fs from 'fs';
@@ -128,7 +128,7 @@ export class AudioCraftProvider implements AudioProvider {
       const relativeFilePath = `/audio/generated/${fileName}`;
 
       // Create audio file record in database
-      const audioFile = await audioFilesService.createAudioFile({
+      await audioFilesService.createAudioFile({
         audioGenerationId: generationId,
         filePath: relativeFilePath,
         fileName: fileName,

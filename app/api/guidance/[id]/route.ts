@@ -47,7 +47,7 @@ export async function PATCH(
     const { name, description } = body;
 
     // Build update object with only provided fields
-    const updateData: any = {};
+    const updateData: { name?: string; description?: string } = {};
     if (name !== undefined) updateData.name = name;
     if (description !== undefined) updateData.description = description;
 

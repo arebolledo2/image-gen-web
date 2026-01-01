@@ -1,6 +1,6 @@
 import { db } from '@/lib/db';
 import { audioFiles, AudioFile, NewAudioFile, audioGenerations } from '@/lib/db/schema';
-import { eq, desc, and, inArray, like } from 'drizzle-orm';
+import { eq, desc, inArray } from 'drizzle-orm';
 import { BaseService } from './base.service';
 
 /**
@@ -59,7 +59,7 @@ export class AudioFilesService extends BaseService<typeof audioFiles, AudioFile,
     }
 
     // Build query
-    let query = db.query.audioFiles.findMany({
+    const query = db.query.audioFiles.findMany({
       where: inArray(audioFiles.audioGenerationId, generationIds),
       orderBy: [desc(audioFiles.createdAt)],
       with: {
@@ -121,7 +121,7 @@ export class AudioFilesService extends BaseService<typeof audioFiles, AudioFile,
     offset?: number;
   }) {
     // Build base query
-    let query = db.query.audioFiles.findMany({
+    const query = db.query.audioFiles.findMany({
       orderBy: [desc(audioFiles.createdAt)],
       with: {
         audioGeneration: {

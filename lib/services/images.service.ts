@@ -1,6 +1,6 @@
 import { db } from '@/lib/db';
-import { images, squishAnimations, imageEdits, Image, NewImage, SquishAnimation, NewSquishAnimation, ImageEdit, NewImageEdit, generations } from '@/lib/db/schema';
-import { eq, desc, and, inArray } from 'drizzle-orm';
+import { images, squishAnimations, imageEdits, Image, NewImage, SquishAnimation, ImageEdit, generations } from '@/lib/db/schema';
+import { eq, desc, inArray } from 'drizzle-orm';
 import { BaseService } from './base.service';
 
 /**
@@ -75,7 +75,7 @@ export class ImagesService extends BaseService<typeof images, Image, NewImage> {
     }
 
     // Build query
-    let query = db.query.images.findMany({
+    const query = db.query.images.findMany({
       where: inArray(images.generationId, generationIds),
       orderBy: [desc(images.createdAt)],
       with: {

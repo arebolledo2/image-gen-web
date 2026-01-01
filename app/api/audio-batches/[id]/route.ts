@@ -1,7 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/db';
-import { audioBatches } from '@/lib/db/schema';
-import { eq } from 'drizzle-orm';
 import { audioBatchesService } from '@/lib/services';
 
 // GET /api/audio-batches/[id] - Get a single audio batch

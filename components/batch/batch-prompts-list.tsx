@@ -16,7 +16,6 @@ interface BatchPrompt {
 interface BatchPromptsListProps {
   prompts: BatchPrompt[];
   batchStatus: string;
-  promptStyle: string;
   onPromptUpdate: (promptId: string, newText: string) => Promise<void>;
   onAdjustPrompt: (promptId: string, suggestion: string, currentText: string) => Promise<string>;
 }
@@ -24,7 +23,6 @@ interface BatchPromptsListProps {
 export const BatchPromptsList = memo(function BatchPromptsList({
   prompts,
   batchStatus,
-  promptStyle,
   onPromptUpdate,
   onAdjustPrompt,
 }: BatchPromptsListProps) {

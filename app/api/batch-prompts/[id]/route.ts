@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { batchPrompts, batches } from '@/lib/db/schema';
+import { batchPrompts } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
 
 // PATCH /api/batch-prompts/[id] - Update a batch prompt
@@ -42,7 +42,7 @@ export async function PATCH(
     }
 
     await db.update(batchPrompts)
-      .set({ promptText, updatedAt: new Date() } as any) // updatedAt might not be on batchPrompts, let's check schema
+      .set({ promptText })
       .where(eq(batchPrompts.id, id));
 
     return NextResponse.json({ success: true });
