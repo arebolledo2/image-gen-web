@@ -10,7 +10,7 @@ import { memo } from "react";
 
 interface BatchDetailsProps {
   batch: {
-    provider: 'gemini' | 'comfyui';
+    provider: 'gemini' | 'gemini3' | 'comfyui';
     createdAt: string;
     completedAt: string | null;
     batchPrompts: any[];
@@ -18,6 +18,19 @@ interface BatchDetailsProps {
     defaults: any;
   };
 }
+
+const getProviderLabel = (provider: string) => {
+  switch (provider) {
+    case 'gemini':
+      return '⚡ Google Gemini 2.5';
+    case 'gemini3':
+      return '✨ Google Gemini 3 Pro';
+    case 'comfyui':
+      return '🎨 ComfyUI';
+    default:
+      return provider;
+  }
+};
 
 export const BatchDetails = memo(function BatchDetails({ batch }: BatchDetailsProps) {
   return (
@@ -30,7 +43,7 @@ export const BatchDetails = memo(function BatchDetails({ batch }: BatchDetailsPr
           <div className="flex justify-between">
             <span className="text-muted-foreground">Provider:</span>
             <span className="font-medium">
-              {batch.provider === 'gemini' ? '⚡ Google Gemini' : '🎨 ComfyUI'}
+              {getProviderLabel(batch.provider)}
             </span>
           </div>
           <div className="flex justify-between">

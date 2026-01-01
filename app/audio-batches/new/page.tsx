@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Slider } from "@/components/ui/slider";
 import { Switch } from "@/components/ui/switch";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Loader2, Plus, X, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 
@@ -27,6 +28,7 @@ export default function NewAudioBatchPage() {
 
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
+  const [provider, setProvider] = useState<'audiocraft' | 'elevenlabs'>('elevenlabs');
   const [useAutoDuration, setUseAutoDuration] = useState(true);
   const [defaultDuration, setDefaultDuration] = useState(1);
   const [defaultCount, setDefaultCount] = useState(1);
@@ -101,7 +103,7 @@ export default function NewAudioBatchPage() {
         body: JSON.stringify({
           name,
           description,
-          provider: 'audiocraft',
+          provider,
           defaults: {
             duration: useAutoDuration ? 0 : defaultDuration,
             count: defaultCount,
@@ -164,6 +166,22 @@ export default function NewAudioBatchPage() {
                 placeholder="Optional description..."
                 rows={3}
               />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="provider">Audio Provider</Label>
+              <Select value={provider} onValueChange={(value: 'audiocraft' | 'elevenlabs') => setProvider(value)}>
+                <SelectTrigger id="provider">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="elevenlabs">✨ ElevenLabs (Recommended)</SelectItem>
+                  <SelectItem value="audiocraft">🎵 AudioCraft</SelectItem>
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                ElevenLabs produces higher quality sound effects
+              </p>
             </div>
           </CardContent>
         </Card>

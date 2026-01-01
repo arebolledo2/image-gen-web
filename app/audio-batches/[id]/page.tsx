@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Loader2, Play, Music, ArrowLeft, Trash2, Edit2, Check, X, Copy } from "lucide-react";
 import { AIAssistButton } from "@/components/agents/ai-assist-button";
+import { AudioBatchSettingsDialog } from "@/components/batch/audio-batch-settings-dialog";
 import { useAudioBatchData } from "@/hooks/use-audio-batch-data";
 
 export default function AudioBatchDetailPage({ params }: { params: Promise<{ id: string }> }) {
@@ -198,14 +199,24 @@ export default function AudioBatchDetailPage({ params }: { params: Promise<{ id:
         </div>
         <div className="flex gap-2">
           {batch.status === 'draft' && (
-            <Button onClick={handleExecute} disabled={executing}>
-              {executing ? (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              ) : (
-                <Play className="mr-2 h-4 w-4" />
-              )}
-              Execute
-            </Button>
+            <>
+              <AudioBatchSettingsDialog
+                batchId={batch.id}
+                currentSettings={{
+                  provider: batch.provider,
+                  defaults: batch.defaults,
+                }}
+                onSettingsUpdated={refetchBatch}
+              />
+              <Button onClick={handleExecute} disabled={executing}>
+                {executing ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <Play className="mr-2 h-4 w-4" />
+                )}
+                Execute
+              </Button>
+            </>
           )}
           <Button onClick={handleCreateVersion} disabled={creatingVersion} variant="outline">
             {creatingVersion ? (
@@ -232,6 +243,12 @@ export default function AudioBatchDetailPage({ params }: { params: Promise<{ id:
             <CardTitle className="text-sm font-medium">Settings</CardTitle>
           </CardHeader>
           <CardContent className="space-y-2 text-sm">
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Provider:</span>
+              <span>
+                {batch.provider === 'elevenlabs' ? '✨ ElevenLabs' : '🎵 AudioCraft'}
+              </span>
+            </div>
             <div className="flex justify-between">
               <span className="text-muted-foreground">Duration:</span>
               <span>

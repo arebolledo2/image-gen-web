@@ -250,6 +250,7 @@ export default function BatchDetailPage() {
         onExecute={handleExecute}
         onCreateVersion={handleCreateVersion}
         onDelete={handleDelete}
+        onSettingsUpdated={refetchBatch}
       />
 
       <BatchDetails batch={batch} />

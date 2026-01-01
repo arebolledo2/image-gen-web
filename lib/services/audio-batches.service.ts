@@ -145,6 +145,8 @@ export class AudioBatchesService extends BaseService<typeof audioBatches, AudioB
     data: {
       name?: string;
       description?: string;
+      provider?: 'audiocraft' | 'elevenlabs';
+      defaults?: Partial<AudioBatchDefaults>;
       prompts?: Array<{
         promptText: string;
         overrides?: AudioBatchPromptOverrides;
@@ -164,15 +166,21 @@ export class AudioBatchesService extends BaseService<typeof audioBatches, AudioB
         throw new Error(`Parent audio batch ${parentAudioBatchId} not found`);
       }
 
+      // Merge parent defaults with new defaults
+      const mergedDefaults = {
+        ...(parentBatch.defaults as AudioBatchDefaults || {}),
+        ...(data.defaults || {}),
+      };
+
       // Create new version
       const [batch] = await tx
         .insert(audioBatches)
         .values({
           name: data.name ?? parentBatch.name,
           description: data.description ?? parentBatch.description,
-          provider: parentBatch.provider,
+          provider: data.provider ?? parentBatch.provider,
           status: 'draft',
-          defaults: parentBatch.defaults,
+          defaults: mergedDefaults,
           parentAudioBatchId,
           version: parentBatch.version + 1,
         })
@@ -214,6 +222,7 @@ export class AudioBatchesService extends BaseService<typeof audioBatches, AudioB
     data: {
       name?: string;
       description?: string;
+      provider?: 'audiocraft' | 'elevenlabs';
       defaults?: Partial<AudioBatchDefaults>;
     }
   ): Promise<AudioBatch | undefined> {

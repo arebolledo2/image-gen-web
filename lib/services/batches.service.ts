@@ -167,6 +167,8 @@ export class BatchesService extends BaseService<typeof batches, Batch, NewBatch>
     data: {
       name?: string;
       description?: string;
+      provider?: 'gemini' | 'gemini3' | 'comfyui';
+      defaults?: Partial<BatchDefaults>;
       prompts?: Array<{
         promptId?: string;
         promptText: string;
@@ -187,15 +189,21 @@ export class BatchesService extends BaseService<typeof batches, Batch, NewBatch>
         throw new Error(`Parent batch ${parentBatchId} not found`);
       }
 
+      // Merge parent defaults with new defaults
+      const mergedDefaults = {
+        ...(parentBatch.defaults as BatchDefaults || {}),
+        ...(data.defaults || {}),
+      };
+
       // Create new version
       const [batch] = await tx
         .insert(batches)
         .values({
           name: data.name ?? parentBatch.name,
           description: data.description ?? parentBatch.description,
-          provider: parentBatch.provider,
+          provider: data.provider ?? parentBatch.provider,
           status: 'draft',
-          defaults: parentBatch.defaults,
+          defaults: mergedDefaults,
           parentBatchId,
           version: parentBatch.version + 1,
         })
@@ -239,6 +247,7 @@ export class BatchesService extends BaseService<typeof batches, Batch, NewBatch>
     data: {
       name?: string;
       description?: string;
+      provider?: 'gemini' | 'gemini3' | 'comfyui';
       defaults?: Partial<BatchDefaults>;
     }
   ): Promise<Batch | undefined> {

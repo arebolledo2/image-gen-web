@@ -196,7 +196,7 @@ export const audioBatches = pgTable('audio_batches', {
   parentAudioBatchId: uuid('parent_audio_batch_id'),
   description: text('description'),
   status: batchStatusEnum('status').default('draft').notNull(),
-  provider: audioProviderEnum('provider').default('audiocraft').notNull(),
+  provider: audioProviderEnum('provider').default('elevenlabs').notNull(),
   defaults: json('defaults').$type<{
     duration?: number;      // seconds (1-10)
     count?: number;         // variations per prompt (1-5)

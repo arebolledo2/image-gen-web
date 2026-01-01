@@ -5,6 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Loader2, Play, Trash2, ArrowLeft, Copy } from "lucide-react";
 import { memo } from "react";
+import { BatchSettingsDialog } from "./batch-settings-dialog";
+import type { ProviderType } from "@/lib/config/resolution-presets";
 
 interface BatchHeaderProps {
   batch: {
@@ -13,12 +15,18 @@ interface BatchHeaderProps {
     version: number;
     description: string | null;
     status: string;
+    provider: ProviderType;
+    defaults?: {
+      count?: number;
+      resolution?: string;
+    };
   };
   executing: boolean;
   creatingVersion: boolean;
   onExecute: () => Promise<void>;
   onCreateVersion: () => Promise<void>;
   onDelete: () => Promise<void>;
+  onSettingsUpdated?: () => void;
 }
 
 const getStatusColor = (status: string) => {
@@ -43,6 +51,7 @@ export const BatchHeader = memo(function BatchHeader({
   onExecute,
   onCreateVersion,
   onDelete,
+  onSettingsUpdated,
 }: BatchHeaderProps) {
   const router = useRouter();
 
@@ -65,14 +74,24 @@ export const BatchHeader = memo(function BatchHeader({
       </div>
       <div className="flex gap-2">
         {batch.status === 'draft' && (
-          <Button onClick={onExecute} disabled={executing}>
-            {executing ? (
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            ) : (
-              <Play className="mr-2 h-4 w-4" />
-            )}
-            Execute Batch
-          </Button>
+          <>
+            <BatchSettingsDialog
+              batchId={batch.id}
+              currentSettings={{
+                provider: batch.provider,
+                defaults: batch.defaults,
+              }}
+              onSettingsUpdated={onSettingsUpdated || (() => router.refresh())}
+            />
+            <Button onClick={onExecute} disabled={executing}>
+              {executing ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <Play className="mr-2 h-4 w-4" />
+              )}
+              Execute Batch
+            </Button>
+          </>
         )}
         <Button onClick={onCreateVersion} disabled={creatingVersion}>
           {creatingVersion ? (
