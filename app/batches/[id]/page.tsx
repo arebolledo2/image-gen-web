@@ -226,7 +226,8 @@ export default function BatchDetailPage() {
   const handleAdjustPrompt = useCallback(async (
     promptId: string,
     suggestion: string,
-    currentText: string
+    currentText: string,
+    referenceImageIds: string[]
   ): Promise<string> => {
     const response = await fetch('/api/agents/adjust-prompt', {
       method: 'POST',
@@ -234,7 +235,8 @@ export default function BatchDetailPage() {
       body: JSON.stringify({
         basePrompt: currentText,
         suggestion,
-        promptStyle
+        promptStyle,
+        referenceImageIds
       })
     });
 
@@ -303,6 +305,7 @@ export default function BatchDetailPage() {
 
       <BatchPromptsList
         prompts={batch.batchPrompts}
+        batchId={batch.id}
         batchStatus={batch.status}
         promptStyle={promptStyle}
         onPromptUpdate={handlePromptUpdate}

@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { Loader2, Edit2, Check, X } from "lucide-react";
-import { AIAssistButton } from "@/components/agents/ai-assist-button";
+import { AIAssistButtonWithReferences } from "@/components/agents/ai-assist-button-with-references";
 import { toast } from "sonner";
 
 interface BatchPrompt {
@@ -15,14 +15,16 @@ interface BatchPrompt {
 
 interface BatchPromptsListProps {
   prompts: BatchPrompt[];
+  batchId: string;
   batchStatus: string;
   promptStyle?: string;
   onPromptUpdate: (promptId: string, newText: string) => Promise<void>;
-  onAdjustPrompt: (promptId: string, suggestion: string, currentText: string) => Promise<string>;
+  onAdjustPrompt: (promptId: string, suggestion: string, currentText: string, referenceImageIds: string[]) => Promise<string>;
 }
 
 export const BatchPromptsList = memo(function BatchPromptsList({
   prompts,
+  batchId,
   batchStatus,
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   promptStyle: _promptStyle,
@@ -51,8 +53,8 @@ export const BatchPromptsList = memo(function BatchPromptsList({
     }
   };
 
-  const handleAdjustPrompt = async (promptId: string, suggestion: string) => {
-    const adjustedText = await onAdjustPrompt(promptId, suggestion, editPromptText);
+  const handleAdjustPrompt = async (promptId: string, suggestion: string, referenceImageIds: string[]) => {
+    const adjustedText = await onAdjustPrompt(promptId, suggestion, editPromptText, referenceImageIds);
     setEditPromptText(adjustedText);
   };
 
@@ -84,12 +86,13 @@ export const BatchPromptsList = memo(function BatchPromptsList({
               {editingPromptId === prompt.id ? (
                 <div className="space-y-2">
                   <div className="flex justify-end">
-                    <AIAssistButton
+                    <AIAssistButtonWithReferences
                       label="AI Adjust"
                       title="Adjust Prompt"
                       description="Make a quick suggestion to adjust this prompt."
                       placeholder="e.g., make it more futuristic, add more blue..."
-                      onGenerate={(suggestion) => handleAdjustPrompt(prompt.id, suggestion)}
+                      batchId={batchId}
+                      onGenerate={(suggestion, referenceImageIds) => handleAdjustPrompt(prompt.id, suggestion, referenceImageIds)}
                     />
                   </div>
                   <Textarea

@@ -456,11 +456,13 @@ Description: "A multi-legged combat automaton with polished obsidian plating and
 
 /**
  * Adjust an existing prompt based on a quick suggestion.
+ * Optionally uses reference image prompts to guide the adjustment.
  */
 export async function adjustPromptAgent(
   basePrompt: string,
   suggestion: string,
-  promptStyle: 'terse' | 'verbose' | 'audio' = 'terse'
+  promptStyle: 'terse' | 'verbose' | 'audio' = 'terse',
+  referencePrompts?: string[]
 ): Promise<string> {
   const isAudio = promptStyle === 'audio';
 
@@ -483,6 +485,10 @@ export async function adjustPromptAgent(
 - Keep it to a single paragraph.
 - Follow the structure: [SUBJECT], [FEATURES], [COLORS], [STYLE], [VIEW], [ANIMATION], [OUTLINE], [BACKGROUND]`;
 
+  const referenceContext = referencePrompts && referencePrompts.length > 0
+    ? `\n\nYou have been provided with reference prompts from images the user likes. Use these as inspiration for style, tone, and visual elements:\n${referencePrompts.map((p, i) => `Reference ${i + 1}: ${p}`).join('\n')}`
+    : '';
+
   const systemPrompt = isAudio
     ? `You are an expert sound designer for video games.
 Your task is to refine an existing audio generation prompt based on a user's suggestion.
@@ -494,12 +500,14 @@ CRITICAL RULES:
 3. DO NOT include any image-related instructions (no colors, no perspectives, no transparency).`
     : `You are an expert at refining and adjusting AI image generation prompts for game assets.
 Your task is to take an existing prompt and modify it according to a user's suggestion while maintaining the overall intent and quality.
+${referenceContext}
 
 CRITICAL RULES:
 1. Preserve technical instructions like "solid bright magenta background #FF00FF" if they are present in the base prompt.
 2. Integrate the new suggestion naturally into the existing structure.
-3. ${styleInstruction}
-4. ONLY output the final prompt text. Do not include any conversational filler, explanations, or "Here is the modified prompt:".`;
+3. ${referencePrompts && referencePrompts.length > 0 ? 'Draw inspiration from the reference prompts for visual style, colors, and details that work well.' : ''}
+4. ${styleInstruction}
+5. ONLY output the final prompt text. Do not include any conversational filler, explanations, or "Here is the modified prompt:".`;
 
   const { text } = await generateText({
     model: google('gemini-2.5-flash'),
