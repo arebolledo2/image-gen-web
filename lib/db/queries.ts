@@ -1,5 +1,5 @@
 import { db } from "@/lib/db";
-import { batches, styles, subjects, images, generations, batchPrompts } from "@/lib/db/schema";
+import { batches, styles, subjects, images } from "@/lib/db/schema";
 import { desc, eq } from "drizzle-orm";
 
 export async function getRecentBatches(count: number = 5) {

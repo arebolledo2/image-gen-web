@@ -1,31 +1,87 @@
 "use client";
 
+import React from "react";
+
 import { useChat } from "@ai-sdk/react";
-import { Send, Image as ImageIcon, Loader2 } from "lucide-react";
+import { Send, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Card } from "@/components/ui/card";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
-import { useRef, useEffect } from "react";
+import { useRef, useEffect, useState, useCallback } from "react";
 import { toast } from "sonner";
 
+interface ToolInvocation {
+    toolCallId: string;
+    toolName: string;
+    result?: unknown;
+}
+
+interface TextPart {
+    type: "text";
+    text: string;
+}
+
+interface MessageData {
+    id: string;
+    role: "user" | "assistant" | "system" | "data";
+    parts?: Array<TextPart | { type: string }>;
+    content?: string; // For backward compatibility
+    toolInvocations?: ToolInvocation[];
+}
+
+// Helper to extract text content from message parts
+function getMessageContent(msg: MessageData): string {
+    if (msg.parts) {
+        return msg.parts
+            .filter((part): part is TextPart => part.type === "text")
+            .map(part => part.text)
+            .join("");
+    }
+    return msg.content || "";
+}
+
 export function ChatInterface() {
-    const { messages, input, handleInputChange, handleSubmit, isLoading, error } = useChat({
-        api: "/api/chat",
+    const [inputValue, setInputValue] = useState("");
+    const scrollRef = useRef<HTMLDivElement>(null);
+
+    const { messages, sendMessage, status } = useChat({
         onError: (err: Error) => {
             toast.error(`Error: ${err.message}`);
         }
-    } as any) as any;
+    });
 
-    const scrollRef = useRef<HTMLDivElement>(null);
+    const isLoading = status === "streaming" || status === "submitted";
 
+    // Scroll to bottom when messages change
     useEffect(() => {
         if (scrollRef.current) {
             scrollRef.current.scrollTo(0, scrollRef.current.scrollHeight);
         }
     }, [messages]);
+
+    const handleInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+        setInputValue(e.target.value);
+    }, []);
+
+    const handleSubmit = useCallback(async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!inputValue.trim() || isLoading) return;
+
+        try {
+            // In AI SDK v6, sendMessage takes a message object with parts
+            await sendMessage({
+                role: "user",
+                parts: [{ type: "text" as const, text: inputValue }]
+            });
+            setInputValue("");
+        } catch (submitError) {
+            console.error("Failed to send message:", submitError);
+            toast.error("Failed to send message");
+        }
+    }, [inputValue, isLoading, sendMessage]);
 
     return (
         <Card className="flex flex-col h-[calc(100vh-130px)] shadow-lg">
@@ -45,50 +101,52 @@ export function ChatInterface() {
                             <p>No messages yet. Start a conversation!</p>
                         </div>
                     )}
-                    {messages.map((m: any) => (
-                        <div
-                            key={m.id}
-                            className={cn(
-                                "flex gap-3",
-                                m.role === "user" ? "flex-row-reverse" : "flex-row"
-                            )}
-                        >
-                            <Avatar className="h-8 w-8">
-                                {m.role === "user" ? (
-                                    <AvatarFallback className="bg-primary text-primary-foreground">
-                                        U
-                                    </AvatarFallback>
-                                ) : (
-                                    <AvatarFallback className="bg-muted">AI</AvatarFallback>
-                                )}
-                            </Avatar>
-
+                    {messages.map((m) => {
+                        // Cast to our interface for type safety
+                        const msg = m as unknown as MessageData;
+                        return (
                             <div
+                                key={msg.id}
                                 className={cn(
-                                    "rounded-lg p-3 max-w-[80%] text-sm",
-                                    m.role === "user"
-                                        ? "bg-primary text-primary-foreground"
-                                        : "bg-muted"
+                                    "flex gap-3",
+                                    msg.role === "user" ? "flex-row-reverse" : "flex-row"
                                 )}
                             >
-                                <div className="whitespace-pre-wrap">{m.content}</div>
-                                {/* Render tool invocations/results if any */}
-                                {m.toolInvocations?.map((toolInvocation: any) => {
-                                    const toolCallId = toolInvocation.toolCallId;
-                                    const addResult =
-                                        'result' in toolInvocation ? toolInvocation.result : undefined;
+                                <Avatar className="h-8 w-8">
+                                    {msg.role === "user" ? (
+                                        <AvatarFallback className="bg-primary text-primary-foreground">
+                                            U
+                                        </AvatarFallback>
+                                    ) : (
+                                        <AvatarFallback className="bg-muted">AI</AvatarFallback>
+                                    )}
+                                </Avatar>
 
-                                    // Basic rendering for now, can be improved later
-                                    return (
-                                        <div key={toolCallId} className="mt-2 text-xs opacity-80 border-t pt-2 border-white/20">
-                                            <div className="font-semibold">Tool: {toolInvocation.toolName}</div>
-                                            {addResult && <div>Result: {JSON.stringify(addResult).substring(0, 100)}...</div>}
-                                        </div>
-                                    )
-                                })}
+                                <div
+                                    className={cn(
+                                        "rounded-lg p-3 max-w-[80%] text-sm",
+                                        msg.role === "user"
+                                            ? "bg-primary text-primary-foreground"
+                                            : "bg-muted"
+                                    )}
+                                >
+                                    <div className="whitespace-pre-wrap">{getMessageContent(msg)}</div>
+                                    {msg.toolInvocations?.map((toolInvocation: ToolInvocation) => {
+                                        const toolCallId = toolInvocation.toolCallId;
+                                        const toolResult =
+                                            'result' in toolInvocation ? toolInvocation.result : undefined;
+
+                                        return (
+                                            <div key={toolCallId} className="mt-2 text-xs opacity-80 border-t pt-2 border-white/20">
+                                                <div className="font-semibold">Tool: {toolInvocation.toolName}</div>
+                                                {toolResult && <div>Result: {String(toolResult).substring(0, 100)}...</div>}
+                                            </div>
+                                        )
+                                    })}
+                                </div>
                             </div>
-                        </div>
-                    ))}
+                        );
+                    })}
                     {isLoading && (
                         <div className="flex gap-3">
                             <Avatar className="h-8 w-8">
@@ -108,13 +166,13 @@ export function ChatInterface() {
                     className="flex items-center gap-2"
                 >
                     <Input
-                        value={input}
+                        value={inputValue}
                         onChange={handleInputChange}
-                        placeholder="Type your message..."
+                        placeholder="Ask about your batches, styles, or analyze an image..."
                         className="flex-1"
                         disabled={isLoading}
                     />
-                    <Button type="submit" size="icon" disabled={isLoading || !(input || '').trim()}>
+                    <Button type="submit" size="icon" disabled={isLoading || !inputValue.trim()}>
                         <Send className="h-4 w-4" />
                     </Button>
                 </form>

@@ -20,6 +20,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   // Load theme from localStorage on mount
   // Note: These setState calls are intentional for hydration - this is a client-only provider
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- Intentional for hydration
     setMounted(true);
     const storedTheme = localStorage.getItem("theme") as Theme | null;
     if (storedTheme && ["light", "dark", "system"].includes(storedTheme)) {

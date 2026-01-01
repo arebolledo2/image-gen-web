@@ -20,9 +20,9 @@ ScrollArea.displayName = "ScrollArea"
 const ScrollBar = React.forwardRef<
     HTMLDivElement,
     React.HTMLAttributes<HTMLDivElement>
->(({ className, ...props }, ref) => (
-    null
-))
+>(function ScrollBarComponent() {
+    return null;
+})
 ScrollBar.displayName = "ScrollBar"
 
 export { ScrollArea, ScrollBar }
