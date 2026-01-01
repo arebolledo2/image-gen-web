@@ -109,7 +109,7 @@ export const ImageGallery = memo(function ImageGallery({
             >
               <div className="aspect-square bg-muted relative">
                 <Image
-                  src={`/api/images/${image.id}/file${showTransparent[image.id] ? `?version=transparent&t=${imageVersions[image.id] || ''}` : ''}`}
+                  src={`/api/images/${image.id}/file?size=thumbnail${showTransparent[image.id] ? `&version=transparent&t=${imageVersions[image.id] || ''}` : ''}`}
                   alt={image.fileName}
                   fill
                   className={`object-cover cursor-pointer ${showTransparent[image.id] ? 'bg-[url("https://www.transparenttextures.com/patterns/checkerboard.png")]' : ''}`}
