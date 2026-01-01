@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { Loader2, Plus, X, Palette, Box, Compass, Sparkles, Wand2, EyeOff } from "lucide-react";
 import { AIAssistButton } from "@/components/agents/ai-assist-button";
-import { RESOLUTION_PRESETS, DEFAULT_RESOLUTION } from "@/lib/config/resolution-presets";
+import { RESOLUTION_PRESETS, DEFAULT_RESOLUTION, getResolutionPresetsForProvider, type ProviderType } from "@/lib/config/resolution-presets";
 import { useSettings } from "@/components/providers/settings-provider";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
@@ -52,9 +52,22 @@ export default function NewBatchPage() {
 
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
-  const [provider, setProvider] = useState<'gemini' | 'gemini3' | 'comfyui'>('gemini');
+  const [provider, setProvider] = useState<ProviderType>('gemini');
   const [defaultCount, setDefaultCount] = useState(1);
   const [resolution, setResolution] = useState<string>(DEFAULT_RESOLUTION);
+
+  // Get available resolutions for the current provider
+  const availableResolutions = getResolutionPresetsForProvider(provider);
+
+  // Handle provider change - reset resolution if current one isn't supported
+  const handleProviderChange = (newProvider: ProviderType) => {
+    setProvider(newProvider);
+    const newAvailableResolutions = getResolutionPresetsForProvider(newProvider);
+    const currentResolutionSupported = newAvailableResolutions.some(r => r.id === resolution);
+    if (!currentResolutionSupported) {
+      setResolution(DEFAULT_RESOLUTION);
+    }
+  };
 
   // Selection mode: 'preset' or 'construct'
   const [mode, setMode] = useState<'preset' | 'construct'>('preset');
@@ -534,13 +547,13 @@ export default function NewBatchPage() {
 
                 <div className="space-y-2">
                   <Label htmlFor="provider">Generation Provider</Label>
-                  <Select value={provider} onValueChange={(value: 'gemini' | 'gemini3' | 'comfyui') => setProvider(value)}>
+                  <Select value={provider} onValueChange={(value: ProviderType) => handleProviderChange(value)}>
                     <SelectTrigger id="provider">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="gemini">⚡ Google Gemini 2.5 (Fast)</SelectItem>
-                      <SelectItem value="gemini3">✨ Google Gemini 3 Pro (New)</SelectItem>
+                      <SelectItem value="gemini">⚡ Google Gemini 2.5 (Fast, 1K only)</SelectItem>
+                      <SelectItem value="gemini3">✨ Google Gemini 3 Pro (1K-4K)</SelectItem>
                       <SelectItem value="comfyui">🎨 ComfyUI (Advanced)</SelectItem>
                     </SelectContent>
                   </Select>
@@ -553,7 +566,7 @@ export default function NewBatchPage() {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      {RESOLUTION_PRESETS.map((preset) => (
+                      {availableResolutions.map((preset) => (
                         <SelectItem key={preset.id} value={preset.id}>
                           {preset.label}
                         </SelectItem>

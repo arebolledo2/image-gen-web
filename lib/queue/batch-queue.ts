@@ -77,6 +77,11 @@ function buildParameters(batch: BatchWithPrompts, batchPrompt: BatchPrompt): Ima
           imageSize: preset.geminiImageSize,
         };
       }
+
+      // For Gemini 3: include resolution ID (provider handles mapping internally)
+      if (batch.provider === 'gemini3') {
+        parameters.resolution = resolutionId;
+      }
     }
   }
 
