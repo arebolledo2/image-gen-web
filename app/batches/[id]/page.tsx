@@ -35,7 +35,7 @@ export default function BatchDetailPage() {
   } = useImageGallery(params.id, !!batch);
 
   // Track previous batch status to detect completion
-  const prevStatusRef = useRef<string | undefined>();
+  const prevStatusRef = useRef<string | undefined>(undefined);
 
   // When batch transitions from queued/running to completed, refetch images
   useEffect(() => {
