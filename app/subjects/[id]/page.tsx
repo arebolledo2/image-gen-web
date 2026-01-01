@@ -44,28 +44,28 @@ export default function SubjectDetailPage({ params }: { params: Promise<{ id: st
   const [editIsTransparent, setEditIsTransparent] = useState(true);
 
   useEffect(() => {
-    fetchSubject();
-  }, [id]);
-
-  const fetchSubject = async () => {
-    try {
-      const response = await fetch(`/api/subjects/${id}`);
-      if (!response.ok) {
-        throw new Error("Failed to fetch subject");
+    const fetchSubject = async () => {
+      try {
+        const response = await fetch(`/api/subjects/${id}`);
+        if (!response.ok) {
+          throw new Error("Failed to fetch subject");
+        }
+        const data = await response.json();
+        setSubject(data.subject);
+        setEditName(data.subject.name);
+        setEditDescription(data.subject.description || "");
+        setEditIsTransparent(data.subject.isTransparent);
+      } catch (error) {
+        console.error("Error fetching subject:", error);
+        toast.error("Failed to load subject");
+        router.push("/subjects");
+      } finally {
+        setLoading(false);
       }
-      const data = await response.json();
-      setSubject(data.subject);
-      setEditName(data.subject.name);
-      setEditDescription(data.subject.description || "");
-      setEditIsTransparent(data.subject.isTransparent);
-    } catch (error) {
-      console.error("Error fetching subject:", error);
-      toast.error("Failed to load subject");
-      router.push("/subjects");
-    } finally {
-      setLoading(false);
-    }
-  };
+    };
+
+    fetchSubject();
+  }, [id, router]);
 
   const handleDelete = async () => {
     if (!confirm("Are you sure you want to delete this subject?")) {

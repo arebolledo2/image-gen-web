@@ -130,7 +130,7 @@ export default function EditorPage() {
       fetchAIAnimations(image.id);
       fetchImageEdits(image.id);
     }
-  }, [image?.id]);
+  }, [image, fetchSquishAnimations, fetchAIAnimations, fetchImageEdits]);
 
   // Handle back navigation
   const handleBack = () => {
@@ -408,30 +408,29 @@ export default function EditorPage() {
                   className="w-full gap-2 h-9"
                   asChild
                 >
-                <a
-                  href={
-                    currentVersion.startsWith('squish-')
-                      ? `/api/squish-animations/${currentVersion.replace('squish-', '')}/file`
-                      : currentVersion.startsWith('ai-')
-                      ? `/api/squish-animations/${currentVersion.replace('ai-', '')}/file`
-                      : currentVersion.startsWith('edit-transparent-')
-                      ? `/api/image-edits/${currentVersion.replace('edit-transparent-', '')}/file?version=transparent`
-                      : currentVersion.startsWith('edit-')
-                      ? `/api/image-edits/${currentVersion.replace('edit-', '')}/file`
-                      : `/api/images/${image.id}/file${
-                          currentVersion === 'transparent'
-                            ? '?version=transparent'
-                            : currentVersion === 'flipped'
-                            ? '?version=flipped'
-                            : ''
-                        }`
-                  }
-                  download={image.fileName}
-                >
-                  <Download className="h-4 w-4" />
-                  <span className="hidden lg:inline">Download Image</span>
-                </a>
-              </Button>
+                  <a
+                    href={
+                      currentVersion.startsWith('squish-')
+                        ? `/api/squish-animations/${currentVersion.replace('squish-', '')}/file`
+                        : currentVersion.startsWith('ai-')
+                          ? `/api/squish-animations/${currentVersion.replace('ai-', '')}/file`
+                          : currentVersion.startsWith('edit-transparent-')
+                            ? `/api/image-edits/${currentVersion.replace('edit-transparent-', '')}/file?version=transparent`
+                            : currentVersion.startsWith('edit-')
+                              ? `/api/image-edits/${currentVersion.replace('edit-', '')}/file`
+                              : `/api/images/${image.id}/file${currentVersion === 'transparent'
+                                ? '?version=transparent'
+                                : currentVersion === 'flipped'
+                                  ? '?version=flipped'
+                                  : ''
+                              }`
+                    }
+                    download={image.fileName}
+                  >
+                    <Download className="h-4 w-4" />
+                    <span className="hidden lg:inline">Download Image</span>
+                  </a>
+                </Button>
               </div>
             </div>
           </div>

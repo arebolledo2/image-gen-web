@@ -3,7 +3,7 @@
 import React from "react";
 import { useState, useRef, useEffect } from "react";
 import { useChat } from "@ai-sdk/react";
-import { DefaultChatTransport } from "ai";
+import { type ImageAgentUIMessage } from "@/lib/agent";
 import { Send, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -18,14 +18,8 @@ export function ChatInterface() {
     const scrollRef = useRef<HTMLDivElement>(null);
 
     const { messages, sendMessage, status } = useChat({
-        transport: new DefaultChatTransport({
-            api: '/api/chat',
-        }),
-        onError: (err: Error) => {
-            console.error("useChat error:", err);
-            toast.error(`Error: ${err.message}`);
-        }
-    });
+        api: '/api/chat',
+    } as any);
 
     const isLoading = status !== "ready";
 
@@ -92,22 +86,20 @@ export function ChatInterface() {
                                 )}
                             >
                                 <div className="whitespace-pre-wrap">
-                                    {message.parts.map((part, index) => {
+                                    {message.parts.map((part: any, index: number) => {
                                         if (part.type === "text") {
                                             return <span key={index}>{part.text}</span>;
                                         }
 
-                                        // Handle tool invocations - cast to any to handle potential type mismatches
-                                        // between UI parts and tool invocations
-                                        if (part.type === "tool-invocation") {
-                                            const toolPart = part as any;
-                                            const toolInvocation = toolPart.toolInvocation;
+                                        // Handle tool invocations using typed agent parts
+                                        if (part.type.startsWith("tool-")) {
+                                            const toolName = part.type.replace("tool-", "");
 
                                             return (
                                                 <div key={index} className="mt-2 text-xs opacity-80 border-t pt-2 border-white/20">
-                                                    <div className="font-semibold">Tool: {toolInvocation?.toolName || 'Unknown Tool'}</div>
-                                                    {toolInvocation?.state === "result" && (
-                                                        <div>Result: {String(toolInvocation.result).substring(0, 100)}...</div>
+                                                    <div className="font-semibold">Tool: {toolName}</div>
+                                                    {part.state === "result" && (
+                                                        <div>Result: {JSON.stringify(part.output).substring(0, 100)}...</div>
                                                     )}
                                                 </div>
                                             );

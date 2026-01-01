@@ -108,7 +108,7 @@ export function AnimationCanvas({
         cancelAnimationFrame(animationFrameRef.current);
       }
     };
-  }, [animation?.id, isPlaying, onFrameChange]);
+  }, [animation, isPlaying, onFrameChange]);
 
   return (
     <canvas

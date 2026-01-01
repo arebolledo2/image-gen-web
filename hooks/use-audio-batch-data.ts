@@ -5,7 +5,7 @@
  * Note: Uses `any` for dynamic batch data from API.
  */
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 
 interface AudioBatch {
     id: string;
@@ -27,7 +27,7 @@ export function useAudioBatchData(batchId: string | string[] | undefined) {
     const [batch, setBatch] = useState<AudioBatch | null>(null);
     const [loading, setLoading] = useState(true);
 
-    const fetchBatch = async () => {
+    const fetchBatch = useCallback(async () => {
         if (!batchId) return;
 
         try {
@@ -39,13 +39,13 @@ export function useAudioBatchData(batchId: string | string[] | undefined) {
         } finally {
             setLoading(false);
         }
-    };
+    }, [batchId]);
 
     useEffect(() => {
         if (batchId) {
             fetchBatch();
         }
-    }, [batchId]);
+    }, [batchId, fetchBatch]);
 
     // Poll for updates when batch is queued or running
     useEffect(() => {
@@ -60,7 +60,7 @@ export function useAudioBatchData(batchId: string | string[] | undefined) {
         }, 3000); // Poll every 3 seconds
 
         return () => clearInterval(pollInterval);
-    }, [batch?.status, batch?.id]);
+    }, [batch?.status, batch?.id, fetchBatch]);
 
     return { batch, loading, refetchBatch: fetchBatch };
 }

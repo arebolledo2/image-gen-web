@@ -4,6 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
+import Image from "next/image";
 import { Loader2, Heart, Layers, Sparkles, Download } from "lucide-react";
 import { memo, useCallback } from "react";
 import { type GalleryImage } from "@/components/image-gallery-modal";
@@ -109,12 +110,13 @@ export const ImageGallery = memo(function ImageGallery({
               ref={index === images.length - 1 ? lastImageElementRef : null}
             >
               <div className="aspect-square bg-muted relative">
-                <img
+                <Image
                   src={`/api/images/${image.id}/file${showTransparent[image.id] ? `?version=transparent&t=${imageVersions[image.id] || ''}` : ''}`}
                   alt={image.fileName}
-                  className={`w-full h-full object-cover cursor-pointer ${showTransparent[image.id] ? 'bg-[url("https://www.transparenttextures.com/patterns/checkerboard.png")]' : ''}`}
+                  fill
+                  className={`object-cover cursor-pointer ${showTransparent[image.id] ? 'bg-[url("https://www.transparenttextures.com/patterns/checkerboard.png")]' : ''}`}
                   onClick={() => onImageClick(index)}
-                  onError={handleImageError}
+                  sizes="(max-width: 768px) 50vw, (max-width: 1024px) 33vw, 20vw"
                 />
 
                 {/* Control buttons on card */}

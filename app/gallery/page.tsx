@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useRef, useCallback } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -99,14 +100,14 @@ export default function GalleryPage() {
 
       const response = await fetch(url.toString());
       const data = await response.json();
-      
+
       const newImages = data.images || [];
       if (isInitial) {
         setImages(newImages);
       } else {
         setImages(prev => [...prev, ...newImages]);
       }
-      
+
       setHasMore(newImages.length === LIMIT);
     } catch (error) {
       console.error('Error fetching images:', error);
@@ -123,7 +124,7 @@ export default function GalleryPage() {
   const toggleFavorite = async (e: React.MouseEvent, image: GalleryImage) => {
     e.stopPropagation();
     const newStatus = !image.isFavorite;
-    
+
     // Optimistic update
     setImages(prev => prev.map(img => img.id === image.id ? { ...img, isFavorite: newStatus } : img));
 
@@ -156,7 +157,7 @@ export default function GalleryPage() {
   const toggleGlobalTransparency = () => {
     const newValue = !globalTransparency;
     setGlobalTransparency(newValue);
-    
+
     const newShowTransparent = { ...showTransparent };
     images.forEach(image => {
       if (image.transparentFilePath) {
@@ -203,16 +204,16 @@ export default function GalleryPage() {
             />
           </div>
           <div className="flex items-center space-x-2 bg-muted/50 p-2 px-4 rounded-lg shrink-0">
-            <Switch 
-              id="favorites-filter" 
+            <Switch
+              id="favorites-filter"
               checked={favoritesOnly}
               onCheckedChange={setFavoritesOnly}
             />
             <Label htmlFor="favorites-filter" className="cursor-pointer">Favorites</Label>
           </div>
           <div className="flex items-center space-x-2 bg-muted/50 p-2 px-4 rounded-lg shrink-0">
-            <Switch 
-              id="global-transparency" 
+            <Switch
+              id="global-transparency"
               checked={globalTransparency}
               onCheckedChange={toggleGlobalTransparency}
             />
@@ -230,10 +231,10 @@ export default function GalleryPage() {
           <CardContent className="pt-6">
             <div className="text-center py-12">
               <p className="text-muted-foreground mb-4">
-                {debouncedSearch 
+                {debouncedSearch
                   ? `No images found matching "${debouncedSearch}"`
-                  : favoritesOnly 
-                    ? "No favorited images yet." 
+                  : favoritesOnly
+                    ? "No favorited images yet."
                     : "No images yet. Create and execute a batch to generate images!"}
               </p>
               {!favoritesOnly && !debouncedSearch && (
@@ -257,22 +258,21 @@ export default function GalleryPage() {
 
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
             {images.map((image, index) => (
-              <Card 
-                key={image.id} 
+              <Card
+                key={image.id}
                 className="overflow-hidden group"
                 ref={index === images.length - 1 ? lastImageElementRef : null}
               >
                 <div className="aspect-square bg-muted relative">
-                  <img
+                  <Image
                     src={`/api/images/${image.id}/file${showTransparent[image.id] ? `?version=transparent&t=${imageVersions[image.id] || ''}` : ''}`}
                     alt={image.fileName}
-                    className={`w-full h-full object-cover cursor-pointer ${showTransparent[image.id] ? 'bg-[url("https://www.transparenttextures.com/patterns/checkerboard.png")]' : ''}`}
+                    fill
+                    className={`object-cover cursor-pointer ${showTransparent[image.id] ? 'bg-[url("https://www.transparenttextures.com/patterns/checkerboard.png")]' : ''}`}
                     onClick={() => setSelectedImageIndex(index)}
-                    onError={(e) => {
-                      (e.target as HTMLImageElement).src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="100" height="100"%3E%3Crect fill="%23ddd" width="100" height="100"/%3E%3Ctext x="50%25" y="50%25" text-anchor="middle" dy=".3em" fill="%23999"%3ENo Image%3C/text%3E%3C/svg%3E';
-                    }}
+                    sizes="(max-width: 768px) 50vw, (max-width: 1024px) 33vw, 20vw"
                   />
-                  
+
                   {/* Control buttons on card */}
                   <div className="absolute top-2 right-2 z-10 flex flex-col gap-2">
                     <Button

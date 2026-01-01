@@ -94,7 +94,7 @@ export class ComfyUIClient {
 
     const downloadedImages = [];
 
-    for (const [_nodeId, nodeOutput] of Object.entries(outputs)) {
+    for (const nodeOutput of Object.values(outputs)) {
       if ((nodeOutput as any).images) {
         for (const image of (nodeOutput as any).images) {
           const filename = image.filename;

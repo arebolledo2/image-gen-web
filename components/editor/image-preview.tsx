@@ -1,6 +1,7 @@
 "use client";
 
 import { AnimationCanvas } from "@/components/shared/animation-canvas";
+import Image from "next/image";
 
 interface ImagePreviewProps {
   imageId: string;
@@ -64,7 +65,7 @@ export function ImagePreview({
     <div className="h-full w-full flex flex-col p-8 bg-muted/5">
       {/* Image/Animation Display */}
       <div className="flex-1 flex items-center justify-center relative min-h-0">
-        <div className="w-full h-full flex items-center justify-center">
+        <div className="w-full h-full relative">
           {isAnimation && currentAnimation ? (
             <AnimationCanvas
               animation={currentAnimation}
@@ -72,27 +73,28 @@ export function ImagePreview({
               className="max-w-full max-h-full w-auto h-auto object-contain bg-[url('https://www.transparenttextures.com/patterns/checkerboard.png')]"
             />
           ) : (
-            <img
+            <Image
               src={
                 isTransparentEdit && currentEdit?.transparentEditPath
                   ? `/api/image-edits/${editId}/file?version=transparent&t=${imageVersion || ''}`
                   : isEdit
-                  ? `/api/image-edits/${editId}/file?t=${imageVersion || ''}`
-                  : `/api/images/${imageId}/file${
-                      selectedVersion === 'transparent'
-                        ? `?version=transparent&t=${imageVersion || ''}`
-                        : selectedVersion === 'flipped'
+                    ? `/api/image-edits/${editId}/file?t=${imageVersion || ''}`
+                    : `/api/images/${imageId}/file${selectedVersion === 'transparent'
+                      ? `?version=transparent&t=${imageVersion || ''}`
+                      : selectedVersion === 'flipped'
                         ? `?version=flipped&t=${imageVersion || ''}`
                         : ''
                     }`
               }
               alt={fileName}
-              className={`max-w-full max-h-full w-auto h-auto object-contain ${isSampling ? 'cursor-crosshair' : ''} ${
-                selectedVersion === 'transparent' || selectedVersion === 'flipped' || isEdit || isTransparentEdit
+              fill
+              className={`object-contain ${isSampling ? 'cursor-crosshair' : ''} ${selectedVersion === 'transparent' || selectedVersion === 'flipped' || isEdit || isTransparentEdit
                   ? 'bg-[url("https://www.transparenttextures.com/patterns/checkerboard.png")]'
                   : ''
-              }`}
+                }`}
               onClick={onImageClick}
+              sizes="100vw"
+              priority
             />
           )}
         </div>

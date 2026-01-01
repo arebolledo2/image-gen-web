@@ -72,42 +72,42 @@ export default function StyleDetailPage({ params }: { params: Promise<{ id: stri
   const [aiLoading, setAiLoading] = useState(false);
 
   useEffect(() => {
+    const fetchStyle = async () => {
+      try {
+        const response = await fetch(`/api/styles/${id}`);
+        if (!response.ok) {
+          throw new Error("Failed to fetch style");
+        }
+        const data = await response.json();
+        const styleData = data.style;
+        setStyle(styleData);
+
+        // Initialize edit state
+        setEditName(styleData.name);
+        setEditDescription(styleData.description || "");
+
+        if (!Array.isArray(styleData.palette)) {
+          setEditPrimaryColors(styleData.palette.primary || []);
+          setEditAccentColors(styleData.palette.accent || []);
+          setEditBackground(styleData.palette.background || "#ffffff");
+        }
+
+        if (!Array.isArray(styleData.renderingCues)) {
+          setEditMaterials(styleData.renderingCues.materials || []);
+          setEditEffects(styleData.renderingCues.effects || []);
+          setEditFinish(styleData.renderingCues.finish || "");
+        }
+      } catch (error) {
+        console.error("Error fetching style:", error);
+        toast.error("Failed to load style");
+        router.push("/styles");
+      } finally {
+        setLoading(false);
+      }
+    };
+
     fetchStyle();
-  }, [id]);
-
-  const fetchStyle = async () => {
-    try {
-      const response = await fetch(`/api/styles/${id}`);
-      if (!response.ok) {
-        throw new Error("Failed to fetch style");
-      }
-      const data = await response.json();
-      const styleData = data.style;
-      setStyle(styleData);
-
-      // Initialize edit state
-      setEditName(styleData.name);
-      setEditDescription(styleData.description || "");
-
-      if (!Array.isArray(styleData.palette)) {
-        setEditPrimaryColors(styleData.palette.primary || []);
-        setEditAccentColors(styleData.palette.accent || []);
-        setEditBackground(styleData.palette.background || "#ffffff");
-      }
-
-      if (!Array.isArray(styleData.renderingCues)) {
-        setEditMaterials(styleData.renderingCues.materials || []);
-        setEditEffects(styleData.renderingCues.effects || []);
-        setEditFinish(styleData.renderingCues.finish || "");
-      }
-    } catch (error) {
-      console.error("Error fetching style:", error);
-      toast.error("Failed to load style");
-      router.push("/styles");
-    } finally {
-      setLoading(false);
-    }
-  };
+  }, [id, router]);
 
   const handleDelete = async () => {
     if (!confirm("Are you sure you want to delete this style?")) {

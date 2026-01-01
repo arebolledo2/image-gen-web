@@ -14,8 +14,10 @@ import {
   Edit,
   HelpCircle,
   Copy,
-  Check
+  Check,
+  X
 } from "lucide-react";
+import NextImage from "next/image";
 import {
   Dialog,
   DialogContent,
@@ -82,7 +84,7 @@ export function ImageGalleryModal({
 
   const navigateImage = useCallback((direction: 'next' | 'prev') => {
     if (selectedIndex === null) return;
-    
+
     if (direction === 'next' && selectedIndex < images.length - 1) {
       onNavigate(selectedIndex + 1);
     } else if (direction === 'prev' && selectedIndex > 0) {
@@ -172,11 +174,11 @@ export function ImageGalleryModal({
 
     const img = new Image();
     img.src = `/api/squish-animations/${animationId}/file`;
-    
+
     img.onload = () => {
       const frameCount = animation.frameCount;
       const gridSize = animation.metadata?.gridSize; // AI animations have gridSize (2, 3, or 4)
-      
+
       console.log('Animation Debug:', {
         frameCount,
         gridSize,
@@ -187,10 +189,10 @@ export function ImageGalleryModal({
         imageWidth: img.width,
         imageHeight: img.height,
       });
-      
+
       let frameWidth: number;
       let frameHeight: number;
-      
+
       if (gridSize) {
         // AI animation: use stored frame dimensions from metadata
         frameWidth = animation.metadata?.frameWidth || img.width / gridSize;
@@ -217,10 +219,10 @@ export function ImageGalleryModal({
 
         if (timestamp - lastFrameTime >= frameInterval) {
           ctx.clearRect(0, 0, frameWidth, frameHeight);
-          
+
           let sourceX: number;
           let sourceY: number;
-          
+
           if (gridSize) {
             // AI animation: calculate grid position (left-to-right, top-to-bottom)
             const col = frame % gridSize;
@@ -232,7 +234,7 @@ export function ImageGalleryModal({
             sourceX = frame * frameWidth;
             sourceY = 0;
           }
-          
+
           ctx.drawImage(img, sourceX, sourceY, frameWidth, frameHeight, 0, 0, frameWidth, frameHeight);
           frame = (frame + 1) % frameCount;
           lastFrameTime = timestamp;
@@ -249,11 +251,11 @@ export function ImageGalleryModal({
         cancelAnimationFrame(animationFrameRef.current);
       }
     };
-  }, [currentImage?.id, selectedVersion, squishAnimations, aiAnimations, isPlaying]);
+  }, [currentImage, selectedVersion, squishAnimations, aiAnimations, isPlaying]);
 
   return (
-    <Dialog 
-      open={selectedIndex !== null} 
+    <Dialog
+      open={selectedIndex !== null}
       onOpenChange={(open) => !open && onClose()}
     >
       <DialogContent
@@ -276,23 +278,24 @@ export function ImageGalleryModal({
                   style={{ imageRendering: 'pixelated' }}
                 />
               ) : (
-                <img
-                  src={`/api/images/${currentImage.id}/file${
-                    selectedVersion[currentImage.id] === 'transparent'
-                      ? '?version=transparent'
-                      : selectedVersion[currentImage.id] === 'flipped'
+                <NextImage
+                  src={`/api/images/${currentImage.id}/file${selectedVersion[currentImage.id] === 'transparent'
+                    ? '?version=transparent'
+                    : selectedVersion[currentImage.id] === 'flipped'
                       ? '?version=flipped'
                       : ''
-                  }`}
+                    }`}
                   alt={currentImage.fileName}
-                  className={`max-w-full max-h-full w-auto h-auto object-contain ${
-                    selectedVersion[currentImage.id] === 'transparent' || selectedVersion[currentImage.id] === 'flipped'
-                      ? 'bg-[url("https://www.transparenttextures.com/patterns/checkerboard.png")]'
-                      : ''
-                  }`}
+                  fill
+                  className={`object-contain ${selectedVersion[currentImage.id] === 'transparent' || selectedVersion[currentImage.id] === 'flipped'
+                    ? 'bg-[url("https://www.transparenttextures.com/patterns/checkerboard.png")]'
+                    : ''
+                    }`}
+                  sizes="100vw"
+                  priority
                 />
               )}
-              
+
               {/* Navigation Arrows */}
               <div className="absolute inset-x-4 flex items-center justify-between pointer-events-none">
                 <Button
@@ -324,11 +327,10 @@ export function ImageGalleryModal({
                     <Button
                       variant="ghost"
                       size="sm"
-                      className={`h-8 px-3 text-xs rounded-lg ${
-                        (selectedVersion[currentImage.id] || 'original') === 'original'
-                          ? 'bg-white/20 text-white border border-white/30'
-                          : 'bg-black/40 text-white/70 hover:bg-black/50 hover:text-white'
-                      }`}
+                      className={`h-8 px-3 text-xs rounded-lg ${(selectedVersion[currentImage.id] || 'original') === 'original'
+                        ? 'bg-white/20 text-white border border-white/30'
+                        : 'bg-black/40 text-white/70 hover:bg-black/50 hover:text-white'
+                        }`}
                       onClick={() => onSelectedVersionChange(currentImage.id, 'original')}
                     >
                       Original
@@ -339,11 +341,10 @@ export function ImageGalleryModal({
                       <Button
                         variant="ghost"
                         size="sm"
-                        className={`h-8 px-3 text-xs rounded-lg ${
-                          selectedVersion[currentImage.id] === 'transparent'
-                            ? 'bg-white/20 text-white border border-white/30'
-                            : 'bg-black/40 text-white/70 hover:bg-black/50 hover:text-white'
-                        }`}
+                        className={`h-8 px-3 text-xs rounded-lg ${selectedVersion[currentImage.id] === 'transparent'
+                          ? 'bg-white/20 text-white border border-white/30'
+                          : 'bg-black/40 text-white/70 hover:bg-black/50 hover:text-white'
+                          }`}
                         onClick={() => onSelectedVersionChange(currentImage.id, 'transparent')}
                       >
                         Transparent
@@ -355,11 +356,10 @@ export function ImageGalleryModal({
                       <Button
                         variant="ghost"
                         size="sm"
-                        className={`h-8 px-3 text-xs rounded-lg ${
-                          selectedVersion[currentImage.id] === 'flipped'
-                            ? 'bg-white/20 text-white border border-white/30'
-                            : 'bg-black/40 text-white/70 hover:bg-black/50 hover:text-white'
-                        }`}
+                        className={`h-8 px-3 text-xs rounded-lg ${selectedVersion[currentImage.id] === 'flipped'
+                          ? 'bg-white/20 text-white border border-white/30'
+                          : 'bg-black/40 text-white/70 hover:bg-black/50 hover:text-white'
+                          }`}
                         onClick={() => onSelectedVersionChange(currentImage.id, 'flipped')}
                       >
                         Flipped
@@ -372,11 +372,10 @@ export function ImageGalleryModal({
                         key={`squish-${animation.id}`}
                         variant="ghost"
                         size="sm"
-                        className={`h-8 px-3 text-xs rounded-lg ${
-                          selectedVersion[currentImage.id] === `squish-${animation.id}`
-                            ? 'bg-white/20 text-white border border-white/30'
-                            : 'bg-black/40 text-white/70 hover:bg-black/50 hover:text-white'
-                        }`}
+                        className={`h-8 px-3 text-xs rounded-lg ${selectedVersion[currentImage.id] === `squish-${animation.id}`
+                          ? 'bg-white/20 text-white border border-white/30'
+                          : 'bg-black/40 text-white/70 hover:bg-black/50 hover:text-white'
+                          }`}
                         onClick={() => onSelectedVersionChange(currentImage.id, `squish-${animation.id}`)}
                       >
                         Squish {animation.frameCount}f @{animation.intensity}%
@@ -389,11 +388,10 @@ export function ImageGalleryModal({
                         key={`ai-${animation.id}`}
                         variant="ghost"
                         size="sm"
-                        className={`h-8 px-3 text-xs rounded-lg ${
-                          selectedVersion[currentImage.id] === `ai-${animation.id}`
-                            ? 'bg-white/20 text-white border border-white/30'
-                            : 'bg-black/40 text-white/70 hover:bg-black/50 hover:text-white'
-                        }`}
+                        className={`h-8 px-3 text-xs rounded-lg ${selectedVersion[currentImage.id] === `ai-${animation.id}`
+                          ? 'bg-white/20 text-white border border-white/30'
+                          : 'bg-black/40 text-white/70 hover:bg-black/50 hover:text-white'
+                          }`}
                         onClick={() => onSelectedVersionChange(currentImage.id, `ai-${animation.id}`)}
                         title={animation.aiPrompt}
                       >
@@ -435,11 +433,10 @@ export function ImageGalleryModal({
                         selectedVersion[currentImage.id]?.startsWith('squish-')
                           ? `/api/squish-animations/${selectedVersion[currentImage.id].replace('squish-', '')}/file`
                           : selectedVersion[currentImage.id]?.startsWith('ai-')
-                          ? `/api/squish-animations/${selectedVersion[currentImage.id].replace('ai-', '')}/file`
-                          : `/api/images/${currentImage.id}/file${
-                              selectedVersion[currentImage.id] === 'transparent'
-                                ? '?version=transparent'
-                                : selectedVersion[currentImage.id] === 'flipped'
+                            ? `/api/squish-animations/${selectedVersion[currentImage.id].replace('ai-', '')}/file`
+                            : `/api/images/${currentImage.id}/file${selectedVersion[currentImage.id] === 'transparent'
+                              ? '?version=transparent'
+                              : selectedVersion[currentImage.id] === 'flipped'
                                 ? '?version=flipped'
                                 : ''
                             }`
@@ -474,9 +471,9 @@ export function ImageGalleryModal({
                       <div className="bg-black/50 p-2 rounded-full backdrop-blur-sm hover:bg-black/70 transition-colors cursor-help">
                         <HelpCircle className="h-5 w-5 text-white/70 group-hover/prompt:text-white" />
                       </div>
-                      
+
                       {/* Tooltip-like prompt display */}
-                      <div 
+                      <div
                         className="absolute bottom-full left-0 mb-0 w-80 md:w-96 opacity-0 group-hover/prompt:opacity-100 transition-opacity pointer-events-none group-hover/prompt:pointer-events-auto pb-4"
                         onWheel={(e) => e.stopPropagation()}
                       >

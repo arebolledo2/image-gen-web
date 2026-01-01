@@ -40,27 +40,27 @@ export default function GuidanceDetailPage({ params }: { params: Promise<{ id: s
   const [editDescription, setEditDescription] = useState("");
 
   useEffect(() => {
-    fetchGuidance();
-  }, [id]);
-
-  const fetchGuidance = async () => {
-    try {
-      const response = await fetch(`/api/guidance/${id}`);
-      if (!response.ok) {
-        throw new Error("Failed to fetch guidance");
+    const fetchGuidance = async () => {
+      try {
+        const response = await fetch(`/api/guidance/${id}`);
+        if (!response.ok) {
+          throw new Error("Failed to fetch guidance");
+        }
+        const data = await response.json();
+        setGuidance(data.guidance);
+        setEditName(data.guidance.name);
+        setEditDescription(data.guidance.description);
+      } catch (error) {
+        console.error("Error fetching guidance:", error);
+        toast.error("Failed to load guidance");
+        router.push("/guidance");
+      } finally {
+        setLoading(false);
       }
-      const data = await response.json();
-      setGuidance(data.guidance);
-      setEditName(data.guidance.name);
-      setEditDescription(data.guidance.description);
-    } catch (error) {
-      console.error("Error fetching guidance:", error);
-      toast.error("Failed to load guidance");
-      router.push("/guidance");
-    } finally {
-      setLoading(false);
-    }
-  };
+    };
+
+    fetchGuidance();
+  }, [id, router]);
 
   const handleDelete = async () => {
     if (!confirm("Are you sure you want to delete this guidance?")) {
