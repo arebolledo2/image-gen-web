@@ -1,8 +1,9 @@
 "use client";
 
 import React from "react";
-
+import { useState, useRef, useEffect } from "react";
 import { useChat } from "@ai-sdk/react";
+import { DefaultChatTransport } from "ai";
 import { Send, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,50 +11,26 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Card } from "@/components/ui/card";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
-import { useRef, useEffect, useState, useCallback } from "react";
 import { toast } from "sonner";
 
-interface ToolInvocation {
-    toolCallId: string;
-    toolName: string;
-    result?: unknown;
-}
-
-interface TextPart {
-    type: "text";
-    text: string;
-}
-
-interface MessageData {
-    id: string;
-    role: "user" | "assistant" | "system" | "data";
-    parts?: Array<TextPart | { type: string }>;
-    content?: string; // For backward compatibility
-    toolInvocations?: ToolInvocation[];
-}
-
-// Helper to extract text content from message parts
-function getMessageContent(msg: MessageData): string {
-    if (msg.parts) {
-        return msg.parts
-            .filter((part): part is TextPart => part.type === "text")
-            .map(part => part.text)
-            .join("");
-    }
-    return msg.content || "";
-}
-
 export function ChatInterface() {
-    const [inputValue, setInputValue] = useState("");
+    const [input, setInput] = useState("");
     const scrollRef = useRef<HTMLDivElement>(null);
 
     const { messages, sendMessage, status } = useChat({
+        transport: new DefaultChatTransport({
+            api: '/api/chat',
+        }),
         onError: (err: Error) => {
+            console.error("useChat error:", err);
             toast.error(`Error: ${err.message}`);
         }
     });
 
-    const isLoading = status === "streaming" || status === "submitted";
+    const isLoading = status !== "ready";
+
+    // Debug logging
+    console.log("Chat status:", status, "Messages count:", messages.length);
 
     // Scroll to bottom when messages change
     useEffect(() => {
@@ -62,26 +39,13 @@ export function ChatInterface() {
         }
     }, [messages]);
 
-    const handleInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-        setInputValue(e.target.value);
-    }, []);
-
-    const handleSubmit = useCallback(async (e: React.FormEvent) => {
+    const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        if (!inputValue.trim() || isLoading) return;
-
-        try {
-            // In AI SDK v6, sendMessage takes a message object with parts
-            await sendMessage({
-                role: "user",
-                parts: [{ type: "text" as const, text: inputValue }]
-            });
-            setInputValue("");
-        } catch (submitError) {
-            console.error("Failed to send message:", submitError);
-            toast.error("Failed to send message");
+        if (input.trim() && status === "ready") {
+            sendMessage({ text: input });
+            setInput("");
         }
-    }, [inputValue, isLoading, sendMessage]);
+    };
 
     return (
         <Card className="flex flex-col h-[calc(100vh-130px)] shadow-lg">
@@ -101,53 +65,61 @@ export function ChatInterface() {
                             <p>No messages yet. Start a conversation!</p>
                         </div>
                     )}
-                    {messages.map((m) => {
-                        // Cast to our interface for type safety
-                        const msg = m as unknown as MessageData;
-                        return (
+                    {messages.map((message) => (
+                        <div
+                            key={message.id}
+                            className={cn(
+                                "flex gap-3",
+                                message.role === "user" ? "flex-row-reverse" : "flex-row"
+                            )}
+                        >
+                            <Avatar className="h-8 w-8">
+                                {message.role === "user" ? (
+                                    <AvatarFallback className="bg-primary text-primary-foreground">
+                                        U
+                                    </AvatarFallback>
+                                ) : (
+                                    <AvatarFallback className="bg-muted">AI</AvatarFallback>
+                                )}
+                            </Avatar>
+
                             <div
-                                key={msg.id}
                                 className={cn(
-                                    "flex gap-3",
-                                    msg.role === "user" ? "flex-row-reverse" : "flex-row"
+                                    "rounded-lg p-3 max-w-[80%] text-sm",
+                                    message.role === "user"
+                                        ? "bg-primary text-primary-foreground"
+                                        : "bg-muted"
                                 )}
                             >
-                                <Avatar className="h-8 w-8">
-                                    {msg.role === "user" ? (
-                                        <AvatarFallback className="bg-primary text-primary-foreground">
-                                            U
-                                        </AvatarFallback>
-                                    ) : (
-                                        <AvatarFallback className="bg-muted">AI</AvatarFallback>
-                                    )}
-                                </Avatar>
+                                <div className="whitespace-pre-wrap">
+                                    {message.parts.map((part, index) => {
+                                        if (part.type === "text") {
+                                            return <span key={index}>{part.text}</span>;
+                                        }
 
-                                <div
-                                    className={cn(
-                                        "rounded-lg p-3 max-w-[80%] text-sm",
-                                        msg.role === "user"
-                                            ? "bg-primary text-primary-foreground"
-                                            : "bg-muted"
-                                    )}
-                                >
-                                    <div className="whitespace-pre-wrap">{getMessageContent(msg)}</div>
-                                    {msg.toolInvocations?.map((toolInvocation: ToolInvocation) => {
-                                        const toolCallId = toolInvocation.toolCallId;
-                                        const toolResult =
-                                            'result' in toolInvocation ? toolInvocation.result : undefined;
+                                        // Handle tool invocations - cast to any to handle potential type mismatches
+                                        // between UI parts and tool invocations
+                                        if (part.type === "tool-invocation") {
+                                            const toolPart = part as any;
+                                            const toolInvocation = toolPart.toolInvocation;
 
-                                        return (
-                                            <div key={toolCallId} className="mt-2 text-xs opacity-80 border-t pt-2 border-white/20">
-                                                <div className="font-semibold">Tool: {toolInvocation.toolName}</div>
-                                                {toolResult && <div>Result: {String(toolResult).substring(0, 100)}...</div>}
-                                            </div>
-                                        )
+                                            return (
+                                                <div key={index} className="mt-2 text-xs opacity-80 border-t pt-2 border-white/20">
+                                                    <div className="font-semibold">Tool: {toolInvocation?.toolName || 'Unknown Tool'}</div>
+                                                    {toolInvocation?.state === "result" && (
+                                                        <div>Result: {String(toolInvocation.result).substring(0, 100)}...</div>
+                                                    )}
+                                                </div>
+                                            );
+                                        }
+
+                                        return null;
                                     })}
                                 </div>
                             </div>
-                        );
-                    })}
-                    {isLoading && (
+                        </div>
+                    ))}
+                    {isLoading && status !== "error" && (
                         <div className="flex gap-3">
                             <Avatar className="h-8 w-8">
                                 <AvatarFallback className="bg-muted">AI</AvatarFallback>
@@ -161,18 +133,15 @@ export function ChatInterface() {
             </ScrollArea>
 
             <div className="p-4 border-t bg-background">
-                <form
-                    onSubmit={handleSubmit}
-                    className="flex items-center gap-2"
-                >
+                <form onSubmit={handleSubmit} className="flex items-center gap-2">
                     <Input
-                        value={inputValue}
-                        onChange={handleInputChange}
+                        value={input}
+                        onChange={(e) => setInput(e.target.value)}
                         placeholder="Ask about your batches, styles, or analyze an image..."
                         className="flex-1"
                         disabled={isLoading}
                     />
-                    <Button type="submit" size="icon" disabled={isLoading || !inputValue.trim()}>
+                    <Button type="submit" size="icon" disabled={isLoading || !input.trim()}>
                         <Send className="h-4 w-4" />
                     </Button>
                 </form>
