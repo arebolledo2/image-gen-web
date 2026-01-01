@@ -6,7 +6,8 @@ import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Loader2, ImageIcon } from "lucide-react";
+import { Plus, Loader2, ImageIcon, Trash2 } from "lucide-react";
+import { toast } from "sonner";
 
 interface Batch {
   id: string;
@@ -56,6 +57,32 @@ export default function BatchesPage() {
         return 'bg-gray-500';
       default:
         return 'bg-gray-500';
+    }
+  };
+
+  const handleDelete = async (e: React.MouseEvent, batchId: string, batchName: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    if (!confirm(`Are you sure you want to delete "${batchName}"?`)) {
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/batches/${batchId}`, {
+        method: 'DELETE',
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to delete batch');
+      }
+
+      // Remove from local state
+      setBatches((prev) => prev.filter((b) => b.id !== batchId));
+      toast.success('Batch deleted');
+    } catch (error) {
+      console.error('Error deleting batch:', error);
+      toast.error('Failed to delete batch');
     }
   };
 
@@ -114,8 +141,8 @@ export default function BatchesPage() {
                     {previewImages.length > 0 ? (
                       <div className="flex w-full h-full">
                         {previewImages.map((img) => (
-                          <div 
-                            key={img.id} 
+                          <div
+                            key={img.id}
                             className="relative flex-1 border-r last:border-r-0 overflow-hidden"
                           >
                             <Image
@@ -134,7 +161,7 @@ export default function BatchesPage() {
                       </div>
                     )}
                     <div className="absolute top-2 right-2 flex gap-2">
-                       <Badge className={`${getStatusColor(batch.status)} text-white border-0`}>
+                      <Badge className={`${getStatusColor(batch.status)} text-white border-0`}>
                         {batch.status}
                       </Badge>
                     </div>
@@ -163,9 +190,19 @@ export default function BatchesPage() {
                       <span className="font-medium text-foreground">{batch.batchPrompts?.length || 0}</span>
                       <span>prompts</span>
                     </div>
-                    <span>
-                      {new Date(batch.createdAt).toLocaleDateString()}
-                    </span>
+                    <div className="flex items-center gap-2">
+                      <span>
+                        {new Date(batch.createdAt).toLocaleDateString()}
+                      </span>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                        onClick={(e) => handleDelete(e, batch.id, batch.name)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
                   </div>
                 </CardContent>
               </Card>
