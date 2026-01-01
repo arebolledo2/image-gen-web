@@ -64,6 +64,12 @@ export function useImageGallery(batchId: string | string[] | undefined, hasBatch
     setImages(prev => prev.map(img => img.id === imageId ? { ...img, ...updates } : img));
   }, []);
 
+  const refetchImages = useCallback(() => {
+    setImageOffset(0);
+    setHasMore(true);
+    fetchImages(0, true);
+  }, [fetchImages]);
+
   return {
     images,
     loadingImages,
@@ -73,5 +79,6 @@ export function useImageGallery(batchId: string | string[] | undefined, hasBatch
     lastImageElementRef,
     updateImage,
     setImages,
+    refetchImages,
   };
 }

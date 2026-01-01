@@ -21,15 +21,15 @@ Avatar.displayName = "Avatar"
 
 const AvatarImage = React.forwardRef<
     HTMLImageElement,
-    React.ImgHTMLAttributes<HTMLImageElement>
->(({ className, alt = "", src, ...props }, ref) => (
+    React.ComponentPropsWithoutRef<typeof Image>
+>(({ className, src, alt = "", ...props }, ref) => (
     <Image
-        ref={ref as any}
-        src={(src as string) || ""}
+        ref={ref}
+        src={src || ""}
         alt={alt}
         fill
         className={cn("aspect-square h-full w-full object-cover", className)}
-        {...(props as any)}
+        {...props}
     />
 ))
 AvatarImage.displayName = "AvatarImage"

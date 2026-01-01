@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useMemo, useEffect } from "react";
+import { useState, useCallback, useMemo, useEffect, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { Loader2 } from "lucide-react";
 import { useSettings } from "@/components/providers/settings-provider";
@@ -31,7 +31,28 @@ export default function BatchDetailPage() {
     hasMore,
     lastImageElementRef,
     updateImage,
+    refetchImages,
   } = useImageGallery(params.id, !!batch);
+
+  // Track previous batch status to detect completion
+  const prevStatusRef = useRef<string | undefined>();
+
+  // When batch transitions from queued/running to completed, refetch images
+  useEffect(() => {
+    const prevStatus = prevStatusRef.current;
+    const currentStatus = batch?.status;
+
+    // Update ref for next comparison
+    prevStatusRef.current = currentStatus;
+
+    // Detect transition from running/queued to completed
+    if (
+      (prevStatus === 'queued' || prevStatus === 'running') &&
+      currentStatus === 'completed'
+    ) {
+      refetchImages();
+    }
+  }, [batch?.status, refetchImages]);
 
   const {
     showTransparent,

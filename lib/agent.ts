@@ -30,45 +30,45 @@ export const imageAgent = new ToolLoopAgent({
     model: google("gemini-2.5-flash"),
     instructions: "You are an intelligent agent that helps the user manage their image generation workflow. You have access to the user's batches, styles, subjects, and images. You can also see and analyze images when asked. Always ask for clarification if a request is ambiguous. When analyzing an image, be detailed.",
     tools: {
-        getRecentBatches: {
+        getRecentBatches: tool({
             description: "Get a list of the most recent image generation batches.",
             parameters: GetRecentBatchesSchema,
-            execute: async ({ count }: z.infer<typeof GetRecentBatchesSchema>) => {
+            execute: async ({ count }) => {
                 const batches = await queries.getRecentBatches(count);
                 return batches;
             },
-        },
-        getBatchDetails: {
+        } as any),
+        getBatchDetails: tool({
             description: "Get detailed information about a specific batch, including its prompts and generations.",
             parameters: GetBatchDetailsSchema,
-            execute: async ({ batchId }: z.infer<typeof GetBatchDetailsSchema>) => {
+            execute: async ({ batchId }) => {
                 const batch = await queries.getBatchDetails(batchId);
                 if (!batch) return "Batch not found.";
                 return batch;
             },
-        },
-        getStyleDetails: {
+        } as any),
+        getStyleDetails: tool({
             description: "Get details about a specific style",
             parameters: GetStyleDetailsSchema,
-            execute: async ({ styleId }: z.infer<typeof GetStyleDetailsSchema>) => {
+            execute: async ({ styleId }) => {
                 const style = await queries.getStyleDetails(styleId);
                 if (!style) return "Style not found.";
                 return style;
             },
-        },
-        getSubjectDetails: {
+        } as any),
+        getSubjectDetails: tool({
             description: "Get details about a specific subject",
             parameters: GetSubjectDetailsSchema,
-            execute: async ({ subjectId }: z.infer<typeof GetSubjectDetailsSchema>) => {
+            execute: async ({ subjectId }) => {
                 const subject = await queries.getSubjectDetails(subjectId);
                 if (!subject) return "Subject not found.";
                 return subject;
             },
-        },
-        analyzeImage: {
+        } as any),
+        analyzeImage: tool({
             description: "Analyze an image",
             parameters: AnalyzeImageSchema,
-            execute: async ({ imageId, prompt }: z.infer<typeof AnalyzeImageSchema>) => {
+            execute: async ({ imageId, prompt }) => {
                 const image = await queries.getImageDetails(imageId);
                 if (!image) return "Image not found.";
 
@@ -96,8 +96,8 @@ export const imageAgent = new ToolLoopAgent({
                     analysis: analysis.text
                 };
             },
-        },
-    } as any,
+        } as any),
+    },
 });
 
 export type ImageAgentUIMessage = InferAgentUIMessage<typeof imageAgent>;

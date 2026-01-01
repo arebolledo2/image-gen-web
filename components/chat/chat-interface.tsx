@@ -3,7 +3,6 @@
 import React from "react";
 import { useState, useRef, useEffect } from "react";
 import { useChat } from "@ai-sdk/react";
-import { type ImageAgentUIMessage } from "@/lib/agent";
 import { Send, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,15 +10,12 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Card } from "@/components/ui/card";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
-import { toast } from "sonner";
 
 export function ChatInterface() {
     const [input, setInput] = useState("");
     const scrollRef = useRef<HTMLDivElement>(null);
 
-    const { messages, sendMessage, status } = useChat({
-        api: '/api/chat',
-    } as any);
+    const { messages, sendMessage, status } = useChat();
 
     const isLoading = status !== "ready";
 
@@ -86,20 +82,22 @@ export function ChatInterface() {
                                 )}
                             >
                                 <div className="whitespace-pre-wrap">
-                                    {message.parts.map((part: any, index: number) => {
+                                    {messages.length > 0 && message.parts && message.parts.map((part, index) => {
                                         if (part.type === "text") {
                                             return <span key={index}>{part.text}</span>;
                                         }
 
-                                        // Handle tool invocations using typed agent parts
-                                        if (part.type.startsWith("tool-")) {
-                                            const toolName = part.type.replace("tool-", "");
+                                        // Handle tool invocations
+                                        if (part.type === 'tool-invocation') {
+                                            const toolPart = part as any;
+                                            const toolName = toolPart.toolInvocation.toolName;
+                                            const invocation = toolPart.toolInvocation;
 
                                             return (
                                                 <div key={index} className="mt-2 text-xs opacity-80 border-t pt-2 border-white/20">
                                                     <div className="font-semibold">Tool: {toolName}</div>
-                                                    {part.state === "result" && (
-                                                        <div>Result: {JSON.stringify(part.output).substring(0, 100)}...</div>
+                                                    {invocation.state === "result" && (
+                                                        <div>Result: {JSON.stringify(invocation.result).substring(0, 100)}...</div>
                                                     )}
                                                 </div>
                                             );

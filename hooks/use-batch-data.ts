@@ -47,11 +47,12 @@ export function useBatchData(batchId: string | string[] | undefined) {
     }
   }, [batchId, fetchBatch]);
 
+  const status = batch?.status;
+  const currentBatchId = batch?.id;
+
   // Poll for updates when batch is queued or running
   useEffect(() => {
-    if (!batch) return;
-
-    const shouldPoll = batch.status === 'queued' || batch.status === 'running';
+    const shouldPoll = status === 'queued' || status === 'running';
 
     if (!shouldPoll) return;
 
@@ -60,7 +61,7 @@ export function useBatchData(batchId: string | string[] | undefined) {
     }, 3000); // Poll every 3 seconds
 
     return () => clearInterval(pollInterval);
-  }, [batch?.status, batch?.id, fetchBatch]);
+  }, [status, currentBatchId, fetchBatch]);
 
   return { batch, loading, refetchBatch: fetchBatch };
 }

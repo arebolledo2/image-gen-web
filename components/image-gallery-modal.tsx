@@ -14,8 +14,7 @@ import {
   Edit,
   HelpCircle,
   Copy,
-  Check,
-  X
+  Check
 } from "lucide-react";
 import NextImage from "next/image";
 import {
