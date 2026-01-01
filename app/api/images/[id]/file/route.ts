@@ -36,7 +36,7 @@ export async function GET(
     const size = searchParams.get('size');
     if (size === 'thumbnail') {
       const { getThumbnail } = await import('@/lib/storage/thumbnail');
-      filePath = await getThumbnail(filePath, 256);
+      filePath = await getThumbnail(filePath, 512);
     }
 
     const fileBuffer = await readImage(filePath);

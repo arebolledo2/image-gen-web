@@ -9,7 +9,7 @@ import fs from 'fs/promises';
  * @param width Target width for the thumbnail (default 256)
  * @returns Path to the generated thumbnail relative to project root
  */
-export async function getThumbnail(sourcePath: string, width: number = 256): Promise<string> {
+export async function getThumbnail(sourcePath: string, width: number = 512): Promise<string> {
     const absoluteSourcePath = path.isAbsolute(sourcePath)
         ? sourcePath
         : path.join(process.cwd(), sourcePath);
