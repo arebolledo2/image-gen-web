@@ -3,6 +3,7 @@ import { db } from '@/lib/db';
 import { images } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
 import { readImage } from '@/lib/storage/local-storage';
+import path from 'path';
 
 export async function GET(
   request: NextRequest,
@@ -31,13 +32,20 @@ export async function GET(
       filePath = image.flippedFilePath;
     }
 
+    // Handle thumbnail request
+    const size = searchParams.get('size');
+    if (size === 'thumbnail') {
+      const { getThumbnail } = await import('@/lib/storage/thumbnail');
+      filePath = await getThumbnail(filePath, 256);
+    }
+
     const fileBuffer = await readImage(filePath);
 
     return new NextResponse(fileBuffer as unknown as BodyInit, {
       headers: {
-        'Content-Type': 'image/png', // Transparent version is always PNG
-        'Content-Disposition': `inline; filename="${image.fileName}"`,
-        'Cache-Control': 'no-store, must-revalidate',
+        'Content-Type': 'image/png', // Thumbnails and transparent versions are PNG
+        'Content-Disposition': `inline; filename="${path.basename(filePath)}"`,
+        'Cache-Control': 'public, max-age=31536000, immutable', // Cache images for a long time
       },
     });
   } catch (error) {

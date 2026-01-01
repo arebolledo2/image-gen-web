@@ -28,20 +28,45 @@ interface Batch {
 export default function BatchesPage() {
   const [batches, setBatches] = useState<Batch[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
 
   useEffect(() => {
-    fetchBatches();
+    fetchBatches(1, false);
   }, []);
 
-  const fetchBatches = async () => {
+  const fetchBatches = async (pageNum: number, append: boolean = false) => {
+    if (append) {
+      setLoadingMore(true);
+    } else {
+      setLoading(true);
+    }
+
     try {
-      const response = await fetch('/api/batches');
+      const response = await fetch(`/api/batches?page=${pageNum}&limit=9`);
       const data = await response.json();
-      setBatches(data.batches || []);
+
+      if (append) {
+        setBatches((prev) => [...prev, ...(data.batches || [])]);
+      } else {
+        setBatches(data.batches || []);
+      }
+
+      setTotalPages(data.pagination?.totalPages || 1);
+      setPage(pageNum);
     } catch (error) {
       console.error('Error fetching batches:', error);
+      toast.error('Failed to load batches');
     } finally {
       setLoading(false);
+      setLoadingMore(false);
+    }
+  };
+
+  const loadMore = () => {
+    if (page < totalPages) {
+      fetchBatches(page + 1, true);
     }
   };
 
@@ -146,11 +171,10 @@ export default function BatchesPage() {
                             className="relative flex-1 border-r last:border-r-0 overflow-hidden"
                           >
                             <Image
-                              src={`/api/images/${img.id}/file`}
+                              src={`/api/images/${img.id}/file?size=thumbnail`}
                               alt={img.fileName}
                               fill
                               className="object-cover"
-                              unoptimized
                             />
                           </div>
                         ))}
@@ -208,6 +232,27 @@ export default function BatchesPage() {
               </Card>
             );
           })}
+        </div>
+      )}
+
+      {page < totalPages && (
+        <div className="flex justify-center pt-8 pb-12">
+          <Button
+            variant="outline"
+            size="lg"
+            onClick={loadMore}
+            disabled={loadingMore}
+            className="min-w-[200px]"
+          >
+            {loadingMore ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Loading...
+              </>
+            ) : (
+              'Load More Batches'
+            )}
+          </Button>
         </div>
       )}
     </div>

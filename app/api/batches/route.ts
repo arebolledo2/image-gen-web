@@ -1,11 +1,28 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { batchesService } from '@/lib/services';
 
-// GET /api/batches - List all batches
-export async function GET() {
+// GET /api/batches - List all batches (paginated)
+export async function GET(request: NextRequest) {
   try {
-    const allBatches = await batchesService.getAllBatchesWithDetails();
-    return NextResponse.json({ batches: allBatches });
+    const { searchParams } = new URL(request.url);
+    const page = parseInt(searchParams.get('page') || '1');
+    const limit = parseInt(searchParams.get('limit') || '10');
+    const offset = (page - 1) * limit;
+
+    const [allBatches, totalCount] = await Promise.all([
+      batchesService.getAllBatchesWithDetails({ limit, offset }),
+      batchesService.countBatches(),
+    ]);
+
+    return NextResponse.json({
+      batches: allBatches,
+      pagination: {
+        page,
+        limit,
+        totalCount,
+        totalPages: Math.ceil(totalCount / limit),
+      },
+    });
   } catch (error) {
     console.error('Error fetching batches:', error);
     return NextResponse.json(

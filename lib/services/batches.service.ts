@@ -19,18 +19,36 @@ export class BatchesService extends BaseService<typeof batches, Batch, NewBatch>
   }
 
   /**
-   * Get all batches with their prompts and preview images
+   * Get all batches with their prompts and preview images (paginated)
    *
-   * @returns All batches with related data
+   * @param options - Pagination options
+   * @returns Paginated batches with related data
    */
-  async getAllBatchesWithDetails() {
+  async getAllBatchesWithDetails(options: { limit?: number; offset?: number } = {}) {
+    const { limit = 10, offset = 0 } = options;
     return db.query.batches.findMany({
       orderBy: [desc(batches.createdAt)],
+      limit,
+      offset,
       with: {
-        batchPrompts: true,
+        batchPrompts: {
+          columns: {
+            id: true,
+            promptText: true,
+            order: true,
+          },
+        },
         generations: {
+          columns: {
+            id: true,
+            status: true,
+          },
           with: {
             images: {
+              columns: {
+                id: true,
+                fileName: true,
+              },
               limit: 3,
             },
           },
@@ -38,6 +56,15 @@ export class BatchesService extends BaseService<typeof batches, Batch, NewBatch>
         },
       },
     });
+  }
+
+  /**
+   * Count total number of batches
+   *
+   * @returns Total count
+   */
+  async countBatches() {
+    return db.$count(batches);
   }
 
   /**
