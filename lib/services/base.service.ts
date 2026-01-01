@@ -1,13 +1,19 @@
 import { db } from '@/lib/db';
-import { PgTable } from 'drizzle-orm/pg-core';
+import { PgTable, PgColumn } from 'drizzle-orm/pg-core';
 import { eq, desc } from 'drizzle-orm';
+
+// Type for tables that have standard id and createdAt columns
+type TableWithIdAndTimestamps = PgTable & {
+  id: PgColumn<any>;
+  createdAt: PgColumn<any>;
+};
 
 /**
  * Base service class providing common database operations.
  * All domain services should extend this class.
  */
 export abstract class BaseService<
-  TTable extends PgTable,
+  TTable extends TableWithIdAndTimestamps,
   TSelect = TTable['$inferSelect'],
   TInsert = TTable['$inferInsert']
 > {
@@ -19,7 +25,7 @@ export abstract class BaseService<
   async findById(id: string): Promise<TSelect | undefined> {
     const records = await db
       .select()
-      .from(this.table)
+      .from(this.table as any)
       .where(eq(this.table.id, id))
       .limit(1);
 
@@ -33,10 +39,10 @@ export abstract class BaseService<
     if (orderByCreatedAt) {
       return db
         .select()
-        .from(this.table)
+        .from(this.table as any)
         .orderBy(desc(this.table.createdAt)) as Promise<TSelect[]>;
     }
-    return db.select().from(this.table) as Promise<TSelect[]>;
+    return db.select().from(this.table as any) as Promise<TSelect[]>;
   }
 
   /**
@@ -44,8 +50,8 @@ export abstract class BaseService<
    */
   async create(data: TInsert): Promise<TSelect> {
     const [record] = await db
-      .insert(this.table)
-      .values(data)
+      .insert(this.table as any)
+      .values(data as any)
       .returning();
 
     return record as TSelect;
@@ -56,7 +62,7 @@ export abstract class BaseService<
    */
   async update(id: string, data: Partial<TInsert>): Promise<TSelect | undefined> {
     const [record] = await db
-      .update(this.table)
+      .update(this.table as any)
       .set({ ...data, updatedAt: new Date() } as any)
       .where(eq(this.table.id, id))
       .returning();
@@ -69,7 +75,7 @@ export abstract class BaseService<
    */
   async delete(id: string): Promise<boolean> {
     const result = await db
-      .delete(this.table)
+      .delete(this.table as any)
       .where(eq(this.table.id, id));
 
     return (result as any).rowCount > 0;
@@ -78,7 +84,7 @@ export abstract class BaseService<
   /**
    * Execute a database transaction
    */
-  async transaction<T>(callback: (tx: typeof db) => Promise<T>): Promise<T> {
+  async transaction<T>(callback: (tx: any) => Promise<T>): Promise<T> {
     return db.transaction(callback);
   }
 }

@@ -176,12 +176,12 @@ export class AudioBatchesService extends BaseService<typeof audioBatches, AudioB
         .returning();
 
       // Copy or use new prompts
-      const promptsToUse = data.prompts || parentBatch.audioBatchPrompts.map(bp => ({
+      const promptsToUse = data.prompts || parentBatch.audioBatchPrompts.map((bp: any) => ({
         promptText: bp.promptText,
         overrides: bp.overrides,
       }));
 
-      const audioBatchPromptsData = promptsToUse.map((prompt, index) => ({
+      const audioBatchPromptsData = promptsToUse.map((prompt: any, index: number) => ({
         audioBatchId: batch.id,
         promptText: prompt.promptText,
         overrides: prompt.overrides || {},
@@ -384,14 +384,14 @@ export class AudioBatchesService extends BaseService<typeof audioBatches, AudioB
       // For now, we need to manually delete in the correct order
 
       // Delete audio files first (leaf nodes)
-      const audioFileIds = batch.audioGenerations.flatMap(g => g.audioFiles.map(f => f.id));
+      const audioFileIds = batch.audioGenerations.flatMap((g: any) => g.audioFiles.map((f: any) => f.id));
       if (audioFileIds.length > 0) {
         const { audioFiles } = await import('@/lib/db/schema');
         await tx.delete(audioFiles).where(inArray(audioFiles.id, audioFileIds));
       }
 
       // Delete audio generations
-      const generationIds = batch.audioGenerations.map(g => g.id);
+      const generationIds = batch.audioGenerations.map((g: any) => g.id);
       if (generationIds.length > 0) {
         await tx.delete(audioGenerations).where(inArray(audioGenerations.id, generationIds));
       }

@@ -137,7 +137,7 @@ export class PromptsService extends BaseService<typeof prompts, Prompt, NewPromp
         where: eq(promptGuidance.promptId, promptId),
       });
 
-      const existingGuidanceIds = new Set(existing.map(pg => pg.guidanceId));
+      const existingGuidanceIds = new Set(existing.map((pg: any) => pg.guidanceId));
 
       // Filter out already associated guidance
       const newGuidanceIds = guidanceIds.filter(id => !existingGuidanceIds.has(id));
@@ -189,8 +189,8 @@ export class PromptsService extends BaseService<typeof prompts, Prompt, NewPromp
       });
 
       const idsToDelete = toDelete
-        .filter(pg => guidanceIds.includes(pg.guidanceId))
-        .map(pg => pg.id);
+        .filter((pg: any) => guidanceIds.includes(pg.guidanceId))
+        .map((pg: any) => pg.id);
 
       if (idsToDelete.length > 0) {
         await tx

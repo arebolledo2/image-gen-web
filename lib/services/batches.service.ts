@@ -199,13 +199,13 @@ export class BatchesService extends BaseService<typeof batches, Batch, NewBatch>
         .returning();
 
       // Copy or use new prompts
-      const promptsToUse = data.prompts || parentBatch.batchPrompts.map(bp => ({
+      const promptsToUse = data.prompts || parentBatch.batchPrompts.map((bp: BatchPrompt) => ({
         promptId: bp.promptId || undefined,
         promptText: bp.promptText,
         overrides: bp.overrides,
       }));
 
-      const batchPromptsData = promptsToUse.map((prompt, index) => ({
+      const batchPromptsData = promptsToUse.map((prompt: { promptId?: string; promptText: string; overrides?: BatchPromptOverrides }, index: number) => ({
         batchId: batch.id,
         promptId: prompt.promptId || null,
         promptText: prompt.promptText,
@@ -409,14 +409,14 @@ export class BatchesService extends BaseService<typeof batches, Batch, NewBatch>
       // For now, we need to manually delete in the correct order
 
       // Delete images first (leaf nodes)
-      const imageIds = batch.generations.flatMap(g => g.images.map(i => i.id));
+      const imageIds = batch.generations.flatMap((g: any) => g.images.map((i: any) => i.id));
       if (imageIds.length > 0) {
         const { images } = await import('@/lib/db/schema');
         await tx.delete(images).where(inArray(images.id, imageIds));
       }
 
       // Delete generations
-      const generationIds = batch.generations.map(g => g.id);
+      const generationIds = batch.generations.map((g: any) => g.id);
       if (generationIds.length > 0) {
         await tx.delete(generations).where(inArray(generations.id, generationIds));
       }

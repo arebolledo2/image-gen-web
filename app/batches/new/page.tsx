@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { Loader2, Plus, X, Palette, Box, Compass, Sparkles, Wand2, EyeOff } from "lucide-react";
 import { AIAssistButton } from "@/components/agents/ai-assist-button";
-import { RESOLUTION_PRESETS, DEFAULT_RESOLUTION, getResolutionPresetsForProvider, type ProviderType } from "@/lib/config/resolution-presets";
+import { DEFAULT_RESOLUTION, getResolutionPresetsForProvider, type ProviderType } from "@/lib/config/resolution-presets";
 import { useSettings } from "@/components/providers/settings-provider";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
