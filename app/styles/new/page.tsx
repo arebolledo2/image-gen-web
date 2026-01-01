@@ -53,15 +53,15 @@ export default function NewStylePage() {
     }
   };
 
-  const addItem = (setter: Function, arr: string[]) => {
+  const addItem = (setter: (arr: string[]) => void, arr: string[]) => {
     setter([...arr, ""]);
   };
 
-  const removeItem = (setter: Function, arr: string[], index: number) => {
-    setter(arr.filter((_: any, i: number) => i !== index));
+  const removeItem = (setter: (arr: string[]) => void, arr: string[], index: number) => {
+    setter(arr.filter((_, i: number) => i !== index));
   };
 
-  const updateItem = (setter: Function, arr: string[], index: number, value: string) => {
+  const updateItem = (setter: (arr: string[]) => void, arr: string[], index: number, value: string) => {
     const updated = [...arr];
     updated[index] = value;
     setter(updated);

@@ -47,7 +47,7 @@ export async function PATCH(
     const { name, description, isTransparent } = body;
 
     // Build update object with only provided fields
-    const updateData: any = {};
+    const updateData: Record<string, string | boolean> = {};
     if (name !== undefined) updateData.name = name;
     if (description !== undefined) updateData.description = description;
     if (isTransparent !== undefined) updateData.isTransparent = isTransparent;

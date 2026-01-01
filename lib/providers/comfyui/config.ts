@@ -10,6 +10,7 @@ export interface ComfyUIConfig {
     };
   };
   defaults: {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     [key: string]: Record<string, any>;
   };
 }

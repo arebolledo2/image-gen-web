@@ -1,3 +1,8 @@
+/**
+ * Gemini 3 Image Provider
+ * Note: Uses `any` for dynamic Gemini API response structures.
+ */
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { ImageProvider, GenerationOptions, GenerationResult } from '../types';
 import { db } from '@/lib/db';
 import { generations, images } from '@/lib/db/schema';
@@ -7,7 +12,7 @@ import { saveImage } from '@/lib/storage/local-storage';
 import { RESOLUTION_PRESETS, DEFAULT_RESOLUTION } from '@/lib/config/resolution-presets';
 
 export class Gemini3Provider implements ImageProvider {
-  name: 'gemini3' = 'gemini3';
+  name = 'gemini3' as const;
 
   private getApiKey(): string {
     const apiKey = process.env.GEMINI_API_KEY;

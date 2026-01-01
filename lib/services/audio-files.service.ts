@@ -1,11 +1,14 @@
+/**
+ * Service for managing audio files and their metadata.
+ * Note: Uses `any` for dynamic JSON data and Drizzle ORM operations.
+ */
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { db } from '@/lib/db';
 import { audioFiles, AudioFile, NewAudioFile, audioGenerations } from '@/lib/db/schema';
 import { eq, desc, inArray } from 'drizzle-orm';
 import { BaseService } from './base.service';
 
 /**
- * Service for managing audio files and their metadata.
- *
  * Handles audio file metadata, favorites, and filtering.
  */
 export class AudioFilesService extends BaseService<typeof audioFiles, AudioFile, NewAudioFile> {

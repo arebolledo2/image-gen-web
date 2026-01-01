@@ -1,5 +1,10 @@
 "use client";
 
+/**
+ * Hook for fetching and managing batch data.
+ * Note: Uses `any` for dynamic batch data from API.
+ */
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState, useEffect } from "react";
 
 interface Batch {

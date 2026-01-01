@@ -10,7 +10,10 @@ export const audioGenerationFunction = inngest.createFunction(
   { event: 'audio/generate' },
   async ({ event, step }) => {
     const job = event.data as AudioGenerationJob;
-    const { provider, audioGenerationId, prompt, runNumber, audioBatchId, audioBatchPromptId, parameters } = job;
+    const { provider, audioGenerationId, prompt, audioBatchId, parameters } = job;
+    // Note: runNumber and audioBatchPromptId are reserved for future use
+    void job.runNumber;
+    void job.audioBatchPromptId;
 
     console.log(`[Inngest] Processing audio generation ${audioGenerationId} with ${provider}`);
 

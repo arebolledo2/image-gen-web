@@ -1,5 +1,10 @@
 "use client";
 
+/**
+ * Image Editor Page
+ * Note: Uses `any` for dynamic image and animation data from API.
+ */
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { Fragment, useEffect, useState } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { Heart, Download, Loader2, Sparkles, Move, Scissors, Copy, Check, Wand2 } from "lucide-react";
@@ -564,7 +569,7 @@ export default function EditorPage() {
         imageEdits={imageEdits[image.id] || []}
         isSampling={isSampling}
         hasTransparent={!!image.transparentFilePath}
-        onVersionChange={(version) => {
+        onVersionChange={(version: string) => {
           setSelectedVersion((prev) => ({ ...prev, [image.id]: version }));
         }}
         onImageClick={handleImageClick}

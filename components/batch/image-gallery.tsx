@@ -12,6 +12,7 @@ interface ImageGalleryProps {
   images: GalleryImage[];
   loading: boolean;
   fetchingMore: boolean;
+  hasMore: boolean;
   totalImageCount: number | string;
   globalTransparency: boolean;
   showTransparent: Record<string, boolean>;
@@ -29,6 +30,8 @@ export const ImageGallery = memo(function ImageGallery({
   images,
   loading,
   fetchingMore,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  hasMore: _hasMore,
   totalImageCount,
   globalTransparency,
   showTransparent,

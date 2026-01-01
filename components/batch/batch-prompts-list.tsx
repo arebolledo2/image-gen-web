@@ -16,6 +16,7 @@ interface BatchPrompt {
 interface BatchPromptsListProps {
   prompts: BatchPrompt[];
   batchStatus: string;
+  promptStyle?: string;
   onPromptUpdate: (promptId: string, newText: string) => Promise<void>;
   onAdjustPrompt: (promptId: string, suggestion: string, currentText: string) => Promise<string>;
 }
@@ -23,6 +24,8 @@ interface BatchPromptsListProps {
 export const BatchPromptsList = memo(function BatchPromptsList({
   prompts,
   batchStatus,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  promptStyle: _promptStyle,
   onPromptUpdate,
   onAdjustPrompt,
 }: BatchPromptsListProps) {

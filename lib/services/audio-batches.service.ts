@@ -1,3 +1,8 @@
+/**
+ * Service for managing audio batches with transaction support.
+ * Note: Uses `any` for dynamic JSON data and Drizzle ORM operations.
+ */
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { db } from '@/lib/db';
 import { audioBatches, audioBatchPrompts, audioGenerations, AudioBatch, NewAudioBatch, AudioGeneration, NewAudioGeneration } from '@/lib/db/schema';
 import { eq, desc, inArray } from 'drizzle-orm';
@@ -5,8 +10,6 @@ import { BaseService } from './base.service';
 import type { AudioBatchPromptOverrides, AudioBatchDefaults } from '@/lib/types/common';
 
 /**
- * Service for managing audio batches with transaction support.
- *
  * Audio batches group multiple prompts for bulk audio generation.
  * This service ensures atomic operations for batch creation and execution.
  */

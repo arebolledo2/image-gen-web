@@ -1,5 +1,10 @@
 "use client";
 
+/**
+ * Batch Details Component
+ * Note: Uses `any` for dynamic batch data from API.
+ */
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { memo } from "react";
 

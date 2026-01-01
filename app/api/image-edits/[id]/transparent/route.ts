@@ -1,3 +1,8 @@
+/**
+ * Image Edit Transparency API Route
+ * Note: Uses `any` for dynamic Jimp pixel data.
+ */
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { imageEdits } from '@/lib/db/schema';

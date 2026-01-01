@@ -47,7 +47,7 @@ export async function PATCH(
     const { name, description, palette, renderingCues } = body;
 
     // Build update object with only provided fields
-    const updateData: any = {};
+    const updateData: Record<string, string | string[]> = {};
     if (name !== undefined) updateData.name = name;
     if (description !== undefined) updateData.description = description;
     if (palette !== undefined) updateData.palette = palette;

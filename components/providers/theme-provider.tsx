@@ -18,6 +18,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [mounted, setMounted] = useState(false);
 
   // Load theme from localStorage on mount
+  // Note: These setState calls are intentional for hydration - this is a client-only provider
   useEffect(() => {
     setMounted(true);
     const storedTheme = localStorage.getItem("theme") as Theme | null;

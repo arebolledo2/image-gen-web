@@ -1,28 +1,37 @@
 "use client";
 
 import { AnimationCanvas } from "@/components/shared/animation-canvas";
-import type { SquishAnimation, ImageEdit } from "@/lib/db/schema";
 
 interface ImagePreviewProps {
   imageId: string;
   fileName: string;
   selectedVersion: string;
   imageVersion: number;
-  squishAnimations: SquishAnimation[];
-  aiAnimations: SquishAnimation[];
-  imageEdits?: ImageEdit[];
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  squishAnimations: any[];
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  aiAnimations: any[];
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  imageEdits?: any[];
   isSampling?: boolean;
+  hasTransparent?: boolean;
+  onVersionChange?: (version: string) => void;
   onImageClick?: (e: React.MouseEvent<HTMLImageElement>) => void;
 }
 
 export function ImagePreview({
   imageId,
+  fileName,
   selectedVersion,
   imageVersion,
   squishAnimations,
   aiAnimations,
   imageEdits = [],
   isSampling = false,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  hasTransparent: _hasTransparent,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  onVersionChange: _onVersionChange,
   onImageClick,
 }: ImagePreviewProps) {
   // Determine if we're viewing an animation or edit

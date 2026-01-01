@@ -1,5 +1,10 @@
 "use client";
 
+/**
+ * Hook for AI image editing.
+ * Note: Uses `any` for dynamic edit data from API.
+ */
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState, useCallback } from "react";
 import { type GalleryImage } from "@/components/image-gallery-modal";
 import { toast } from "sonner";

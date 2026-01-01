@@ -1,11 +1,14 @@
+/**
+ * Service for managing images and their transformations.
+ * Note: Uses `any` for dynamic JSON data and Drizzle ORM operations.
+ */
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { db } from '@/lib/db';
 import { images, squishAnimations, imageEdits, Image, NewImage, SquishAnimation, ImageEdit, generations } from '@/lib/db/schema';
 import { eq, desc, inArray } from 'drizzle-orm';
 import { BaseService } from './base.service';
 
 /**
- * Service for managing images and their transformations.
- *
  * Handles image metadata, favorites, transformations (transparent, flipped),
  * squish animations, and AI edits.
  */

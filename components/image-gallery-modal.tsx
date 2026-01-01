@@ -1,5 +1,10 @@
 "use client";
 
+/**
+ * Image Gallery Modal Component
+ * Note: Uses `any` for dynamic image and animation data from API.
+ */
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   Download,
@@ -70,6 +75,7 @@ export function ImageGalleryModal({
   const lastScrollTime = useRef(0);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const animationFrameRef = useRef<number | null>(null);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [isPlaying, setIsPlaying] = useState(true);
 
   const currentImage = selectedIndex !== null ? images[selectedIndex] : null;

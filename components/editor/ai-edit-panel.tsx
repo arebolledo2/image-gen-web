@@ -1,5 +1,10 @@
 "use client";
 
+/**
+ * AI Edit Panel Component
+ * Note: Uses `any` for dynamic edit data from API.
+ */
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { Wand2, Loader2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";

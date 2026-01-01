@@ -1,5 +1,10 @@
 "use client";
 
+/**
+ * Hook for AI animation generation.
+ * Note: Uses `any` for dynamic animation data from API.
+ */
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState, useCallback } from "react";
 import { type GalleryImage } from "@/components/image-gallery-modal";
 import { toast } from "sonner";

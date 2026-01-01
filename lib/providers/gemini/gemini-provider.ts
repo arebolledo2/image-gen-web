@@ -1,3 +1,8 @@
+/**
+ * Gemini Image Provider
+ * Note: Uses `any` for dynamic Gemini API response structures.
+ */
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { ImageProvider, GenerationOptions, GenerationResult } from '../types';
 import { db } from '@/lib/db';
 import { generations, images } from '@/lib/db/schema';
@@ -5,7 +10,7 @@ import { eq } from 'drizzle-orm';
 import { saveImage } from '@/lib/storage/local-storage';
 
 export class GeminiProvider implements ImageProvider {
-  name: 'gemini' = 'gemini';
+  name = 'gemini' as const;
 
   private getApiKey(): string {
     const apiKey = process.env.GEMINI_API_KEY;

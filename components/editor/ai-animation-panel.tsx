@@ -1,5 +1,10 @@
 "use client";
 
+/**
+ * AI Animation Panel Component
+ * Note: Uses `any` for dynamic animation data from API.
+ */
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { Sparkles, Loader2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";

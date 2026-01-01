@@ -27,6 +27,7 @@ export interface AudioGenerationResult {
   sampleRate: number;     // Sample rate in Hz (e.g., 16000)
   fileSize: number;       // File size in bytes
   mediaType: string;      // MIME type (e.g., 'audio/mpeg')
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   metadata?: Record<string, any>; // Additional metadata from provider
 }
 

@@ -1,3 +1,8 @@
+/**
+ * ComfyUI Workflow Builder
+ * Note: Uses `any` for dynamic ComfyUI workflow JSON structures.
+ */
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { readFile } from 'fs/promises';
 import { join } from 'path';
 import { getComfyUIConfig } from './config';

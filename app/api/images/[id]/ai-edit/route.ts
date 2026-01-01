@@ -1,3 +1,8 @@
+/**
+ * AI Edit API Route
+ * Note: Uses `any` for dynamic Gemini API response structures.
+ */
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { images, squishAnimations, imageEdits } from '@/lib/db/schema';

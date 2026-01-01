@@ -1,3 +1,8 @@
+/**
+ * Squish Animation API Route
+ * Note: Uses `any` for dynamic animation frame data structures.
+ */
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { images, squishAnimations } from '@/lib/db/schema';

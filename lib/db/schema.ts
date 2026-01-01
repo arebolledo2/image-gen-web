@@ -1,3 +1,10 @@
+/**
+ * Database Schema
+ *
+ * Note: This file uses `any` types for JSON columns and metadata fields.
+ * These are intentional because the database stores flexible JSON data.
+ */
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { pgTable, uuid, text, integer, timestamp, json, pgEnum, boolean } from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
 

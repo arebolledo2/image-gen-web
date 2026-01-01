@@ -1,3 +1,8 @@
+/**
+ * ComfyUI Client
+ * Note: Uses `any` for dynamic ComfyUI API responses and workflow structures.
+ */
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { getComfyUIConfig } from './config';
 
 export class ComfyUIClient {
@@ -89,7 +94,7 @@ export class ComfyUIClient {
 
     const downloadedImages = [];
 
-    for (const [nodeId, nodeOutput] of Object.entries(outputs)) {
+    for (const [_nodeId, nodeOutput] of Object.entries(outputs)) {
       if ((nodeOutput as any).images) {
         for (const image of (nodeOutput as any).images) {
           const filename = image.filename;

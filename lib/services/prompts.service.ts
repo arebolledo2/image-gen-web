@@ -1,11 +1,14 @@
+/**
+ * Service for managing prompts and their guidance associations.
+ * Note: Uses `any` for dynamic JSON data and Drizzle ORM operations.
+ */
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { db } from '@/lib/db';
 import { prompts, promptGuidance, Prompt, NewPrompt } from '@/lib/db/schema';
 import { eq, desc, inArray } from 'drizzle-orm';
 import { BaseService } from './base.service';
 
 /**
- * Service for managing prompts and their guidance associations.
- *
  * Prompts combine a style, subject, and optional guidance modifiers
  * to create complete AI image generation prompts.
  */

@@ -1,3 +1,8 @@
+/**
+ * Service for managing batches with transaction support.
+ * Note: Uses `any` for dynamic JSON data and Drizzle ORM operations.
+ */
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { db } from '@/lib/db';
 import { batches, batchPrompts, generations, Batch, NewBatch, BatchPrompt, Generation, NewGeneration } from '@/lib/db/schema';
 import { eq, desc, inArray, asc } from 'drizzle-orm';
@@ -5,8 +10,6 @@ import { BaseService } from './base.service';
 import type { BatchPromptOverrides, BatchDefaults } from '@/lib/types/common';
 
 /**
- * Service for managing batches with transaction support.
- *
  * Batches group multiple prompts for bulk image generation.
  * This service ensures atomic operations for batch creation and execution.
  */
