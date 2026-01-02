@@ -55,6 +55,14 @@ export function createMockTransaction() {
         findFirst: vi.fn(),
         findMany: vi.fn(),
       },
+      squishAnimations: {
+        findFirst: vi.fn(),
+        findMany: vi.fn(),
+      },
+      imageEdits: {
+        findFirst: vi.fn(),
+        findMany: vi.fn(),
+      },
     },
   };
 
@@ -191,6 +199,10 @@ export function createTestImage(overrides = {}) {
     isFavorite: false,
     sourceVersion: 'original' as const,
     parentImageId: null,
+    transparentFilePath: null,
+    flippedFilePath: null,
+    squishAnimations: [],
+    imageEdits: [],
     createdAt: new Date(),
     updatedAt: new Date(),
     ...overrides,
