@@ -32,42 +32,42 @@ export const imageAgent = new ToolLoopAgent({
     tools: {
         getRecentBatches: tool({
             description: "Get a list of the most recent image generation batches.",
-            parameters: GetRecentBatchesSchema,
+            inputSchema: GetRecentBatchesSchema,
             execute: async ({ count }) => {
                 const batches = await queries.getRecentBatches(count);
                 return batches;
             },
-        } as any),
+        }),
         getBatchDetails: tool({
             description: "Get detailed information about a specific batch, including its prompts and generations.",
-            parameters: GetBatchDetailsSchema,
+            inputSchema: GetBatchDetailsSchema,
             execute: async ({ batchId }) => {
                 const batch = await queries.getBatchDetails(batchId);
                 if (!batch) return "Batch not found.";
                 return batch;
             },
-        } as any),
+        }),
         getStyleDetails: tool({
             description: "Get details about a specific style",
-            parameters: GetStyleDetailsSchema,
+            inputSchema: GetStyleDetailsSchema,
             execute: async ({ styleId }) => {
                 const style = await queries.getStyleDetails(styleId);
                 if (!style) return "Style not found.";
                 return style;
             },
-        } as any),
+        }),
         getSubjectDetails: tool({
             description: "Get details about a specific subject",
-            parameters: GetSubjectDetailsSchema,
+            inputSchema: GetSubjectDetailsSchema,
             execute: async ({ subjectId }) => {
                 const subject = await queries.getSubjectDetails(subjectId);
                 if (!subject) return "Subject not found.";
                 return subject;
             },
-        } as any),
+        }),
         analyzeImage: tool({
             description: "Analyze an image",
-            parameters: AnalyzeImageSchema,
+            inputSchema: AnalyzeImageSchema,
             execute: async ({ imageId, prompt }) => {
                 const image = await queries.getImageDetails(imageId);
                 if (!image) return "Image not found.";
@@ -96,7 +96,7 @@ export const imageAgent = new ToolLoopAgent({
                     analysis: analysis.text
                 };
             },
-        } as any),
+        }),
     },
 });
 
