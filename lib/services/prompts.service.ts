@@ -5,7 +5,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { db } from '@/lib/db';
 import { prompts, promptGuidance, Prompt, NewPrompt } from '@/lib/db/schema';
-import { eq, desc, inArray } from 'drizzle-orm';
+import { eq, desc, inArray, and } from 'drizzle-orm';
 import { BaseService } from './base.service';
 
 /**
@@ -179,29 +179,17 @@ export class PromptsService extends BaseService<typeof prompts, Prompt, NewPromp
    */
   async removeGuidanceFromPrompt(promptId: string, guidanceIds: string[]) {
     return this.transaction(async (tx) => {
-      // Delete the guidance associations
+      // Delete ONLY the specified guidance associations
       await tx
         .delete(promptGuidance)
         .where(
-          eq(promptGuidance.promptId, promptId)
+          and(
+            eq(promptGuidance.promptId, promptId),
+            inArray(promptGuidance.guidanceId, guidanceIds)
+          )
         );
 
-      // Re-query to get specific associations to delete
-      const toDelete = await tx.query.promptGuidance.findMany({
-        where: eq(promptGuidance.promptId, promptId),
-      });
-
-      const idsToDelete = toDelete
-        .filter((pg: any) => guidanceIds.includes(pg.guidanceId))
-        .map((pg: any) => pg.id);
-
-      if (idsToDelete.length > 0) {
-        await tx
-          .delete(promptGuidance)
-          .where(inArray(promptGuidance.id, idsToDelete));
-      }
-
-      // Return updated prompt with relations
+      // Return updated prompt with remaining guidance
       return tx.query.prompts.findFirst({
         where: eq(prompts.id, promptId),
         with: {
