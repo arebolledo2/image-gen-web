@@ -2,6 +2,7 @@
  * Tests for BaseService
  * Priority: Core CRUD operations and transaction support
  */
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-nocheck
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { BaseService } from '../base.service';
@@ -209,7 +210,7 @@ describe('BaseService', () => {
 
       db.transaction = vi.fn((callback) => callback(mockTx));
 
-      const result = await service.transaction(async (tx) => {
+      const result = await service.transaction(async () => {
         return 'transaction result';
       });
 
@@ -231,14 +232,12 @@ describe('BaseService', () => {
 
     it('should rollback transaction on error', async () => {
       const { db } = await import('@/lib/db');
-      let rollbackCalled = false;
 
       db.transaction = vi.fn(async (callback) => {
         try {
           await callback(createMockTransaction());
-        } catch (error) {
-          rollbackCalled = true;
-          throw error;
+        } catch (err) {
+          throw err;
         }
       });
 
@@ -246,7 +245,7 @@ describe('BaseService', () => {
         await service.transaction(async () => {
           throw new Error('Rollback test');
         });
-      } catch (error) {
+      } catch {
         // Expected error
       }
 

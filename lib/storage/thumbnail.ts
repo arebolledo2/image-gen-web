@@ -38,7 +38,8 @@ export async function getThumbnail(sourcePath: string, width: number = 512): Pro
 
     try {
         // Generate thumbnail
-        // Note: Jimp 1.6.0 uses (Jimp as any).read for compatibility in some environments
+        // Note: Jimp 1.6.0 uses static read method
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const image = await (Jimp as any).read(absoluteSourcePath);
 
         // Resize maintaining aspect ratio

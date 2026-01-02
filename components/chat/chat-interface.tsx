@@ -11,6 +11,15 @@ import { Card } from "@/components/ui/card";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
 
+interface ToolInvocationPart {
+    type: 'tool-invocation';
+    toolInvocation: {
+        toolName: string;
+        state: string;
+        result?: unknown;
+    };
+}
+
 export function ChatInterface() {
     const [input, setInput] = useState("");
     const scrollRef = useRef<HTMLDivElement>(null);
@@ -89,7 +98,7 @@ export function ChatInterface() {
 
                                         // Handle tool invocations
                                         if (part.type === 'tool-invocation') {
-                                            const toolPart = part as any;
+                                            const toolPart = part as ToolInvocationPart;
                                             const toolName = toolPart.toolInvocation.toolName;
                                             const invocation = toolPart.toolInvocation;
 

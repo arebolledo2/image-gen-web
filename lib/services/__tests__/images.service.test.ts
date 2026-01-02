@@ -3,6 +3,7 @@
  * Priority: Cascade deletes, filtering logic, statistics calculations
  * NOTE: Contains tests for identified performance issue (in-memory filtering)
  */
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-nocheck
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { ImagesService } from '../images.service';
@@ -236,7 +237,7 @@ describe('ImagesService', () => {
 
   describe('deleteImageWithTransformations - CASCADE DELETE', () => {
     it('should delete image and all transformations in transaction', async () => {
-      const mockImage = createTestImage({ id: 'image-id' });
+      createTestImage({ id: 'image-id' });
       const mockTx = createMockTransaction();
 
       // Mock finding transformations

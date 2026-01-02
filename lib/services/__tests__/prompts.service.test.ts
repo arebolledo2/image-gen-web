@@ -2,6 +2,7 @@
  * Tests for PromptsService
  * Priority: Transaction logic and guidance associations (regression test for bug)
  */
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-nocheck - Vitest mocks have complex types, focus on behavior tests
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { PromptsService } from '../prompts.service';

@@ -6,7 +6,7 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import Image from "next/image";
 import { Loader2, Heart, Layers, Sparkles, Download } from "lucide-react";
-import { memo, useCallback } from "react";
+import { memo } from "react";
 import { type GalleryImage } from "@/components/image-gallery-modal";
 
 interface ImageGalleryProps {

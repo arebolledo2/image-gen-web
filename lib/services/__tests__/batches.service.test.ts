@@ -2,6 +2,7 @@
  * Tests for BatchesService
  * Priority: Transaction logic, optimistic concurrency, batch completion calculations
  */
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-nocheck
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { BatchesService } from '../batches.service';
