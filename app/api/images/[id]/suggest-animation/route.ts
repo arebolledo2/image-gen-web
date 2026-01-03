@@ -73,7 +73,7 @@ Good examples:
     const userPrompt = `Analyze this game sprite image (Subject: ${subjectName}, Style: ${styleName}) and suggest a creative animation that would work as a sprite sheet with 4-16 frames. Base your suggestion on what you actually see in the image.`;
 
     const { text } = await generateText({
-      model: google('gemini-2.5-flash'),
+      model: google('gemini-3-flash-preview'),
       messages: [
         {
           role: 'user' as const,
@@ -90,17 +90,17 @@ Good examples:
 
     const suggestion = text.trim();
 
-    return NextResponse.json({ 
-      success: true, 
+    return NextResponse.json({
+      success: true,
       suggestion,
     });
 
   } catch (error) {
     console.error('Error suggesting animation:', error);
     return NextResponse.json(
-      { 
+      {
         success: false,
-        error: error instanceof Error ? error.message : 'Failed to suggest animation' 
+        error: error instanceof Error ? error.message : 'Failed to suggest animation'
       },
       { status: 500 }
     );
