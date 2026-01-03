@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Plus, Loader2, Box, X, Sparkles } from "lucide-react";
+import { AIAssistButton } from "@/components/agents/ai-assist-button";
 
 interface Subject {
   id: string;
@@ -74,18 +75,15 @@ export default function SubjectsPage() {
     }
   };
 
-  const handleAiAssist = async () => {
-    if (!newName && !newDescription) return;
-    
+  const handleAiAssist = async (concept: string) => {
     setIsGenerating(true);
     try {
-      const concept = newName || newDescription;
       const response = await fetch('/api/agents/create-subject', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ concept }),
       });
-      
+
       if (response.ok) {
         const data = await response.json();
         if (data.subject) {
@@ -95,6 +93,7 @@ export default function SubjectsPage() {
       }
     } catch (error) {
       console.error('Error with AI assist:', error);
+      throw error; // Re-throw so AIAssistButton can show error toast
     } finally {
       setIsGenerating(false);
     }
@@ -138,21 +137,13 @@ export default function SubjectsPage() {
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
                   <Label htmlFor="name">Name</Label>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    className="h-8 px-2 text-xs"
-                    onClick={handleAiAssist}
-                    disabled={isGenerating || (!newName && !newDescription)}
-                  >
-                    {isGenerating ? (
-                      <Loader2 className="mr-2 h-3 w-3 animate-spin" />
-                    ) : (
-                      <Sparkles className="mr-2 h-3 w-3" />
-                    )}
-                    AI Assist
-                  </Button>
+                  <AIAssistButton
+                    onGenerate={handleAiAssist}
+                    title="AI Subject Generator"
+                    description="Describe your subject concept and AI will generate a detailed name and description"
+                    placeholder="e.g., mechanical spider, cyberpunk samurai, glowing jellyfish"
+                    buttonVariant="outline"
+                  />
                 </div>
                 <Input
                   id="name"
