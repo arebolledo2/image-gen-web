@@ -9,12 +9,16 @@ import { StylesService } from '../styles.service';
 import { createMockTransaction, createTestStyle } from './test-utils';
 
 // Mock the database
-vi.mock('@/lib/db', () => ({
-  db: {
+vi.mock('@/lib/db', () => {
+  const mockDb = {
     insert: vi.fn().mockReturnThis(),
     update: vi.fn().mockReturnThis(),
     delete: vi.fn().mockReturnThis(),
     select: vi.fn().mockReturnThis(),
+    from: vi.fn().mockReturnThis(),
+    where: vi.fn().mockReturnThis(),
+    orderBy: vi.fn().mockReturnThis(),
+    limit: vi.fn().mockResolvedValue([]),
     transaction: vi.fn((callback) => callback(createMockTransaction())),
     query: {
       styles: {
@@ -22,8 +26,16 @@ vi.mock('@/lib/db', () => ({
         findMany: vi.fn(),
       },
     },
-  },
-}));
+  };
+
+  // Make select, from, where, orderBy return mockDb for chaining
+  mockDb.select.mockImplementation(() => mockDb);
+  mockDb.from.mockImplementation(() => mockDb);
+  mockDb.where.mockImplementation(() => mockDb);
+  mockDb.orderBy.mockImplementation(() => mockDb);
+
+  return { db: mockDb };
+});
 
 vi.mock('@/lib/db/schema', () => ({
   styles: {
@@ -224,16 +236,33 @@ describe('StylesService', () => {
 
       const { db } = await import('@/lib/db');
 
-      // Mock sequential findById calls
-      let callCount = 0;
-      db.select = vi.fn().mockReturnThis();
-      db.from = vi.fn().mockReturnThis();
-      db.where = vi.fn().mockReturnThis();
-      db.limit = vi.fn().mockImplementation(() => {
-        callCount++;
-        if (callCount === 1) return Promise.resolve([styleV2]); // Start from v2
-        if (callCount === 2) return Promise.resolve([styleV1]); // Traverse to v1 (root)
-        return Promise.resolve([]);
+      // Mock sequential findById calls and findAll
+      let findByIdCallCount = 0;
+      const mockChain = {
+        select: vi.fn().mockReturnThis(),
+        from: vi.fn().mockReturnThis(),
+        where: vi.fn().mockReturnThis(),
+        orderBy: vi.fn().mockReturnThis(),
+        limit: vi.fn().mockImplementation(() => {
+          findByIdCallCount++;
+          if (findByIdCallCount === 1) return Promise.resolve([styleV2]); // Start from v2
+          if (findByIdCallCount === 2) return Promise.resolve([styleV1]); // Traverse to v1 (root)
+          return Promise.resolve([]);
+        }),
+      };
+
+      db.select = vi.fn(() => mockChain);
+      db.from = vi.fn(() => mockChain);
+      db.where = vi.fn(() => mockChain);
+      db.orderBy = vi.fn(() => mockChain);
+      db.limit = mockChain.limit;
+
+      // For findAll: select().from() should return the styles array
+      // When limit is NOT called (findAll case), from() needs to resolve to array
+      mockChain.from.mockImplementation(() => {
+        // If this is for findAll (no limit will be called after), return a thenable
+        const result = Object.assign(Promise.resolve([styleV1, styleV2, styleV3]), mockChain);
+        return result;
       });
 
       // Mock findMany for getting all versions
@@ -266,10 +295,25 @@ describe('StylesService', () => {
 
       const { db } = await import('@/lib/db');
 
-      db.select = vi.fn().mockReturnThis();
-      db.from = vi.fn().mockReturnThis();
-      db.where = vi.fn().mockReturnThis();
-      db.limit = vi.fn().mockResolvedValue([singleStyle]);
+      const mockChain = {
+        select: vi.fn().mockReturnThis(),
+        from: vi.fn().mockReturnThis(),
+        where: vi.fn().mockReturnThis(),
+        orderBy: vi.fn().mockReturnThis(),
+        limit: vi.fn().mockResolvedValue([singleStyle]),
+      };
+
+      db.select = vi.fn(() => mockChain);
+      db.from = vi.fn(() => mockChain);
+      db.where = vi.fn(() => mockChain);
+      db.orderBy = vi.fn(() => mockChain);
+      db.limit = mockChain.limit;
+
+      // For findAll
+      mockChain.from.mockImplementation(() => {
+        const result = Object.assign(Promise.resolve([singleStyle]), mockChain);
+        return result;
+      });
 
       db.query.styles.findMany = vi.fn().mockResolvedValue([singleStyle]);
 
@@ -288,20 +332,42 @@ describe('StylesService', () => {
 
       const { db } = await import('@/lib/db');
 
-      // Mock finding root
-      db.select = vi.fn().mockReturnThis();
-      db.from = vi.fn().mockReturnThis();
-      db.where = vi.fn().mockReturnThis();
-      db.limit = vi.fn()
-        .mockResolvedValueOnce([styleV2]) // Start from v2
-        .mockResolvedValueOnce([styleV1]); // Traverse to v1 (root)
+      // Mock the query chains
+      let findByIdCallCount = 0;
+      const mockChain = {
+        select: null as any,
+        from: null as any,
+        where: null as any,
+        orderBy: null as any,
+        limit: vi.fn().mockImplementation(() => {
+          findByIdCallCount++;
+          if (findByIdCallCount === 1) return Promise.resolve([styleV2]);
+          if (findByIdCallCount === 2) return Promise.resolve([styleV1]);
+          return Promise.resolve([]);
+        }),
+      };
 
-      // Mock finding all versions
-      db.query.styles.findMany = vi.fn().mockResolvedValue([styleV1, styleV2, styleV3]);
+      // Set up methods to return mockChain itself
+      mockChain.select = vi.fn(() => mockChain);
+      mockChain.from = vi.fn(() => mockChain);
+      mockChain.where = vi.fn(() => mockChain);
+      mockChain.orderBy = vi.fn(() => mockChain);
+
+      db.select = mockChain.select;
+      db.from = mockChain.from;
+      db.where = mockChain.where;
+      db.orderBy = mockChain.orderBy;
+      db.limit = mockChain.limit;
+
+      // For findAll - from() should return a thenable with chain methods
+      mockChain.from.mockImplementation(() => {
+        const result = Object.assign(Promise.resolve([styleV1, styleV2, styleV3]), mockChain);
+        return result;
+      });
 
       // Mock delete
       db.delete = vi.fn().mockReturnThis();
-      db.where = vi.fn().mockResolvedValue({ rowCount: 3 });
+      mockChain.where.mockResolvedValue({ rowCount: 3 });
 
       const result = await service.deleteStyleFamily('v2');
 

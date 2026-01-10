@@ -11,13 +11,14 @@ import { Card } from "@/components/ui/card";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
 
-interface ToolInvocationPart {
-    type: 'tool-invocation';
-    toolInvocation: {
-        toolName: string;
-        state: string;
-        result?: unknown;
-    };
+interface ToolCallPart {
+    type: `tool-${string}`;
+    toolCallId: string;
+    toolName: string;
+    state: string;
+    input?: unknown;
+    output?: unknown;
+    result?: unknown;
 }
 
 export function ChatInterface() {
@@ -96,17 +97,16 @@ export function ChatInterface() {
                                             return <span key={index}>{part.text}</span>;
                                         }
 
-                                        // Handle tool invocations
-                                        if (part.type === 'tool-invocation') {
-                                            const toolPart = part as ToolInvocationPart;
-                                            const toolName = toolPart.toolInvocation.toolName;
-                                            const invocation = toolPart.toolInvocation;
+                                        // Handle tool calls (type starts with 'tool-')
+                                        if (part.type.startsWith('tool-')) {
+                                            const toolPart = part as ToolCallPart;
+                                            const toolName = toolPart.toolName;
 
                                             return (
                                                 <div key={index} className="mt-2 text-xs opacity-80 border-t pt-2 border-white/20">
                                                     <div className="font-semibold">Tool: {toolName}</div>
-                                                    {invocation.state === "result" && (
-                                                        <div>Result: {JSON.stringify(invocation.result).substring(0, 100)}...</div>
+                                                    {toolPart.state === "result" && toolPart.result !== undefined && (
+                                                        <div>Result: {JSON.stringify(toolPart.result).substring(0, 100)}...</div>
                                                     )}
                                                 </div>
                                             );

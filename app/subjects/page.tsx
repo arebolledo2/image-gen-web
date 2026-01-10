@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
-import { Plus, Loader2, Box, X, Sparkles } from "lucide-react";
+import { Plus, Loader2, Box, X } from "lucide-react";
 import { AIAssistButton } from "@/components/agents/ai-assist-button";
 
 interface Subject {
@@ -30,7 +30,6 @@ export default function SubjectsPage() {
   const [newDescription, setNewDescription] = useState("");
   const [isTransparent, setIsTransparent] = useState(true);
   const [submitting, setSubmitting] = useState(false);
-  const [isGenerating, setIsGenerating] = useState(false);
 
   useEffect(() => {
     fetchSubjects();
@@ -55,10 +54,10 @@ export default function SubjectsPage() {
       const response = await fetch('/api/subjects', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          name: newName, 
+        body: JSON.stringify({
+          name: newName,
           description: newDescription,
-          isTransparent 
+          isTransparent
         }),
       });
       if (response.ok) {
@@ -76,7 +75,6 @@ export default function SubjectsPage() {
   };
 
   const handleAiAssist = async (concept: string) => {
-    setIsGenerating(true);
     try {
       const response = await fetch('/api/agents/create-subject', {
         method: 'POST',
@@ -94,8 +92,6 @@ export default function SubjectsPage() {
     } catch (error) {
       console.error('Error with AI assist:', error);
       throw error; // Re-throw so AIAssistButton can show error toast
-    } finally {
-      setIsGenerating(false);
     }
   };
 

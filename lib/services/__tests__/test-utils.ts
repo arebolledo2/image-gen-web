@@ -14,54 +14,56 @@ export function createMockTransaction() {
     update: vi.fn().mockReturnThis(),
     delete: vi.fn().mockReturnThis(),
     select: vi.fn().mockReturnThis(),
+    from: vi.fn().mockReturnThis(),
+    where: vi.fn().mockReturnThis(),
+    limit: vi.fn().mockResolvedValue([]),
     values: vi.fn().mockReturnThis(),
     set: vi.fn().mockReturnThis(),
-    where: vi.fn().mockReturnThis(),
     returning: vi.fn().mockResolvedValue([]),
     query: {
       styles: {
         findFirst: vi.fn(),
-        findMany: vi.fn(),
+        findMany: vi.fn().mockResolvedValue([]),
       },
       subjects: {
         findFirst: vi.fn(),
-        findMany: vi.fn(),
+        findMany: vi.fn().mockResolvedValue([]),
       },
       guidance: {
         findFirst: vi.fn(),
-        findMany: vi.fn(),
+        findMany: vi.fn().mockResolvedValue([]),
       },
       prompts: {
         findFirst: vi.fn(),
-        findMany: vi.fn(),
+        findMany: vi.fn().mockResolvedValue([]),
       },
       promptGuidance: {
         findFirst: vi.fn(),
-        findMany: vi.fn(),
+        findMany: vi.fn().mockResolvedValue([]),
       },
       batches: {
         findFirst: vi.fn(),
-        findMany: vi.fn(),
+        findMany: vi.fn().mockResolvedValue([]),
       },
       batchPrompts: {
         findFirst: vi.fn(),
-        findMany: vi.fn(),
+        findMany: vi.fn().mockResolvedValue([]),
       },
       generations: {
         findFirst: vi.fn(),
-        findMany: vi.fn(),
+        findMany: vi.fn().mockResolvedValue([]),
       },
       images: {
         findFirst: vi.fn(),
-        findMany: vi.fn(),
+        findMany: vi.fn().mockResolvedValue([]),
       },
       squishAnimations: {
         findFirst: vi.fn(),
-        findMany: vi.fn(),
+        findMany: vi.fn().mockResolvedValue([]),
       },
       imageEdits: {
         findFirst: vi.fn(),
-        findMany: vi.fn(),
+        findMany: vi.fn().mockResolvedValue([]),
       },
     },
   };

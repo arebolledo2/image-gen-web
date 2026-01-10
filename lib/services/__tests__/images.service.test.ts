@@ -247,9 +247,6 @@ describe('ImagesService', () => {
       mockTx.query.imageEdits.findMany = vi.fn().mockResolvedValue([
         { id: 'edit-1', imageId: 'image-id' },
       ]);
-      mockTx.query.images.findMany = vi.fn().mockResolvedValue([
-        { id: 'child-1', parentImageId: 'image-id' },
-      ]);
 
       // Mock deletes
       mockTx.delete = vi.fn().mockReturnThis();
@@ -265,8 +262,8 @@ describe('ImagesService', () => {
 
       // Verify all related data was deleted
       expect(mockTx.delete).toHaveBeenCalled();
-      // Should delete: animations, edits, child images, and the image itself
-      expect(mockTx.delete).toHaveBeenCalledTimes(4);
+      // Should delete: animations, edits, and the image itself
+      expect(mockTx.delete).toHaveBeenCalledTimes(3);
     });
 
     it('should handle image with no transformations', async () => {
@@ -274,7 +271,6 @@ describe('ImagesService', () => {
 
       mockTx.query.squishAnimations.findMany = vi.fn().mockResolvedValue([]);
       mockTx.query.imageEdits.findMany = vi.fn().mockResolvedValue([]);
-      mockTx.query.images.findMany = vi.fn().mockResolvedValue([]);
 
       mockTx.delete = vi.fn().mockReturnThis();
       mockTx.where = vi.fn().mockReturnThis();
@@ -284,45 +280,41 @@ describe('ImagesService', () => {
 
       await service.deleteImageWithTransformations('image-id');
 
-      // Should only delete the image itself
-      expect(mockTx.delete).toHaveBeenCalledTimes(1);
+      // Still calls delete 3 times (animations, edits, image), even though animations and edits are empty
+      // The where clause will just find nothing to delete
+      expect(mockTx.delete).toHaveBeenCalledTimes(3);
     });
   });
 
   describe('getImageStatistics', () => {
     it('should calculate correct statistics', async () => {
       const mockImages = [
-        createTestImage({ id: 'img-1', isFavorite: true, sourceVersion: 'original' }),
-        createTestImage({ id: 'img-2', isFavorite: false, sourceVersion: 'original' }),
-        createTestImage({ id: 'img-3', isFavorite: true, sourceVersion: 'transparent', parentImageId: 'img-1' }),
-        createTestImage({ id: 'img-4', isFavorite: false, sourceVersion: 'flipped', parentImageId: 'img-2' }),
+        createTestImage({
+          id: 'img-1',
+          isFavorite: true,
+          squishAnimations: [{ id: 'anim-1', imageId: 'img-1' }],
+          imageEdits: [{ id: 'edit-1', imageId: 'img-1' }],
+        }),
+        createTestImage({ id: 'img-2', isFavorite: false }),
+        createTestImage({ id: 'img-3', isFavorite: true, transparentFilePath: '/path/transparent.png' }),
+        createTestImage({ id: 'img-4', isFavorite: false, flippedFilePath: '/path/flipped.png' }),
       ];
 
       const mockGenerations = [
         createTestGeneration({ id: 'gen-1', batchId: 'batch-1' }),
       ];
 
-      const mockAnimations = [
-        { id: 'anim-1', imageId: 'img-1' },
-      ];
-
-      const mockEdits = [
-        { id: 'edit-1', imageId: 'img-1' },
-      ];
-
       const { db } = await import('@/lib/db');
 
       db.query.generations.findMany = vi.fn().mockResolvedValue(mockGenerations);
       db.query.images.findMany = vi.fn().mockResolvedValue(mockImages);
-      db.query.squishAnimations.findMany = vi.fn().mockResolvedValue(mockAnimations);
-      db.query.imageEdits.findMany = vi.fn().mockResolvedValue(mockEdits);
 
       const result = await service.getImageStatistics('batch-1');
 
       expect(result.total).toBe(4);
       expect(result.favorites).toBe(2);
-      expect(result.withTransparent).toBe(1); // img-3
-      expect(result.withFlipped).toBe(1); // img-4
+      expect(result.withTransparent).toBe(1); // img-3 has transparentFilePath
+      expect(result.withFlipped).toBe(1); // img-4 has flippedFilePath
       expect(result.withAnimations).toBe(1); // img-1 has animation
       expect(result.withEdits).toBe(1); // img-1 has edit
     });
