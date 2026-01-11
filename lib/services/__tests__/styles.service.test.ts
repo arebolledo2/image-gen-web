@@ -332,13 +332,13 @@ describe('StylesService', () => {
 
       const { db } = await import('@/lib/db');
 
-      // Mock the query chains
+      // SELECT chain for findById and findAll
       let findByIdCallCount = 0;
-      const mockChain = {
-        select: null as any,
-        from: null as any,
-        where: null as any,
-        orderBy: null as any,
+      const selectChain = {
+        select: vi.fn().mockReturnThis(),
+        from: vi.fn().mockReturnThis(),
+        where: vi.fn().mockReturnThis(),
+        orderBy: vi.fn().mockReturnThis(),
         limit: vi.fn().mockImplementation(() => {
           findByIdCallCount++;
           if (findByIdCallCount === 1) return Promise.resolve([styleV2]);
@@ -347,31 +347,43 @@ describe('StylesService', () => {
         }),
       };
 
-      // Set up methods to return mockChain itself
-      mockChain.select = vi.fn(() => mockChain);
-      mockChain.from = vi.fn(() => mockChain);
-      mockChain.where = vi.fn(() => mockChain);
-      mockChain.orderBy = vi.fn(() => mockChain);
-
-      db.select = mockChain.select;
-      db.from = mockChain.from;
-      db.where = mockChain.where;
-      db.orderBy = mockChain.orderBy;
-      db.limit = mockChain.limit;
+      // Make select chain methods return selectChain for proper chaining
+      selectChain.select = vi.fn(() => selectChain);
+      selectChain.from = vi.fn(() => selectChain);
+      selectChain.where = vi.fn(() => selectChain);
+      selectChain.orderBy = vi.fn(() => selectChain);
 
       // For findAll - from() should return a thenable with chain methods
-      mockChain.from.mockImplementation(() => {
-        const result = Object.assign(Promise.resolve([styleV1, styleV2, styleV3]), mockChain);
+      selectChain.from.mockImplementation(() => {
+        const result = Object.assign(Promise.resolve([styleV1, styleV2, styleV3]), selectChain);
         return result;
       });
 
-      // Mock delete
-      db.delete = vi.fn().mockReturnThis();
-      mockChain.where.mockResolvedValue({ rowCount: 3 });
+      // Wire up db.select to use selectChain
+      db.select = selectChain.select;
+
+      // DELETE chain for the delete operation (used by transaction)
+      const txDeleteChain = {
+        where: vi.fn().mockResolvedValue({ rowCount: 1 }),
+      };
+
+      // Mock transaction to provide a tx object with delete capability
+      let deleteCallCount = 0;
+      const mockTx = {
+        delete: vi.fn(() => {
+          deleteCallCount++;
+          return txDeleteChain;
+        }),
+      };
+
+      db.transaction = vi.fn(async (callback) => {
+        return callback(mockTx);
+      });
 
       const result = await service.deleteStyleFamily('v2');
 
-      expect(db.delete).toHaveBeenCalled();
+      expect(mockTx.delete).toHaveBeenCalled();
+      expect(deleteCallCount).toBe(3); // Should delete 3 styles (v1, v2, v3)
       expect(result).toBe(3); // Deleted 3 styles
     });
 
