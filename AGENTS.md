@@ -1,10 +1,10 @@
 # Image Gen Web - AI Agent Instructions
 
-A powerful web orchestration platform for large-scale AI image generation, built with Next.js 15, Vercel AI SDK, and Inngest.
+A powerful web orchestration platform for large-scale AI image generation, built with Next.js 16, Vercel AI SDK 6, and Inngest.
 
 ## Quick Reference
 
-- **Framework**: Next.js 15 (App Router)
+- **Framework**: Next.js 16 (App Router)
 - **Language**: TypeScript
 - **Database**: PostgreSQL with Drizzle ORM
 - **AI Integration**: Vercel AI SDK & Google Gemini
@@ -50,7 +50,7 @@ Whether generating game assets, marketing materials, or experimental art, this p
 ### Tech Stack
 
 ```
-Next.js 15 (App Router)
+Next.js 16 (App Router)
 ├── PostgreSQL (Drizzle ORM)
 ├── Vercel AI SDK (Google Gemini)
 ├── Inngest (Job Queue)
@@ -207,7 +207,7 @@ All AI agent functions are defined in `lib/ai/agents.ts` with corresponding API 
 
 **Game Asset Workflow Agent** (ToolLoopAgent):
 10. **Game Asset Workflow Agent** (via `/api/chat`)
-    - Autonomous multi-step agent using AI SDK 6
+    - Autonomous multi-step agent using Vercel AI SDK 6
     - Combines querying and creation capabilities in one interface
     - **Query Tools**: Get batches, styles, subjects, images; analyze images
     - **Creation Tools**: Create styles, subjects, batches; execute generation
@@ -231,7 +231,7 @@ All AI agent functions are defined in `lib/ai/agents.ts` with corresponding API 
 - `audio-types.ts` - Type definitions for audio jobs
 
 **Provider Support**:
-- Image: Gemini (2.0 & 3.0), ComfyUI
+- Image: Gemini (2.5 & 3.0), ComfyUI
 - Audio: AudioCraft, ElevenLabs
 
 **Development**: Inngest dev server runs with `npm run dev`
