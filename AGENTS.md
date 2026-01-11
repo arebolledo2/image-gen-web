@@ -205,6 +205,17 @@ All AI agent functions are defined in `lib/ai/agents.ts` with corresponding API 
    - Creates detailed audio prompts optimized for game SFX
    - API: `POST /api/agents/create-audio-prompt`
 
+**Game Asset Workflow Agent** (ToolLoopAgent):
+10. **Game Asset Workflow Agent** (via `/api/chat`)
+    - Autonomous multi-step agent using AI SDK 6
+    - Combines querying and creation capabilities in one interface
+    - **Query Tools**: Get batches, styles, subjects, images; analyze images
+    - **Creation Tools**: Create styles, subjects, batches; execute generation
+    - **AI-Assisted Tools**: Generate and adjust prompts with AI
+    - Supports full game asset pipeline through natural language
+    - Example: "Create a cyberpunk style and generate 5 turret sprites"
+
+
 ### Job Queue (Inngest)
 
 **Job Functions** (defined in `lib/queue/`):

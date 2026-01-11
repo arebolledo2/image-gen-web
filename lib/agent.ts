@@ -3,6 +3,17 @@ import { ToolLoopAgent, tool, generateText, type InferAgentUIMessage } from "ai"
 import { z } from "zod";
 import * as queries from "@/lib/db/queries";
 import { readImage } from "@/lib/storage/local-storage";
+import {
+    getAllStyles,
+    createStyle,
+    getAllSubjects,
+    createSubject,
+    createBatch,
+    executeBatch,
+    getImages,
+    createPromptWithAI,
+    adjustPrompt
+} from "@/lib/ai/tools";
 
 // Define schemas separately to infer types
 const GetRecentBatchesSchema = z.object({
@@ -27,8 +38,34 @@ const AnalyzeImageSchema = z.object({
 });
 
 export const imageAgent = new ToolLoopAgent({
-    model: google("gemini-2.5-flash"),
-    instructions: "You are an intelligent agent that helps the user manage their image generation workflow. You have access to the user's batches, styles, subjects, and images. You can also see and analyze images when asked. Always ask for clarification if a request is ambiguous. When analyzing an image, be detailed.",
+    model: google("gemini-3-flash-preview"),
+    instructions: `You are an intelligent agent that helps users create and manage game assets through AI image generation.
+
+You have access to the user's existing resources (batches, styles, subjects, images) and can create new ones.
+
+**Game Asset Workflow:**
+1. **Style**: Define visual appearance (color palette, materials, effects)
+2. **Subject**: Define what to generate (enemies, turrets, items, backgrounds)
+3. **Batch**: Create a collection of prompts with settings
+4. **Execute**: Trigger background image generation
+5. **Review**: Query and analyze generated images
+
+**Your Capabilities:**
+- Query existing styles, subjects, batches, and images
+- Create new styles with custom color palettes and rendering cues
+- Create new subjects for game assets
+- Generate AI-optimized prompts for better results
+- Create and execute image generation batches
+- Analyze generated images
+
+**Best Practices:**
+- Ask clarifying questions when requests are ambiguous
+- Suggest using existing resources before creating duplicates
+- Recommend appropriate styles for game asset types
+- Use AI prompt generation for complex requirements
+- Provide helpful context about batch execution status
+
+When the user wants to create game assets, guide them through the workflow naturally.`,
     tools: {
         getRecentBatches: tool({
             description: "Get a list of the most recent image generation batches.",
@@ -97,6 +134,16 @@ export const imageAgent = new ToolLoopAgent({
                 };
             },
         }),
+        // Game Asset Creation Tools
+        getAllStyles,
+        createStyle,
+        getAllSubjects,
+        createSubject,
+        createBatch,
+        executeBatch,
+        getImages,
+        createPromptWithAI,
+        adjustPrompt,
     },
 });
 
