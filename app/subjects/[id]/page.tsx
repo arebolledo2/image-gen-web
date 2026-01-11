@@ -6,11 +6,18 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, ArrowLeft, Trash2, Copy, Box, ChevronRight, Pencil, Save, X } from "lucide-react";
+import { Loader2, ArrowLeft, Trash2, Copy, Box, ChevronRight, Pencil, Save, X, Tag } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+
+interface Category {
+  id: string;
+  name: string;
+  color: string | null;
+}
 
 interface Subject {
   id: string;
@@ -18,7 +25,9 @@ interface Subject {
   version: number;
   description: string | null;
   isTransparent: boolean;
+  categoryId: string | null;
   createdAt: string;
+  category?: Category;
   parentSubject?: {
     id: string;
     name: string;
@@ -34,6 +43,7 @@ export default function SubjectDetailPage({ params }: { params: Promise<{ id: st
   const { id } = use(params);
   const router = useRouter();
   const [subject, setSubject] = useState<Subject | null>(null);
+  const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [deleting, setDeleting] = useState(false);
   const [creatingVersion, setCreatingVersion] = useState(false);
@@ -42,21 +52,36 @@ export default function SubjectDetailPage({ params }: { params: Promise<{ id: st
   const [editName, setEditName] = useState("");
   const [editDescription, setEditDescription] = useState("");
   const [editIsTransparent, setEditIsTransparent] = useState(true);
+  const [selectedCategoryId, setSelectedCategoryId] = useState<string>("none");
 
   useEffect(() => {
-    const fetchSubject = async () => {
+    const fetchData = async () => {
       try {
-        const response = await fetch(`/api/subjects/${id}`);
-        if (!response.ok) {
-          throw new Error("Failed to fetch subject");
-        }
-        const data = await response.json();
-        setSubject(data.subject);
-        setEditName(data.subject.name);
-        setEditDescription(data.subject.description || "");
-        setEditIsTransparent(data.subject.isTransparent);
+        const [subjectRes, categoriesRes] = await Promise.all([
+          fetch(`/api/subjects/${id}`),
+          fetch('/api/subject-categories')
+        ]);
+
+        if (!subjectRes.ok) throw new Error("Failed to fetch subject");
+
+        const subjectData = await subjectRes.json();
+        const categoriesData = await categoriesRes.json();
+
+        const sub = subjectData.subject;
+        const cats = categoriesData.categories || [];
+
+        setCategories(cats);
+        setSubject({
+          ...sub,
+          category: cats.find((c: Category) => c.id === sub.categoryId)
+        });
+
+        setEditName(sub.name);
+        setEditDescription(sub.description || "");
+        setEditIsTransparent(sub.isTransparent);
+        setSelectedCategoryId(sub.categoryId || "none");
       } catch (error) {
-        console.error("Error fetching subject:", error);
+        console.error("Error fetching data:", error);
         toast.error("Failed to load subject");
         router.push("/subjects");
       } finally {
@@ -64,7 +89,7 @@ export default function SubjectDetailPage({ params }: { params: Promise<{ id: st
       }
     };
 
-    fetchSubject();
+    fetchData();
   }, [id, router]);
 
   const handleDelete = async () => {
@@ -122,6 +147,7 @@ export default function SubjectDetailPage({ params }: { params: Promise<{ id: st
           name: editName,
           description: editDescription,
           isTransparent: editIsTransparent,
+          categoryId: selectedCategoryId === "none" ? null : selectedCategoryId
         }),
       });
 
@@ -130,7 +156,11 @@ export default function SubjectDetailPage({ params }: { params: Promise<{ id: st
       }
 
       const data = await response.json();
-      setSubject(data.subject);
+      const updatedSub = data.subject;
+      setSubject({
+        ...updatedSub,
+        category: categories.find(c => c.id === updatedSub.categoryId)
+      });
       toast.success("Subject updated successfully!");
       setEditing(false);
     } catch (error) {
@@ -145,6 +175,7 @@ export default function SubjectDetailPage({ params }: { params: Promise<{ id: st
     setEditName(subject?.name || "");
     setEditDescription(subject?.description || "");
     setEditIsTransparent(subject?.isTransparent ?? true);
+    setSelectedCategoryId(subject?.categoryId || "none");
     setEditing(false);
   };
 
@@ -167,12 +198,25 @@ export default function SubjectDetailPage({ params }: { params: Promise<{ id: st
           <ArrowLeft className="h-4 w-4" />
         </Button>
         <div className="flex-1">
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <h1 className="text-3xl font-bold tracking-tight">{subject.name}</h1>
             <Badge variant="outline">v{subject.version}</Badge>
             {subject.isTransparent && (
               <Badge variant="secondary" className="bg-pink-500/10 text-pink-600 border-pink-200">
                 Transparent
+              </Badge>
+            )}
+            {subject.category && (
+              <Badge
+                variant="secondary"
+                style={{
+                  backgroundColor: subject.category.color + '20' || '#3b82f620',
+                  color: subject.category.color || '#3b82f6',
+                  borderColor: subject.category.color + '40' || '#3b82f640'
+                }}
+              >
+                <Tag className="mr-1 h-3 w-3" />
+                {subject.category.name}
               </Badge>
             )}
           </div>
@@ -225,46 +269,77 @@ export default function SubjectDetailPage({ params }: { params: Promise<{ id: st
 
       <Card>
         <CardHeader>
-          <CardTitle>{editing ? "Edit Subject" : "Description"}</CardTitle>
+          <CardTitle>{editing ? "Edit Subject" : "Details"}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           {editing ? (
-            <>
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Name</label>
-                <Input
-                  value={editName}
-                  onChange={(e) => setEditName(e.target.value)}
-                  placeholder="Subject name"
-                />
-              </div>
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Description</label>
-                <Textarea
-                  value={editDescription}
-                  onChange={(e) => setEditDescription(e.target.value)}
-                  placeholder="Subject description"
-                  rows={4}
-                />
-              </div>
-              <div className="flex items-center space-x-2 py-2">
-                <Switch
-                  id="editIsTransparent"
-                  checked={editIsTransparent}
-                  onCheckedChange={setEditIsTransparent}
-                />
-                <div className="space-y-0.5">
-                  <Label htmlFor="editIsTransparent">Transparent Background</Label>
-                  <p className="text-[10px] text-muted-foreground">
-                    ALWAYS include magenta background for sprite transparency
-                  </p>
+            <div className="grid md:grid-cols-2 gap-4">
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="editName">Name</Label>
+                  <Input
+                    id="editName"
+                    value={editName}
+                    onChange={(e) => setEditName(e.target.value)}
+                    placeholder="Subject name"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="editCategory">Category</Label>
+                  <Select value={selectedCategoryId} onValueChange={setSelectedCategoryId}>
+                    <SelectTrigger id="editCategory">
+                      <SelectValue placeholder="Select Category..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">No Category</SelectItem>
+                      {categories.map((cat) => (
+                        <SelectItem key={cat.id} value={cat.id}>
+                          <div className="flex items-center gap-2">
+                            <div className="w-2 h-2 rounded-full" style={{ backgroundColor: cat.color || '#3b82f6' }} />
+                            {cat.name}
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
-            </>
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="editDescription">Description</Label>
+                  <Textarea
+                    id="editDescription"
+                    value={editDescription}
+                    onChange={(e) => setEditDescription(e.target.value)}
+                    placeholder="Subject description"
+                    rows={4}
+                  />
+                </div>
+                <div className="flex items-center space-x-2 py-2">
+                  <Switch
+                    id="editIsTransparent"
+                    checked={editIsTransparent}
+                    onCheckedChange={setEditIsTransparent}
+                  />
+                  <div className="space-y-0.5">
+                    <Label htmlFor="editIsTransparent">Transparent Background</Label>
+                    <p className="text-[10px] text-muted-foreground">
+                      ALWAYS include magenta background for sprite transparency
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
           ) : (
-            <p className="text-muted-foreground whitespace-pre-wrap">
-              {subject.description || "No description provided."}
-            </p>
+            <div className="space-y-4">
+              {subject.description && (
+                <div>
+                  <h4 className="text-sm font-medium mb-1 text-muted-foreground uppercase tracking-wider">Description</h4>
+                  <p className="text-sm whitespace-pre-wrap">{subject.description}</p>
+                </div>
+              )}
+              {!subject.description && <p className="text-sm text-muted-foreground italic">No description provided.</p>}
+            </div>
           )}
         </CardContent>
       </Card>

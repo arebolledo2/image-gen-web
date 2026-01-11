@@ -1,23 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/db';
-import { subjects } from '@/lib/db/schema';
-import { eq } from 'drizzle-orm';
+import { subjectsService } from '@/lib/services';
 
 // GET /api/subjects/[id] - Get a single subject
 export async function GET(
-  request: NextRequest,
+  _request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const { id } = await params;
-
-    const subject = await db.query.subjects.findFirst({
-      where: eq(subjects.id, id),
-      with: {
-        parentSubject: true,
-        childSubjects: true,
-      },
-    });
+    const subject = await subjectsService.findById(id);
 
     if (!subject) {
       return NextResponse.json(
@@ -44,19 +35,14 @@ export async function PATCH(
   try {
     const { id } = await params;
     const body = await request.json();
-    const { name, description, isTransparent } = body;
+    const { name, description, isTransparent, categoryId } = body;
 
-    // Build update object with only provided fields
-    const updateData: Record<string, string | boolean> = {};
-    if (name !== undefined) updateData.name = name;
-    if (description !== undefined) updateData.description = description;
-    if (isTransparent !== undefined) updateData.isTransparent = isTransparent;
-
-    const [updatedSubject] = await db
-      .update(subjects)
-      .set(updateData)
-      .where(eq(subjects.id, id))
-      .returning();
+    const updatedSubject = await subjectsService.updateSubject(id, {
+      name,
+      description,
+      isTransparent,
+      categoryId: categoryId === 'none' ? undefined : categoryId,
+    });
 
     if (!updatedSubject) {
       return NextResponse.json(
@@ -77,14 +63,12 @@ export async function PATCH(
 
 // DELETE /api/subjects/[id] - Delete a subject
 export async function DELETE(
-  request: NextRequest,
+  _request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const { id } = await params;
-
-    await db.delete(subjects).where(eq(subjects.id, id));
-
+    await subjectsService.delete(id);
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error('Error deleting subject:', error);
