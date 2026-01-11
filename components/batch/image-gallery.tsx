@@ -6,7 +6,7 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import Image from "next/image";
 import { Loader2, Heart, Layers, Sparkles, Download } from "lucide-react";
-import { memo } from "react";
+import { memo, useMemo } from "react";
 import { type GalleryImage } from "@/components/image-gallery-modal";
 
 interface ImageGalleryProps {
@@ -46,6 +46,18 @@ export const ImageGallery = memo(function ImageGallery({
   onImageClick,
 }: ImageGalleryProps) {
 
+  // Deduplicate images by id to prevent React key collisions
+  const uniqueImages = useMemo(() => {
+    const seen = new Set<string>();
+    return images.filter(image => {
+      if (seen.has(image.id)) {
+        return false;
+      }
+      seen.add(image.id);
+      return true;
+    });
+  }, [images]);
+
 
   if (loading) {
     return (
@@ -63,7 +75,7 @@ export const ImageGallery = memo(function ImageGallery({
     );
   }
 
-  if (images.length === 0) {
+  if (uniqueImages.length === 0) {
     return (
       <Card>
         <CardHeader>
@@ -101,11 +113,11 @@ export const ImageGallery = memo(function ImageGallery({
       </CardHeader>
       <CardContent>
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-          {images.map((image, index) => (
+          {uniqueImages.map((image, index) => (
             <Card
               key={image.id}
               className="overflow-hidden group"
-              ref={index === images.length - 1 ? lastImageElementRef : null}
+              ref={index === uniqueImages.length - 1 ? lastImageElementRef : null}
             >
               <div className="aspect-square bg-muted relative">
                 <Image
