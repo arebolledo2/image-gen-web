@@ -5,7 +5,8 @@ import { db } from '@/lib/db';
 import { generations, images } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
 import { writeFile, mkdir } from 'fs/promises';
-import { join } from 'path';
+import path from 'path';
+const { join } = path;
 
 export class ComfyUIProvider implements ImageProvider {
   name = 'comfyui' as const;
@@ -59,8 +60,11 @@ export class ComfyUIProvider implements ImageProvider {
 
       const savedImages = [];
       for (const { buffer, filename, contentType } of downloadedImages) {
-        const filePath = join(outputDir, `${generationId}_${filename}`);
-        await writeFile(filePath, buffer);
+        const absoluteFilePath = join(outputDir, `${generationId}_${filename}`);
+        await writeFile(absoluteFilePath, buffer);
+
+        // Convert to relative path for database storage (consistent with Gemini provider)
+        const filePath = path.relative(process.cwd(), absoluteFilePath);
 
         const [imageRecord] = await db.insert(images).values({
           generationId,

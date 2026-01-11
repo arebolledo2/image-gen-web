@@ -14,15 +14,19 @@ export async function getThumbnail(sourcePath: string, width: number = 512): Pro
         ? sourcePath
         : path.join(process.cwd(), sourcePath);
 
+    // Convert to relative path for consistent thumbnail directory structure
+    // This ensures thumbnails work regardless of whether source path is absolute or relative
+    const relativeSourcePath = path.isAbsolute(sourcePath)
+        ? path.relative(process.cwd(), sourcePath)
+        : sourcePath;
+
     // Generate thumbnail path: source_dir/thumbnails/width_filename
-    const dir = path.dirname(sourcePath);
-    const fileName = path.basename(sourcePath);
+    const dir = path.dirname(relativeSourcePath);
+    const fileName = path.basename(relativeSourcePath);
     const thumbnailDir = path.join(dir, 'thumbnails');
     const thumbnailPath = path.join(thumbnailDir, `${width}_${fileName}`);
 
-    const absoluteThumbnailPath = path.isAbsolute(thumbnailPath)
-        ? thumbnailPath
-        : path.join(process.cwd(), thumbnailPath);
+    const absoluteThumbnailPath = path.join(process.cwd(), thumbnailPath);
 
     // Check if thumbnail already exists
     try {
@@ -33,8 +37,7 @@ export async function getThumbnail(sourcePath: string, width: number = 512): Pro
     }
 
     // Ensure thumbnail directory exists
-    const absoluteThumbnailDir = path.join(process.cwd(), thumbnailDir);
-    await fs.mkdir(absoluteThumbnailDir, { recursive: true });
+    await fs.mkdir(absoluteThumbnailPath.replace(path.basename(absoluteThumbnailPath), ''), { recursive: true });
 
     try {
         // Generate thumbnail
