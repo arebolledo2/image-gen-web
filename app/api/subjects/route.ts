@@ -1,14 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/db';
-import { subjects } from '@/lib/db/schema';
-import { desc } from 'drizzle-orm';
+import { subjectsService } from '@/lib/services';
 
 // GET /api/subjects - List all subjects
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
-    const allSubjects = await db.query.subjects.findMany({
-      orderBy: [desc(subjects.createdAt)],
-    });
+    const { searchParams } = new URL(request.url);
+    const categoryId = searchParams.get('categoryId') || undefined;
+
+    const allSubjects = await subjectsService.getLatestSubjects(categoryId);
 
     return NextResponse.json({ subjects: allSubjects });
   } catch (error) {
@@ -24,7 +23,7 @@ export async function GET() {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { name, description, isTransparent } = body;
+    const { name, description, isTransparent, categoryId } = body;
 
     if (!name) {
       return NextResponse.json(
@@ -33,11 +32,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const [subject] = await db.insert(subjects).values({
+    const subject = await subjectsService.createSubject({
       name,
       description,
       isTransparent: isTransparent !== undefined ? isTransparent : true,
-    }).returning();
+      categoryId,
+    });
 
     return NextResponse.json({ subject }, { status: 201 });
   } catch (error) {

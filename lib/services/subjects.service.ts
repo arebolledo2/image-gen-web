@@ -19,8 +19,9 @@ export class SubjectsService extends BaseService<typeof subjects, Subject, NewSu
    *
    * @returns Array of latest subject versions with their version count
    */
-  async getLatestSubjects(): Promise<(Subject & { versionCount: number })[]> {
+  async getLatestSubjects(categoryId?: string): Promise<(Subject & { versionCount: number })[]> {
     const allSubjects = await db.query.subjects.findMany({
+      where: categoryId ? eq(subjects.categoryId, categoryId) : undefined,
       orderBy: [desc(subjects.createdAt)],
     });
 
@@ -140,11 +141,13 @@ export class SubjectsService extends BaseService<typeof subjects, Subject, NewSu
     name: string;
     description?: string;
     isTransparent?: boolean;
+    categoryId?: string;
   }): Promise<Subject> {
     return this.create({
       name: data.name,
       description: data.description,
       isTransparent: data.isTransparent ?? true,
+      categoryId: data.categoryId,
       version: 1,
     });
   }
@@ -162,6 +165,7 @@ export class SubjectsService extends BaseService<typeof subjects, Subject, NewSu
       name?: string;
       description?: string;
       isTransparent?: boolean;
+      categoryId?: string;
     }
   ): Promise<Subject> {
     const parentSubject = await this.findById(parentSubjectId);
@@ -173,6 +177,7 @@ export class SubjectsService extends BaseService<typeof subjects, Subject, NewSu
       name: data.name ?? parentSubject.name,
       description: data.description ?? parentSubject.description,
       isTransparent: data.isTransparent ?? parentSubject.isTransparent,
+      categoryId: data.categoryId ?? parentSubject.categoryId,
       parentSubjectId,
       version: parentSubject.version + 1,
     });
@@ -191,6 +196,7 @@ export class SubjectsService extends BaseService<typeof subjects, Subject, NewSu
       name?: string;
       description?: string;
       isTransparent?: boolean;
+      categoryId?: string;
     }
   ): Promise<Subject | undefined> {
     return this.update(id, data);

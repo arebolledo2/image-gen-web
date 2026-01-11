@@ -37,12 +37,23 @@ export const styles = pgTable('styles', {
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });
 
+// Subject Categories table
+export const subjectCategories = pgTable('subject_categories', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  name: text('name').notNull(),
+  color: text('color'), // Hex color for UI
+  description: text('description'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+
 // Subjects table (New)
 export const subjects = pgTable('subjects', {
   id: uuid('id').defaultRandom().primaryKey(),
   name: text('name').notNull(),
   version: integer('version').notNull().default(1),
   parentSubjectId: uuid('parent_subject_id'),
+  categoryId: uuid('category_id'), // New category association
   description: text('description'),
   isTransparent: boolean('is_transparent').default(true).notNull(),
   createdAt: timestamp('created_at').defaultNow().notNull(),
@@ -277,7 +288,15 @@ export const subjectsRelations = relations(subjects, ({ one, many }) => ({
   childSubjects: many(subjects, {
     relationName: 'subjectLineage',
   }),
+  category: one(subjectCategories, {
+    fields: [subjects.categoryId],
+    references: [subjectCategories.id],
+  }),
   prompts: many(prompts),
+}));
+
+export const subjectCategoriesRelations = relations(subjectCategories, ({ many }) => ({
+  subjects: many(subjects),
 }));
 
 export const guidanceRelations = relations(guidance, ({ one, many }) => ({
@@ -447,3 +466,5 @@ export type AudioGeneration = typeof audioGenerations.$inferSelect;
 export type NewAudioGeneration = typeof audioGenerations.$inferInsert;
 export type AudioFile = typeof audioFiles.$inferSelect;
 export type NewAudioFile = typeof audioFiles.$inferInsert;
+export type SubjectCategory = typeof subjectCategories.$inferSelect;
+export type NewSubjectCategory = typeof subjectCategories.$inferInsert;
