@@ -19,7 +19,10 @@ export async function GET(
 ) {
   try {
     const { id: batchId } = await params;
-    const { searchParams } = new URL(request.url);
+
+    // Extract search params - compatible with both runtime and test environments
+    const url = request.nextUrl || new URL(request.url);
+    const { searchParams } = url;
 
     // Get batch with all details
     const batch = await batchesService.getBatchWithDetails(batchId);
@@ -58,7 +61,8 @@ export async function GET(
     const fileName = `${safeFileName}_${batchId.substring(0, 8)}.zip`;
 
     // Return ZIP file
-    return new NextResponse(zipBuffer, {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    return new NextResponse(zipBuffer as any, {
       headers: {
         'Content-Type': 'application/zip',
         'Content-Disposition': `attachment; filename="${fileName}"`,

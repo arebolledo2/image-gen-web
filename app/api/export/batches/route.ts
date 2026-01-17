@@ -16,7 +16,9 @@ import { batchesService } from '@/lib/services';
  */
 export async function GET(request: NextRequest) {
   try {
-    const { searchParams } = new URL(request.url);
+    // Extract search params - compatible with both runtime and test environments
+    const url = request.nextUrl || new URL(request.url);
+    const { searchParams } = url;
 
     const search = searchParams.get('search') || undefined;
     const status = searchParams.get('status') as 'draft' | 'queued' | 'running' | 'completed' | 'failed' | undefined;
