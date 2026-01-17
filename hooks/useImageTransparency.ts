@@ -17,7 +17,8 @@ export function useImageTransparency() {
     forceOriginal?: boolean,
     onSuccess?: (updatedImage: GalleryImage) => void,
     currentVersion?: string,
-    onVersionChange?: (version: string) => void
+    onVersionChange?: (version: string) => void,
+    displayedDimensions?: { width: number, height: number }
   ) => {
     e?.stopPropagation();
     if (processingTransparency[image.id]) return;
@@ -47,7 +48,7 @@ export function useImageTransparency() {
       const response = await fetch(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ tolerance, mode, samplePoint, forceOriginal }),
+        body: JSON.stringify({ tolerance, mode, samplePoint, forceOriginal, displayedDimensions }),
       });
 
       if (!response.ok) {

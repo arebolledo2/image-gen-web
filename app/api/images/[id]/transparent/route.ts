@@ -42,7 +42,7 @@ export async function POST(
       : path.join(process.cwd(), filePathToLoad);
 
     const image = await (Jimp as any).read(absolutePath);
-    
+
     // Ensure image is RGBA
     if (image.bitmap.alpha === false) {
       image.bitmap.alpha = true;
@@ -66,21 +66,105 @@ export async function POST(
     let targetB: number;
 
     if (samplePoint) {
-      const color = intToRGBA(image.getPixelColor(samplePoint.x, samplePoint.y));
+      // Get displayed dimensions from request (browser-side natural dimensions)
+      const displayedDimensions = body.displayedDimensions as { width: number, height: number } | undefined;
 
-      // Check if the sampled pixel is already fully transparent
+      // Scale coordinates if the displayed image differs from actual file dimensions
+      let scaledX = samplePoint.x;
+      let scaledY = samplePoint.y;
+
+      if (displayedDimensions && (displayedDimensions.width !== width || displayedDimensions.height !== height)) {
+        const scaleX = width / displayedDimensions.width;
+        const scaleY = height / displayedDimensions.height;
+        scaledX = Math.round(samplePoint.x * scaleX);
+        scaledY = Math.round(samplePoint.y * scaleY);
+        console.log('[API Sampling Debug] Scaling coordinates:', {
+          original: samplePoint,
+          displayedDimensions,
+          actualDimensions: { width, height },
+          scale: { x: scaleX, y: scaleY },
+          scaled: { x: scaledX, y: scaledY },
+        });
+      }
+
+      console.log('[API Sampling Debug]', {
+        samplePoint: { x: scaledX, y: scaledY },
+        filePathToLoad,
+        imageDimensions: { width, height },
+        inBounds: scaledX >= 0 && scaledX < width && scaledY >= 0 && scaledY < height,
+      });
+
+      // Clamp coordinates to valid range to prevent reading outside image bounds
+      const clampedX = Math.max(0, Math.min(scaledX, width - 1));
+      const clampedY = Math.max(0, Math.min(scaledY, height - 1));
+
+      let color = intToRGBA(image.getPixelColor(clampedX, clampedY));
+
+      console.log('[API Sampling Debug] Pixel color at coordinates:', {
+        requested: samplePoint,
+        clamped: { x: clampedX, y: clampedY },
+        color,
+        source: 'transparent file',
+      });
+
+      // If the sampled pixel is transparent, search for the nearest visible pixel
       if (color.a === 0) {
-        return NextResponse.json({
-          success: false,
-          message: 'Cannot sample from a fully transparent pixel. Please click on a visible area.',
-          alreadyTransparent: true,
-          transparentFilePath: imageRecord.transparentFilePath
-        }, { status: 200 });
+        console.log('[API Sampling Debug] Pixel is transparent, searching for nearest visible pixel');
+
+        // Search in expanding rings for the nearest non-transparent pixel
+        let foundColor: { r: number; g: number; b: number; a: number } | null = null;
+        let foundAt: { x: number; y: number } | null = null;
+        const maxSearchRadius = Math.max(width, height); // Search entire image if needed
+
+        searchLoop:
+        for (let radius = 1; radius <= maxSearchRadius; radius++) {
+          // Check pixels in a square ring at distance 'radius'
+          for (let dx = -radius; dx <= radius; dx++) {
+            for (let dy = -radius; dy <= radius; dy++) {
+              // Only check pixels on the edge of the square (not interior)
+              if (Math.abs(dx) !== radius && Math.abs(dy) !== radius) continue;
+
+              const nx = clampedX + dx;
+              const ny = clampedY + dy;
+
+              if (nx >= 0 && nx < width && ny >= 0 && ny < height) {
+                const neighborColor = intToRGBA(image.getPixelColor(nx, ny));
+                if (neighborColor.a > 0) {
+                  foundColor = neighborColor;
+                  foundAt = { x: nx, y: ny };
+                  console.log('[API Sampling Debug] Found visible pixel at radius', radius);
+                  break searchLoop;
+                }
+              }
+            }
+          }
+        }
+
+        if (foundColor && foundAt) {
+          console.log('[API Sampling Debug] Found nearest visible pixel:', {
+            at: foundAt,
+            color: foundColor,
+            distanceFromClick: Math.max(Math.abs(foundAt.x - clampedX), Math.abs(foundAt.y - clampedY)),
+          });
+          color = foundColor;
+        } else {
+          console.log('[API Sampling Debug] No visible pixel found in entire image! Image may be fully transparent.');
+          return NextResponse.json({
+            success: false,
+            message: 'The entire image appears to be transparent. Please click directly on a visible area.',
+            alreadyTransparent: true,
+            transparentFilePath: imageRecord.transparentFilePath
+          }, { status: 200 });
+        }
       }
 
       targetR = color.r;
       targetG = color.g;
       targetB = color.b;
+
+      console.log('[API Sampling Debug] Target color for transparency:', {
+        r: targetR, g: targetG, b: targetB
+      });
     } else {
       // Get corner pixels to detect background color
       const corners = [
@@ -117,15 +201,15 @@ export async function POST(
       let head = 0;
       while (head < queue.length) {
         const [x, y] = queue[head++];
-        
+
         // Process current pixel
         const color = intToRGBA(image.getPixelColor(x, y));
-        
+
         // If it's already transparent, we should still spread if it was reached,
         // but it doesn't count as a match for color matching if we are looking for a specific color.
         // Actually, if it's transparent, we just continue spreading to non-transparent matches.
-        
-        const isMatch = 
+
+        const isMatch =
           Math.abs(color.r - targetR) <= tolerance &&
           Math.abs(color.g - targetG) <= tolerance &&
           Math.abs(color.b - targetB) <= tolerance;
@@ -155,12 +239,12 @@ export async function POST(
       }
     } else {
       // Global scan approach
-      image.scan(0, 0, width, height, function(this: any, x: number, y: number, idx: number) {
+      image.scan(0, 0, width, height, function (this: any, x: number, y: number, idx: number) {
         const r = this.bitmap.data[idx + 0];
         const g = this.bitmap.data[idx + 1];
         const b = this.bitmap.data[idx + 2];
 
-        const isMatch = 
+        const isMatch =
           Math.abs(r - targetR) <= tolerance &&
           Math.abs(g - targetG) <= tolerance &&
           Math.abs(b - targetB) <= tolerance;
@@ -177,10 +261,10 @@ export async function POST(
     const ext = path.extname(imageRecord.fileName);
     const baseName = path.basename(imageRecord.fileName, ext);
     const transparentFileName = `${baseName}_transparent.png`;
-    
+
     const dirName = path.dirname(imageRecord.filePath);
     const transparentFilePath = path.join(dirName, transparentFileName);
-    
+
     const absoluteTransparentPath = path.isAbsolute(transparentFilePath)
       ? transparentFilePath
       : path.join(process.cwd(), transparentFilePath);
@@ -196,9 +280,9 @@ export async function POST(
       .set({ transparentFilePath: transparentFilePath })
       .where(eq(images.id, id));
 
-    return NextResponse.json({ 
-      success: true, 
-      transparentFilePath: transparentFilePath 
+    return NextResponse.json({
+      success: true,
+      transparentFilePath: transparentFilePath
     });
 
   } catch (error) {

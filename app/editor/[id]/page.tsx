@@ -196,6 +196,19 @@ export default function EditorPage() {
     const imageX = Math.floor((x - offsetX) / scale);
     const imageY = Math.floor((y - offsetY) / scale);
 
+    // Debug logging
+    console.log('[Sampling Debug]', {
+      click: { clientX: e.clientX, clientY: e.clientY },
+      rect: { left: rect.left, top: rect.top, width: rect.width, height: rect.height },
+      relativeClick: { x, y },
+      natural: { width: naturalWidth, height: naturalHeight },
+      scale,
+      actualRendered: { width: actualRenderedWidth, height: actualRenderedHeight },
+      offset: { x: offsetX, y: offsetY },
+      imageCoords: { x: imageX, y: imageY },
+      currentVersion,
+    });
+
     if (imageX >= 0 && imageX < naturalWidth && imageY >= 0 && imageY < naturalHeight) {
       makeTransparent(
         e,
@@ -211,7 +224,8 @@ export default function EditorPage() {
           }
         },
         currentVersion,
-        (version) => setSelectedVersion((prev) => ({ ...prev, [image.id]: version }))
+        (version) => setSelectedVersion((prev) => ({ ...prev, [image.id]: version })),
+        { width: naturalWidth, height: naturalHeight }
       );
     }
   };

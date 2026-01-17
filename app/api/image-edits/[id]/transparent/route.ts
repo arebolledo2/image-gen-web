@@ -64,16 +64,64 @@ export async function POST(
     let targetB: number;
 
     if (samplePoint) {
-      const color = intToRGBA(image.getPixelColor(samplePoint.x, samplePoint.y));
+      // Get displayed dimensions from request (browser-side natural dimensions)
+      const displayedDimensions = body.displayedDimensions as { width: number, height: number } | undefined;
 
-      // Check if the sampled pixel is already fully transparent
+      // Scale coordinates if the displayed image differs from actual file dimensions
+      let scaledX = samplePoint.x;
+      let scaledY = samplePoint.y;
+
+      if (displayedDimensions && (displayedDimensions.width !== width || displayedDimensions.height !== height)) {
+        const scaleX = width / displayedDimensions.width;
+        const scaleY = height / displayedDimensions.height;
+        scaledX = Math.round(samplePoint.x * scaleX);
+        scaledY = Math.round(samplePoint.y * scaleY);
+      }
+
+      // Clamp coordinates to valid range to prevent reading outside image bounds
+      const clampedX = Math.max(0, Math.min(scaledX, width - 1));
+      const clampedY = Math.max(0, Math.min(scaledY, height - 1));
+
+      let color = intToRGBA(image.getPixelColor(clampedX, clampedY));
+
+      // If the sampled pixel is transparent, search for the nearest visible pixel
       if (color.a === 0) {
-        return NextResponse.json({
-          success: false,
-          message: 'Cannot sample from a fully transparent pixel. Please click on a visible area.',
-          alreadyTransparent: true,
-          transparentEditPath: edit.transparentEditPath
-        }, { status: 200 });
+        // Search in expanding rings for the nearest non-transparent pixel
+        let foundColor: { r: number; g: number; b: number; a: number } | null = null;
+        let foundAt: { x: number; y: number } | null = null;
+        const maxSearchRadius = Math.max(width, height); // Search entire image if needed
+
+        searchLoop:
+        for (let radius = 1; radius <= maxSearchRadius; radius++) {
+          for (let dx = -radius; dx <= radius; dx++) {
+            for (let dy = -radius; dy <= radius; dy++) {
+              if (Math.abs(dx) !== radius && Math.abs(dy) !== radius) continue;
+
+              const nx = clampedX + dx;
+              const ny = clampedY + dy;
+
+              if (nx >= 0 && nx < width && ny >= 0 && ny < height) {
+                const neighborColor = intToRGBA(image.getPixelColor(nx, ny));
+                if (neighborColor.a > 0) {
+                  foundColor = neighborColor;
+                  foundAt = { x: nx, y: ny };
+                  break searchLoop;
+                }
+              }
+            }
+          }
+        }
+
+        if (foundColor && foundAt) {
+          color = foundColor;
+        } else {
+          return NextResponse.json({
+            success: false,
+            message: 'Cannot find a visible pixel near click position. Please click directly on a visible area.',
+            alreadyTransparent: true,
+            transparentEditPath: edit.transparentEditPath
+          }, { status: 200 });
+        }
       }
 
       targetR = color.r;
@@ -149,7 +197,7 @@ export async function POST(
       }
     } else {
       // Global scan approach
-      image.scan(0, 0, width, height, function(this: any, x: number, y: number, idx: number) {
+      image.scan(0, 0, width, height, function (this: any, x: number, y: number, idx: number) {
         const r = this.bitmap.data[idx + 0];
         const g = this.bitmap.data[idx + 1];
         const b = this.bitmap.data[idx + 2];

@@ -76,21 +76,21 @@ export function ImagePreview({
             <Image
               src={
                 isTransparentEdit && currentEdit?.transparentEditPath
-                  ? `/api/image-edits/${editId}/file?version=transparent&t=${imageVersion || ''}`
+                  ? `/api/image-edits/${editId}/file?version=transparent&t=${imageVersion || Date.now()}`
                   : isEdit
-                    ? `/api/image-edits/${editId}/file?t=${imageVersion || ''}`
-                    : `/api/images/${imageId}/file${selectedVersion === 'transparent'
-                      ? `?version=transparent&t=${imageVersion || ''}`
+                    ? `/api/image-edits/${editId}/file?t=${imageVersion || Date.now()}`
+                    : `/api/images/${imageId}/file?${selectedVersion === 'transparent'
+                      ? `version=transparent&t=${imageVersion || Date.now()}`
                       : selectedVersion === 'flipped'
-                        ? `?version=flipped&t=${imageVersion || ''}`
-                        : ''
+                        ? `version=flipped&t=${imageVersion || Date.now()}`
+                        : `t=${imageVersion || Date.now()}`
                     }`
               }
               alt={fileName}
               fill
               className={`object-contain ${isSampling ? 'cursor-crosshair' : ''} ${selectedVersion === 'transparent' || selectedVersion === 'flipped' || isEdit || isTransparentEdit
-                  ? 'bg-[url("https://www.transparenttextures.com/patterns/checkerboard.png")]'
-                  : ''
+                ? 'bg-[url("https://www.transparenttextures.com/patterns/checkerboard.png")]'
+                : ''
                 }`}
               onClick={onImageClick}
               sizes="100vw"
