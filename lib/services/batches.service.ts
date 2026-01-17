@@ -5,7 +5,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { db } from '@/lib/db';
 import { batches, batchPrompts, generations, Batch, NewBatch, BatchPrompt, Generation, NewGeneration } from '@/lib/db/schema';
-import { eq, desc, inArray, asc } from 'drizzle-orm';
+import { eq, desc, inArray, asc, like, or, sql } from 'drizzle-orm';
 import { BaseService } from './base.service';
 import type { BatchPromptOverrides, BatchDefaults } from '@/lib/types/common';
 
@@ -65,6 +65,93 @@ export class BatchesService extends BaseService<typeof batches, Batch, NewBatch>
    */
   async countBatches() {
     return db.$count(batches);
+  }
+
+  /**
+   * Get batches with optional filtering and search
+   * Designed for external tools (Claude skills, API consumers)
+   *
+   * @param options - Query options
+   * @returns Batches matching the criteria
+   */
+  async getBatches(options: {
+    search?: string;
+    status?: 'draft' | 'queued' | 'running' | 'completed' | 'failed';
+    includeImageCount?: boolean;
+    limit?: number;
+    offset?: number;
+  } = {}) {
+    const { search, status, includeImageCount = false, limit = 20, offset = 0 } = options;
+
+    // Build where conditions
+    const conditions = [];
+
+    if (status) {
+      conditions.push(eq(batches.status, status));
+    }
+
+    if (search) {
+      // Search in name and description
+      conditions.push(
+        or(
+          like(batches.name, `%${search}%`),
+          like(batches.description, `%${search}%`)
+        )!
+      );
+    }
+
+    // Build base query
+    const query = db.query.batches.findMany({
+      where: conditions.length > 0 ? conditions[0] : undefined,
+      orderBy: [desc(batches.createdAt)],
+      limit,
+      offset,
+      with: {
+        batchPrompts: {
+          columns: {
+            id: true,
+            promptText: true,
+          },
+        },
+      },
+    });
+
+    let result = await query;
+
+    // If includeImageCount, fetch image counts for each batch
+    if (includeImageCount) {
+      const batchIds = result.map(b => b.id);
+
+      if (batchIds.length > 0) {
+        // Get generation counts per batch
+        const generationsData = await db.query.generations.findMany({
+          where: inArray(generations.batchId, batchIds),
+          with: {
+            images: {
+              columns: {
+                id: true,
+              },
+            },
+          },
+        });
+
+        // Build image count map
+        const imageCountMap = new Map<string, number>();
+        for (const gen of generationsData) {
+          const batchId = gen.batchId;
+          const currentCount = imageCountMap.get(batchId) || 0;
+          imageCountMap.set(batchId, currentCount + gen.images.length);
+        }
+
+        // Add imageCount to results
+        result = result.map(batch => ({
+          ...batch,
+          imageCount: imageCountMap.get(batch.id) || 0,
+        }));
+      }
+    }
+
+    return result;
   }
 
   /**
