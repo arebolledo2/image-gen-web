@@ -21,8 +21,15 @@ interface Entity {
   name: string;
 }
 
+interface Category {
+  id: string;
+  name: string;
+  color: string | null;
+}
+
 interface SubjectEntity extends Entity {
   isTransparent: boolean;
+  categoryId: string | null;
 }
 
 interface PromptPreset {
@@ -47,8 +54,10 @@ export default function NewBatchPage() {
 
   const [styles, setStyles] = useState<Entity[]>([]);
   const [subjects, setSubjects] = useState<SubjectEntity[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
   const [guidanceList, setGuidanceList] = useState<Entity[]>([]);
   const [presets, setPresets] = useState<PromptPreset[]>([]);
+  const [filterCategoryId, setFilterCategoryId] = useState<string>("all");
 
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
@@ -92,20 +101,23 @@ export default function NewBatchPage() {
 
   const fetchData = async () => {
     try {
-      const [stylesRes, subjectsRes, guidanceRes, presetsRes] = await Promise.all([
+      const [stylesRes, subjectsRes, categoriesRes, guidanceRes, presetsRes] = await Promise.all([
         fetch('/api/styles'),
         fetch('/api/subjects'),
+        fetch('/api/subject-categories'),
         fetch('/api/guidance'),
         fetch('/api/prompts'),
       ]);
-      const [stylesData, subjectsData, guidanceData, presetsData] = await Promise.all([
+      const [stylesData, subjectsData, categoriesData, guidanceData, presetsData] = await Promise.all([
         stylesRes.json(),
         subjectsRes.json(),
+        categoriesRes.json(),
         guidanceRes.json(),
         presetsRes.json(),
       ]);
       setStyles(stylesData.styles || []);
       setSubjects(subjectsData.subjects || []);
+      setCategories(categoriesData.categories || []);
       setGuidanceList(guidanceData.guidance || []);
       setPresets(presetsData.prompts || []);
     } catch (error) {
@@ -370,19 +382,46 @@ export default function NewBatchPage() {
                     </Select>
                   </div>
                   <div className="space-y-2">
-                    <Label className="flex items-center gap-2"><Box className="h-4 w-4" /> Subjects</Label>
+                    <div className="flex items-center justify-between">
+                      <Label className="flex items-center gap-2"><Box className="h-4 w-4" /> Subjects</Label>
+                      <Select value={filterCategoryId} onValueChange={setFilterCategoryId}>
+                        <SelectTrigger className="w-[160px] h-8 text-xs">
+                          <SelectValue placeholder="Filter by category..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">All Categories</SelectItem>
+                          {categories.map((cat) => (
+                            <SelectItem key={cat.id} value={cat.id}>
+                              <div className="flex items-center gap-2">
+                                <div className="w-2 h-2 rounded-full" style={{ backgroundColor: cat.color || '#3b82f6' }} />
+                                {cat.name}
+                              </div>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
                     <div className="flex flex-wrap gap-2 p-2 border rounded-md min-h-[42px] max-h-[200px] overflow-y-auto">
-                      {subjects.map((s) => (
-                        <Badge
-                          key={s.id}
-                          variant={selectedSubjectIds.includes(s.id) ? "default" : "outline"}
-                          className={`cursor-pointer transition-colors ${s.isTransparent && !selectedSubjectIds.includes(s.id) ? "border-pink-200 text-pink-600" : ""}`}
-                          onClick={() => toggleSubject(s.id)}
-                        >
-                          {s.name}
-                          {s.isTransparent && <span className="ml-1 text-[8px] opacity-70">★</span>}
-                        </Badge>
-                      ))}
+                      {(filterCategoryId === "all" ? subjects : subjects.filter(s => s.categoryId === filterCategoryId)).map((s) => {
+                        const subjectCategory = categories.find(c => c.id === s.categoryId);
+                        return (
+                          <Badge
+                            key={s.id}
+                            variant={selectedSubjectIds.includes(s.id) ? "default" : "outline"}
+                            className={`cursor-pointer transition-colors ${s.isTransparent && !selectedSubjectIds.includes(s.id) ? "border-pink-200 text-pink-600" : ""}`}
+                            onClick={() => toggleSubject(s.id)}
+                            style={subjectCategory && !selectedSubjectIds.includes(s.id) ? {
+                              borderColor: subjectCategory.color + '60' || undefined,
+                            } : undefined}
+                          >
+                            {subjectCategory && (
+                              <div className="w-1.5 h-1.5 rounded-full mr-1" style={{ backgroundColor: subjectCategory.color || '#3b82f6' }} />
+                            )}
+                            {s.name}
+                            {s.isTransparent && <span className="ml-1 text-[8px] opacity-70">★</span>}
+                          </Badge>
+                        );
+                      })}
                     </div>
                   </div>
                 </div>

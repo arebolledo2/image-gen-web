@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { images, generations, batches, batchPrompts } from '@/lib/db/schema';
+import { images, generations, batches, batchPrompts, prompts, subjects } from '@/lib/db/schema';
 import { desc, eq, and, or, ilike as ilikeFn } from 'drizzle-orm';
 
 // GET /api/images - List images with filtering
@@ -10,17 +10,18 @@ export async function GET(request: NextRequest) {
     const batchId = searchParams.get('batchId');
     const favoritesOnly = searchParams.get('favoritesOnly') === 'true';
     const search = searchParams.get('search');
+    const categoryId = searchParams.get('categoryId');
     const limit = parseInt(searchParams.get('limit') || '20');
     const offset = parseInt(searchParams.get('offset') || '0');
 
     const results = await db.query.images.findMany({
       where: (images, { and: andFn, eq: eqFn, exists }) => {
         const conditions = [];
-        
+
         if (favoritesOnly) {
           conditions.push(eqFn(images.isFavorite, true));
         }
-        
+
         if (batchId) {
           conditions.push(exists(
             db.select()
@@ -51,7 +52,24 @@ export async function GET(request: NextRequest) {
               )
           ));
         }
-        
+
+        // Filter by category through: generations → batchPrompts → prompts → subjects
+        if (categoryId) {
+          conditions.push(exists(
+            db.select()
+              .from(generations)
+              .innerJoin(batchPrompts, eq(generations.batchPromptId, batchPrompts.id))
+              .innerJoin(prompts, eq(batchPrompts.promptId, prompts.id))
+              .innerJoin(subjects, eq(prompts.subjectId, subjects.id))
+              .where(
+                and(
+                  eq(generations.id, images.generationId),
+                  eq(subjects.categoryId, categoryId)
+                )
+              )
+          ));
+        }
+
         return conditions.length > 0 ? andFn(...conditions) : undefined;
       },
       orderBy: [desc(images.createdAt)],

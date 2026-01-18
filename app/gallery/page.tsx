@@ -6,6 +6,7 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Loader2, Download, Heart, Sparkles, Layers, Search } from "lucide-react";
 import { ImageGalleryModal, type GalleryImage } from "@/components/image-gallery-modal";
 import { Switch } from "@/components/ui/switch";
@@ -15,9 +16,17 @@ import { useImageTransparency } from "@/hooks/useImageTransparency";
 import { useSquishAnimation } from "@/hooks/use-squish-animation";
 import { useAIAnimation } from "@/hooks/use-ai-animation";
 
+interface Category {
+  id: string;
+  name: string;
+  color: string | null;
+}
+
 export default function GalleryPage() {
   const router = useRouter();
   const [images, setImages] = useState<GalleryImage[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [filterCategoryId, setFilterCategoryId] = useState<string>("all");
   const [loading, setLoading] = useState(true);
   const [fetchingMore, setFetchingMore] = useState(false);
   const [hasMore, setHasMore] = useState(true);
@@ -25,6 +34,21 @@ export default function GalleryPage() {
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const LIMIT = 20;
+
+  // Fetch categories on mount
+  useEffect(() => {
+    fetchCategories();
+  }, []);
+
+  const fetchCategories = async () => {
+    try {
+      const response = await fetch('/api/subject-categories');
+      const data = await response.json();
+      setCategories(data.categories || []);
+    } catch (error) {
+      console.error('Error fetching categories:', error);
+    }
+  };
 
   // Debounce search
   useEffect(() => {
@@ -85,7 +109,7 @@ export default function GalleryPage() {
     });
   };
 
-  const fetchImages = useCallback(async (currentOffset: number, isInitial: boolean = false, favOnly: boolean = false, searchTerm: string = "") => {
+  const fetchImages = useCallback(async (currentOffset: number, isInitial: boolean = false, favOnly: boolean = false, searchTerm: string = "", categoryId: string = "all") => {
     if (isInitial) setLoading(true);
     else setFetchingMore(true);
 
@@ -96,6 +120,9 @@ export default function GalleryPage() {
       url.searchParams.append('favoritesOnly', favOnly.toString());
       if (searchTerm) {
         url.searchParams.append('search', searchTerm);
+      }
+      if (categoryId !== 'all') {
+        url.searchParams.append('categoryId', categoryId);
       }
 
       const response = await fetch(url.toString());
@@ -118,8 +145,8 @@ export default function GalleryPage() {
   }, []);
 
   useEffect(() => {
-    fetchImages(0, true, favoritesOnly, debouncedSearch);
-  }, [fetchImages, favoritesOnly, debouncedSearch]);
+    fetchImages(0, true, favoritesOnly, debouncedSearch, filterCategoryId);
+  }, [fetchImages, favoritesOnly, debouncedSearch, filterCategoryId]);
 
   const toggleFavorite = async (e: React.MouseEvent, image: GalleryImage) => {
     e.stopPropagation();
@@ -176,12 +203,12 @@ export default function GalleryPage() {
     observer.current = new IntersectionObserver(entries => {
       if (entries[0].isIntersecting && hasMore) {
         const nextOffset = images.length;
-        fetchImages(nextOffset, false, favoritesOnly, debouncedSearch);
+        fetchImages(nextOffset, false, favoritesOnly, debouncedSearch, filterCategoryId);
       }
     });
 
     if (node) observer.current.observe(node);
-  }, [loading, fetchingMore, hasMore, images.length, fetchImages, favoritesOnly, debouncedSearch]);
+  }, [loading, fetchingMore, hasMore, images.length, fetchImages, favoritesOnly, debouncedSearch, filterCategoryId]);
 
   return (
     <div className="space-y-6">
@@ -219,6 +246,22 @@ export default function GalleryPage() {
             />
             <Label htmlFor="global-transparency" className="cursor-pointer">Transparency</Label>
           </div>
+          <Select value={filterCategoryId} onValueChange={setFilterCategoryId}>
+            <SelectTrigger className="w-[160px]">
+              <SelectValue placeholder="All Categories" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Categories</SelectItem>
+              {categories.map((cat) => (
+                <SelectItem key={cat.id} value={cat.id}>
+                  <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 rounded-full" style={{ backgroundColor: cat.color || '#3b82f6' }} />
+                    {cat.name}
+                  </div>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
       </div>
 

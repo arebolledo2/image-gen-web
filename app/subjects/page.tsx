@@ -38,6 +38,7 @@ export default function SubjectsPage() {
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
+  const [filterCategoryId, setFilterCategoryId] = useState<string>("all");
 
   // New Subject Form State
   const [showNewForm, setShowNewForm] = useState(false);
@@ -220,7 +221,24 @@ export default function SubjectsPage() {
             Manage entities you want to generate (e.g., enemy, turret)
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 items-center">
+          {/* Category Filter */}
+          <Select value={filterCategoryId} onValueChange={setFilterCategoryId}>
+            <SelectTrigger className="w-[180px]">
+              <SelectValue placeholder="Filter by category..." />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Categories</SelectItem>
+              {categories.map((cat) => (
+                <SelectItem key={cat.id} value={cat.id}>
+                  <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 rounded-full" style={{ backgroundColor: cat.color || '#3b82f6' }} />
+                    {cat.name}
+                  </div>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
           <Dialog open={showCategoryDialog} onOpenChange={setShowCategoryDialog}>
             <DialogTrigger asChild>
               <Button variant="outline">
@@ -401,77 +419,96 @@ export default function SubjectsPage() {
         </Card>
       )}
 
-      {subjects.length === 0 ? (
-        <Card>
-          <CardContent className="pt-6">
-            <div className="text-center py-12">
-              <p className="text-muted-foreground mb-4">
-                No subjects yet. Create your first subject to get started!
-              </p>
-              <Button onClick={() => setShowNewForm(true)}>
-                <Plus className="mr-2 h-4 w-4" />
-                Create First Subject
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      ) : (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {subjects.map((subject) => (
-            <Card
-              key={subject.id}
-              className="hover:shadow-md transition-shadow cursor-pointer relative overflow-hidden"
-              onClick={() => router.push(`/subjects/${subject.id}`)}
-            >
-              {subject.category && (
-                <div
-                  className="absolute top-0 right-0 w-12 h-12 bg-muted transform translate-x-6 -translate-y-6 rotate-45"
-                  style={{ backgroundColor: subject.category.color + '20' || '#3b82f620' }}
-                />
-              )}
-              <CardHeader className="relative">
-                <div className="flex items-start justify-between">
-                  <div className="space-y-2 flex-1">
-                    <div className="flex flex-wrap items-center gap-1.5">
-                      <CardTitle className="flex items-center gap-2">
-                        <Box className="h-4 w-4" />
-                        {subject.name}
-                      </CardTitle>
-                      <Badge variant="outline" className="text-[10px] px-1 h-4">v{subject.version}</Badge>
-                      {subject.isTransparent && (
-                        <Badge variant="secondary" className="bg-pink-500/10 text-pink-600 border-pink-200 text-[10px] px-1 h-4">
-                          T
+      {(() => {
+        const filteredSubjects = filterCategoryId === "all"
+          ? subjects
+          : subjects.filter(s => s.categoryId === filterCategoryId);
+
+        if (filteredSubjects.length === 0) {
+          return (
+            <Card>
+              <CardContent className="pt-6">
+                <div className="text-center py-12">
+                  <p className="text-muted-foreground mb-4">
+                    {subjects.length === 0
+                      ? "No subjects yet. Create your first subject to get started!"
+                      : "No subjects in this category."}
+                  </p>
+                  {subjects.length === 0 && (
+                    <Button onClick={() => setShowNewForm(true)}>
+                      <Plus className="mr-2 h-4 w-4" />
+                      Create First Subject
+                    </Button>
+                  )}
+                  {subjects.length > 0 && filterCategoryId !== "all" && (
+                    <Button variant="outline" onClick={() => setFilterCategoryId("all")}>
+                      Show All Subjects
+                    </Button>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          );
+        }
+
+        return (
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            {filteredSubjects.map((subject) => (
+              <Card
+                key={subject.id}
+                className="hover:shadow-md transition-shadow cursor-pointer relative overflow-hidden"
+                onClick={() => router.push(`/subjects/${subject.id}`)}
+              >
+                {subject.category && (
+                  <div
+                    className="absolute top-0 right-0 w-12 h-12 bg-muted transform translate-x-6 -translate-y-6 rotate-45"
+                    style={{ backgroundColor: subject.category.color + '20' || '#3b82f620' }}
+                  />
+                )}
+                <CardHeader className="relative">
+                  <div className="flex items-start justify-between">
+                    <div className="space-y-2 flex-1">
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        <CardTitle className="flex items-center gap-2">
+                          <Box className="h-4 w-4" />
+                          {subject.name}
+                        </CardTitle>
+                        <Badge variant="outline" className="text-[10px] px-1 h-4">v{subject.version}</Badge>
+                        {subject.isTransparent && (
+                          <Badge variant="secondary" className="bg-pink-500/10 text-pink-600 border-pink-200 text-[10px] px-1 h-4">
+                            T
+                          </Badge>
+                        )}
+                      </div>
+
+                      {subject.category && (
+                        <Badge
+                          variant="secondary"
+                          className="text-[10px] h-5"
+                          style={{
+                            backgroundColor: subject.category.color + '20' || '#3b82f620',
+                            color: subject.category.color || '#3b82f6',
+                            borderColor: subject.category.color + '40' || '#3b82f640'
+                          }}
+                        >
+                          <Tag className="mr-1 h-3 w-3" />
+                          {subject.category.name}
                         </Badge>
                       )}
+
+                      {subject.description && (
+                        <CardDescription className="line-clamp-2 text-xs">
+                          {subject.description}
+                        </CardDescription>
+                      )}
                     </div>
-
-                    {subject.category && (
-                      <Badge
-                        variant="secondary"
-                        className="text-[10px] h-5"
-                        style={{
-                          backgroundColor: subject.category.color + '20' || '#3b82f620',
-                          color: subject.category.color || '#3b82f6',
-                          borderColor: subject.category.color + '40' || '#3b82f640'
-                        }}
-                      >
-                        <Tag className="mr-1 h-3 w-3" />
-                        {subject.category.name}
-                      </Badge>
-                    )}
-
-                    {subject.description && (
-                      <CardDescription className="line-clamp-2 text-xs">
-                        {subject.description}
-                      </CardDescription>
-                    )}
                   </div>
-                </div>
-              </CardHeader>
-            </Card>
-          ))}
-        </div>
-      )}
+                </CardHeader>
+              </Card>
+            ))}
+          </div>
+        );
+      })()}
     </div>
   );
 }

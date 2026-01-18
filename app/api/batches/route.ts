@@ -8,10 +8,13 @@ export async function GET(request: NextRequest) {
     const page = parseInt(searchParams.get('page') || '1');
     const limit = parseInt(searchParams.get('limit') || '10');
     const offset = (page - 1) * limit;
+    // Note: categoryId filter requires service enhancement to join through
+    // batchPrompts → prompts → subjects for filtering
+    const categoryId = searchParams.get('categoryId') || undefined;
 
     const [allBatches, totalCount] = await Promise.all([
-      batchesService.getAllBatchesWithDetails({ limit, offset }),
-      batchesService.countBatches(),
+      batchesService.getAllBatchesWithDetails({ limit, offset, categoryId }),
+      batchesService.countBatches({ categoryId }),
     ]);
 
     return NextResponse.json({

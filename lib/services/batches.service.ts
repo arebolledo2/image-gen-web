@@ -4,8 +4,8 @@
  */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { db } from '@/lib/db';
-import { batches, batchPrompts, generations, Batch, NewBatch, BatchPrompt, Generation, NewGeneration } from '@/lib/db/schema';
-import { eq, desc, inArray, asc, like, or, sql } from 'drizzle-orm';
+import { batches, batchPrompts, generations, prompts, subjects, Batch, NewBatch, BatchPrompt, Generation, NewGeneration } from '@/lib/db/schema';
+import { eq, desc, inArray, asc, like, or, and, exists } from 'drizzle-orm';
 import { BaseService } from './base.service';
 import type { BatchPromptOverrides, BatchDefaults } from '@/lib/types/common';
 
@@ -21,12 +21,30 @@ export class BatchesService extends BaseService<typeof batches, Batch, NewBatch>
   /**
    * Get all batches with their prompts and preview images (paginated)
    *
-   * @param options - Pagination options
+   * @param options - Pagination and filter options
    * @returns Paginated batches with related data
    */
-  async getAllBatchesWithDetails(options: { limit?: number; offset?: number } = {}) {
-    const { limit = 10, offset = 0 } = options;
+  async getAllBatchesWithDetails(options: { limit?: number; offset?: number; categoryId?: string } = {}) {
+    const { limit = 10, offset = 0, categoryId } = options;
+
+    // Build where condition for category filtering
+    const whereCondition = categoryId
+      ? exists(
+        db.select()
+          .from(batchPrompts)
+          .innerJoin(prompts, eq(batchPrompts.promptId, prompts.id))
+          .innerJoin(subjects, eq(prompts.subjectId, subjects.id))
+          .where(
+            and(
+              eq(batchPrompts.batchId, batches.id),
+              eq(subjects.categoryId, categoryId)
+            )
+          )
+      )
+      : undefined;
+
     return db.query.batches.findMany({
+      where: whereCondition,
       orderBy: [desc(batches.createdAt)],
       limit,
       offset,
@@ -61,9 +79,33 @@ export class BatchesService extends BaseService<typeof batches, Batch, NewBatch>
   /**
    * Count total number of batches
    *
+   * @param options - Filter options
    * @returns Total count
    */
-  async countBatches() {
+  async countBatches(options: { categoryId?: string } = {}) {
+    const { categoryId } = options;
+
+    if (categoryId) {
+      // Count batches that have at least one prompt linked to a subject in this category
+      const result = await db.select()
+        .from(batches)
+        .where(
+          exists(
+            db.select()
+              .from(batchPrompts)
+              .innerJoin(prompts, eq(batchPrompts.promptId, prompts.id))
+              .innerJoin(subjects, eq(prompts.subjectId, subjects.id))
+              .where(
+                and(
+                  eq(batchPrompts.batchId, batches.id),
+                  eq(subjects.categoryId, categoryId)
+                )
+              )
+          )
+        );
+      return result.length;
+    }
+
     return db.$count(batches);
   }
 

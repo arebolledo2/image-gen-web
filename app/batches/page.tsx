@@ -6,6 +6,7 @@ import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Plus, Loader2, ImageIcon, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -25,16 +26,38 @@ interface Batch {
   }[];
 }
 
+interface Category {
+  id: string;
+  name: string;
+  color: string | null;
+}
+
 export default function BatchesPage() {
   const [batches, setBatches] = useState<Batch[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [filterCategoryId, setFilterCategoryId] = useState<string>("all");
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
 
   useEffect(() => {
-    fetchBatches(1, false);
+    fetchCategories();
   }, []);
+
+  useEffect(() => {
+    fetchBatches(1, false);
+  }, [filterCategoryId]);
+
+  const fetchCategories = async () => {
+    try {
+      const response = await fetch('/api/subject-categories');
+      const data = await response.json();
+      setCategories(data.categories || []);
+    } catch (error) {
+      console.error('Error fetching categories:', error);
+    }
+  };
 
   const fetchBatches = async (pageNum: number, append: boolean = false) => {
     if (append) {
@@ -44,7 +67,13 @@ export default function BatchesPage() {
     }
 
     try {
-      const response = await fetch(`/api/batches?page=${pageNum}&limit=9`);
+      const url = new URL('/api/batches', window.location.origin);
+      url.searchParams.append('page', pageNum.toString());
+      url.searchParams.append('limit', '9');
+      if (filterCategoryId !== 'all') {
+        url.searchParams.append('categoryId', filterCategoryId);
+      }
+      const response = await fetch(url.toString());
       const data = await response.json();
 
       if (append) {
@@ -128,12 +157,30 @@ export default function BatchesPage() {
             Create and manage your image generation batches
           </p>
         </div>
-        <Link href="/batches/new">
-          <Button>
-            <Plus className="mr-2 h-4 w-4" />
-            New Batch
-          </Button>
-        </Link>
+        <div className="flex items-center gap-2">
+          <Select value={filterCategoryId} onValueChange={setFilterCategoryId}>
+            <SelectTrigger className="w-[180px]">
+              <SelectValue placeholder="Filter by category..." />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Categories</SelectItem>
+              {categories.map((cat) => (
+                <SelectItem key={cat.id} value={cat.id}>
+                  <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 rounded-full" style={{ backgroundColor: cat.color || '#3b82f6' }} />
+                    {cat.name}
+                  </div>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Link href="/batches/new">
+            <Button>
+              <Plus className="mr-2 h-4 w-4" />
+              New Batch
+            </Button>
+          </Link>
+        </div>
       </div>
 
       {batches.length === 0 ? (
