@@ -189,7 +189,8 @@ export default function NewBatchPage() {
           const data = await response.json();
           return {
             subjectName: subject?.name || 'Unknown',
-            promptText: data.promptText
+            promptText: data.promptText,
+            promptId: data.promptId  // Capture the promptId from the API response
           };
         });
 

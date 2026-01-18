@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { styles, subjects } from '@/lib/db/schema';
+import { styles, subjects, prompts, promptGuidance } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
 import { composeConstructedPromptAgent } from '@/lib/ai/agents';
 
@@ -57,7 +57,29 @@ export async function POST(request: NextRequest) {
       promptStyle
     });
 
-    return NextResponse.json({ promptText });
+    // Create a prompt record in the database to enable category filtering
+    // This links the composed prompt to the subject (and its category)
+    const [createdPrompt] = await db.insert(prompts).values({
+      name: `${subject.name} prompt`,
+      styleId: styleId || null!,  // May be null if style was omitted
+      subjectId: subjectId,
+      promptText: promptText,
+    }).returning();
+
+    // Link guidance to the prompt if any was selected
+    if (selectedGuidance.length > 0) {
+      await db.insert(promptGuidance).values(
+        selectedGuidance.map(g => ({
+          promptId: createdPrompt.id,
+          guidanceId: g.id,
+        }))
+      );
+    }
+
+    return NextResponse.json({
+      promptText,
+      promptId: createdPrompt.id
+    });
   } catch (error) {
     console.error('Error composing prompt:', error);
     return NextResponse.json(

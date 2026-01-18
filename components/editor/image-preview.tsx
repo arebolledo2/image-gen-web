@@ -61,6 +61,10 @@ export function ImagePreview({
 
   const currentEdit = editId ? imageEdits?.find((e) => e.id === editId) : null;
 
+  // Use imageVersion prop for cache busting - parent component manages this
+  // Fallback to 0 if not provided (static cache)
+  const cacheBuster = imageVersion || 0;
+
   return (
     <div className="h-full w-full flex flex-col p-8 bg-muted/5">
       {/* Image/Animation Display */}
@@ -76,14 +80,14 @@ export function ImagePreview({
             <Image
               src={
                 isTransparentEdit && currentEdit?.transparentEditPath
-                  ? `/api/image-edits/${editId}/file?version=transparent&t=${imageVersion || Date.now()}`
+                  ? `/api/image-edits/${editId}/file?version=transparent&t=${cacheBuster}`
                   : isEdit
-                    ? `/api/image-edits/${editId}/file?t=${imageVersion || Date.now()}`
+                    ? `/api/image-edits/${editId}/file?t=${cacheBuster}`
                     : `/api/images/${imageId}/file?${selectedVersion === 'transparent'
-                      ? `version=transparent&t=${imageVersion || Date.now()}`
+                      ? `version=transparent&t=${cacheBuster}`
                       : selectedVersion === 'flipped'
-                        ? `version=flipped&t=${imageVersion || Date.now()}`
-                        : `t=${imageVersion || Date.now()}`
+                        ? `version=flipped&t=${cacheBuster}`
+                        : `t=${cacheBuster}`
                     }`
               }
               alt={fileName}
