@@ -33,7 +33,7 @@ export function getComfyUIConfig(): ComfyUIConfig {
       txt2img: {
         width: 1024,
         height: 1024,
-        steps: 10,
+        steps: 11,
         cfg: 1.0,
         sampler: 'euler',
         scheduler: 'ddim_uniform',

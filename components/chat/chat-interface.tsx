@@ -3,14 +3,16 @@
 import React, { useEffect } from "react";
 import { useChat } from "@ai-sdk/react";
 import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { PlusCircle } from "lucide-react";
 import { ChatMessages } from "./chat-messages";
 import { ChatInput } from "./chat-input";
 import { useChatHistory } from "@/lib/hooks/use-chat-history";
 
 export function ChatInterface() {
-    const { initialMessages, isLoaded, saveMessages } = useChatHistory("agent-chat");
+    const { initialMessages, isLoaded, saveMessages, clearHistory } = useChatHistory("agent-chat");
 
-    const { messages, sendMessage, status } = useChat({
+    const { messages, sendMessage, status, setMessages } = useChat({
         messages: initialMessages,
     });
 
@@ -32,17 +34,35 @@ export function ChatInterface() {
         );
     };
 
+    const handleNewSession = () => {
+        clearHistory();
+        setMessages([]);
+    };
+
     const isLoading = status !== "ready";
 
     return (
         <Card className="flex flex-col h-[calc(100vh-130px)] shadow-lg overflow-hidden border-none bg-background/50 backdrop-blur-md">
             <div className="p-4 border-b bg-muted/30">
-                <h2 className="font-semibold flex items-center gap-2">
-                    <span className="text-xl">🤖</span> Agentic Chat
-                </h2>
-                <p className="text-sm text-muted-foreground">
-                    Orchestrate your game asset workflow with AI.
-                </p>
+                <div className="flex items-center justify-between">
+                    <div>
+                        <h2 className="font-semibold flex items-center gap-2">
+                            <span className="text-xl">🤖</span> Agentic Chat
+                        </h2>
+                        <p className="text-sm text-muted-foreground">
+                            Orchestrate your game asset workflow with AI.
+                        </p>
+                    </div>
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={handleNewSession}
+                        className="flex items-center gap-2"
+                    >
+                        <PlusCircle className="h-4 w-4" />
+                        New Session
+                    </Button>
+                </div>
             </div>
 
             <div className="flex-1 overflow-hidden relative">
