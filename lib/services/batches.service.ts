@@ -24,27 +24,37 @@ export class BatchesService extends BaseService<typeof batches, Batch, NewBatch>
    * @param options - Pagination and filter options
    * @returns Paginated batches with related data
    */
-  async getAllBatchesWithDetails(options: { limit?: number; offset?: number; categoryId?: string } = {}) {
-    const { limit = 10, offset = 0, categoryId } = options;
+  async getAllBatchesWithDetails(options: { limit?: number; offset?: number; categoryId?: string; favoritesOnly?: boolean } = {}) {
+    const { limit = 10, offset = 0, categoryId, favoritesOnly } = options;
 
-    // Build where condition for category filtering
-    const whereCondition = categoryId
-      ? exists(
-        db.select()
-          .from(batchPrompts)
-          .innerJoin(prompts, eq(batchPrompts.promptId, prompts.id))
-          .innerJoin(subjects, eq(prompts.subjectId, subjects.id))
-          .where(
-            and(
-              eq(batchPrompts.batchId, batches.id),
-              eq(subjects.categoryId, categoryId)
+    // Build where conditions
+    const conditions = [];
+
+    // Filter by favorite
+    if (favoritesOnly) {
+      conditions.push(eq(batches.isFavorite, true));
+    }
+
+    // Filter by category (subjects linked to prompts in this batch)
+    if (categoryId) {
+      conditions.push(
+        exists(
+          db.select()
+            .from(batchPrompts)
+            .innerJoin(prompts, eq(batchPrompts.promptId, prompts.id))
+            .innerJoin(subjects, eq(prompts.subjectId, subjects.id))
+            .where(
+              and(
+                eq(batchPrompts.batchId, batches.id),
+                eq(subjects.categoryId, categoryId)
+              )
             )
-          )
-      )
-      : undefined;
+        )
+      );
+    }
 
     return db.query.batches.findMany({
-      where: whereCondition,
+      where: conditions.length > 0 ? and(...conditions) : undefined,
       orderBy: [desc(batches.createdAt)],
       limit,
       offset,
@@ -82,27 +92,37 @@ export class BatchesService extends BaseService<typeof batches, Batch, NewBatch>
    * @param options - Filter options
    * @returns Total count
    */
-  async countBatches(options: { categoryId?: string } = {}) {
-    const { categoryId } = options;
+  async countBatches(options: { categoryId?: string; favoritesOnly?: boolean } = {}) {
+    const { categoryId, favoritesOnly } = options;
+
+    // Build where conditions for counting
+    const conditions = [];
+
+    if (favoritesOnly) {
+      conditions.push(eq(batches.isFavorite, true));
+    }
 
     if (categoryId) {
-      // Count batches that have at least one prompt linked to a subject in this category
+      conditions.push(
+        exists(
+          db.select()
+            .from(batchPrompts)
+            .innerJoin(prompts, eq(batchPrompts.promptId, prompts.id))
+            .innerJoin(subjects, eq(prompts.subjectId, subjects.id))
+            .where(
+              and(
+                eq(batchPrompts.batchId, batches.id),
+                eq(subjects.categoryId, categoryId)
+              )
+            )
+        )
+      );
+    }
+
+    if (conditions.length > 0) {
       const result = await db.select()
         .from(batches)
-        .where(
-          exists(
-            db.select()
-              .from(batchPrompts)
-              .innerJoin(prompts, eq(batchPrompts.promptId, prompts.id))
-              .innerJoin(subjects, eq(prompts.subjectId, subjects.id))
-              .where(
-                and(
-                  eq(batchPrompts.batchId, batches.id),
-                  eq(subjects.categoryId, categoryId)
-                )
-              )
-          )
-        );
+        .where(and(...conditions));
       return result.length;
     }
 
@@ -597,6 +617,21 @@ export class BatchesService extends BaseService<typeof batches, Batch, NewBatch>
 
       return true;
     });
+  }
+
+  /**
+   * Toggle favorite status for a batch
+   *
+   * @param id - Batch ID
+   * @returns Updated batch
+   */
+  async toggleFavorite(id: string): Promise<Batch | undefined> {
+    const batch = await this.findById(id);
+    if (!batch) {
+      throw new Error(`Batch ${id} not found`);
+    }
+
+    return this.update(id, { isFavorite: !batch.isFavorite });
   }
 }
 

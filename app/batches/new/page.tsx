@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Plus, X, Palette, Box, Compass, Sparkles, Wand2, EyeOff } from "lucide-react";
+import { Loader2, Plus, X, Palette, Box, Compass, Sparkles, Wand2, EyeOff, Star } from "lucide-react";
 import { AIAssistButton } from "@/components/agents/ai-assist-button";
 import { DEFAULT_RESOLUTION, getResolutionPresetsForProvider, type ProviderType } from "@/lib/config/resolution-presets";
 import { useSettings } from "@/components/providers/settings-provider";
@@ -19,6 +19,7 @@ import { toast } from "sonner";
 interface Entity {
   id: string;
   name: string;
+  isFavorite?: boolean;
 }
 
 interface Category {
@@ -30,6 +31,7 @@ interface Category {
 interface SubjectEntity extends Entity {
   isTransparent: boolean;
   categoryId: string | null;
+  isFavorite: boolean;
 }
 
 interface PromptPreset {
@@ -58,6 +60,8 @@ export default function NewBatchPage() {
   const [guidanceList, setGuidanceList] = useState<Entity[]>([]);
   const [presets, setPresets] = useState<PromptPreset[]>([]);
   const [filterCategoryId, setFilterCategoryId] = useState<string>("all");
+  const [stylesFavoritesOnly, setStylesFavoritesOnly] = useState(false);
+  const [subjectsFavoritesOnly, setSubjectsFavoritesOnly] = useState(false);
 
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
@@ -376,11 +380,28 @@ export default function NewBatchPage() {
                         <SelectValue placeholder="Select style..." />
                       </SelectTrigger>
                       <SelectContent>
-                        {styles.map((s) => (
-                          <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+                        {(stylesFavoritesOnly ? styles.filter(s => s.isFavorite) : styles).map((s) => (
+                          <SelectItem key={s.id} value={s.id}>
+                            <span className="flex items-center gap-2">
+                              {s.isFavorite && <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />}
+                              {s.name}
+                            </span>
+                          </SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
+                    <div className="flex items-center gap-2 mt-1">
+                      <Button
+                        type="button"
+                        variant={stylesFavoritesOnly ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => setStylesFavoritesOnly(!stylesFavoritesOnly)}
+                        className={`h-6 text-xs ${stylesFavoritesOnly ? "bg-yellow-500 hover:bg-yellow-600 text-white" : ""}`}
+                      >
+                        <Star className={`h-3 w-3 mr-1 ${stylesFavoritesOnly ? 'fill-current' : ''}`} />
+                        Favorites Only
+                      </Button>
+                    </div>
                   </div>
                   <div className="space-y-2">
                     <div className="flex items-center justify-between">
@@ -401,28 +422,39 @@ export default function NewBatchPage() {
                           ))}
                         </SelectContent>
                       </Select>
+                      <Button
+                        type="button"
+                        variant={subjectsFavoritesOnly ? "default" : "outline"}
+                        size="icon"
+                        onClick={() => setSubjectsFavoritesOnly(!subjectsFavoritesOnly)}
+                        className={`h-8 w-8 ${subjectsFavoritesOnly ? "bg-yellow-500 hover:bg-yellow-600 text-white" : ""}`}
+                      >
+                        <Star className={`h-3 w-3 ${subjectsFavoritesOnly ? 'fill-current' : ''}`} />
+                      </Button>
                     </div>
                     <div className="flex flex-wrap gap-2 p-2 border rounded-md min-h-[42px] max-h-[200px] overflow-y-auto">
-                      {(filterCategoryId === "all" ? subjects : subjects.filter(s => s.categoryId === filterCategoryId)).map((s) => {
-                        const subjectCategory = categories.find(c => c.id === s.categoryId);
-                        return (
-                          <Badge
-                            key={s.id}
-                            variant={selectedSubjectIds.includes(s.id) ? "default" : "outline"}
-                            className={`cursor-pointer transition-colors ${s.isTransparent && !selectedSubjectIds.includes(s.id) ? "border-pink-200 text-pink-600" : ""}`}
-                            onClick={() => toggleSubject(s.id)}
-                            style={subjectCategory && !selectedSubjectIds.includes(s.id) ? {
-                              borderColor: subjectCategory.color + '60' || undefined,
-                            } : undefined}
-                          >
-                            {subjectCategory && (
-                              <div className="w-1.5 h-1.5 rounded-full mr-1" style={{ backgroundColor: subjectCategory.color || '#3b82f6' }} />
-                            )}
-                            {s.name}
-                            {s.isTransparent && <span className="ml-1 text-[8px] opacity-70">★</span>}
-                          </Badge>
-                        );
-                      })}
+                      {(filterCategoryId === "all" ? subjects : subjects.filter(s => s.categoryId === filterCategoryId))
+                        .filter(s => !subjectsFavoritesOnly || s.isFavorite)
+                        .map((s) => {
+                          const subjectCategory = categories.find(c => c.id === s.categoryId);
+                          return (
+                            <Badge
+                              key={s.id}
+                              variant={selectedSubjectIds.includes(s.id) ? "default" : "outline"}
+                              className={`cursor-pointer transition-colors ${s.isTransparent && !selectedSubjectIds.includes(s.id) ? "border-pink-200 text-pink-600" : ""}`}
+                              onClick={() => toggleSubject(s.id)}
+                              style={subjectCategory && !selectedSubjectIds.includes(s.id) ? {
+                                borderColor: subjectCategory.color + '60' || undefined,
+                              } : undefined}
+                            >
+                              {subjectCategory && (
+                                <div className="w-1.5 h-1.5 rounded-full mr-1" style={{ backgroundColor: subjectCategory.color || '#3b82f6' }} />
+                              )}
+                              {s.name}
+                              {s.isTransparent && <span className="ml-1 text-[8px] opacity-70">★</span>}
+                            </Badge>
+                          );
+                        })}
                     </div>
                   </div>
                 </div>

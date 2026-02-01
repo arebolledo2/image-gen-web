@@ -6,8 +6,9 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const categoryId = searchParams.get('categoryId') || undefined;
+    const favoritesOnly = searchParams.get('favoritesOnly') === 'true';
 
-    const allSubjects = await subjectsService.getLatestSubjects(categoryId);
+    const allSubjects = await subjectsService.getLatestSubjects({ categoryId, favoritesOnly });
 
     return NextResponse.json({ subjects: allSubjects });
   } catch (error) {

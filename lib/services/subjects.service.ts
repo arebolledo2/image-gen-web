@@ -1,6 +1,6 @@
 import { db } from '@/lib/db';
 import { subjects, Subject, NewSubject } from '@/lib/db/schema';
-import { eq, desc } from 'drizzle-orm';
+import { eq, desc, and } from 'drizzle-orm';
 import { BaseService } from './base.service';
 
 /**
@@ -17,11 +17,19 @@ export class SubjectsService extends BaseService<typeof subjects, Subject, NewSu
   /**
    * Get all subjects, grouped by subject family (returns only latest version of each family)
    *
+   * @param options - Filter options
    * @returns Array of latest subject versions with their version count
    */
-  async getLatestSubjects(categoryId?: string): Promise<(Subject & { versionCount: number })[]> {
+  async getLatestSubjects(options: { categoryId?: string; favoritesOnly?: boolean } = {}): Promise<(Subject & { versionCount: number })[]> {
+    const { categoryId, favoritesOnly } = options;
+
+    // Build where conditions
+    const conditions = [];
+    if (categoryId) conditions.push(eq(subjects.categoryId, categoryId));
+    if (favoritesOnly) conditions.push(eq(subjects.isFavorite, true));
+
     const allSubjects = await db.query.subjects.findMany({
-      where: categoryId ? eq(subjects.categoryId, categoryId) : undefined,
+      where: conditions.length > 0 ? and(...conditions) : undefined,
       orderBy: [desc(subjects.createdAt)],
     });
 
@@ -222,6 +230,21 @@ export class SubjectsService extends BaseService<typeof subjects, Subject, NewSu
 
       return deletedCount;
     });
+  }
+
+  /**
+   * Toggle favorite status for a subject
+   *
+   * @param id - Subject ID
+   * @returns Updated subject
+   */
+  async toggleFavorite(id: string): Promise<Subject | undefined> {
+    const subject = await this.findById(id);
+    if (!subject) {
+      throw new Error(`Subject ${id} not found`);
+    }
+
+    return this.update(id, { isFavorite: !subject.isFavorite });
   }
 }
 

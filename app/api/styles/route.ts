@@ -2,9 +2,12 @@ import { NextRequest, NextResponse } from 'next/server';
 import { stylesService } from '@/lib/services';
 
 // GET /api/styles - List all styles with version info
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
-    const latestStyles = await stylesService.getLatestStyles();
+    const { searchParams } = new URL(request.url);
+    const favoritesOnly = searchParams.get('favoritesOnly') === 'true';
+
+    const latestStyles = await stylesService.getLatestStyles({ favoritesOnly });
     return NextResponse.json({ styles: latestStyles });
   } catch (error) {
     console.error('Error fetching styles:', error);
@@ -32,17 +35,17 @@ export async function POST(request: NextRequest) {
     // Create new style or version using service
     const style = parentStyleId
       ? await stylesService.createStyleVersion(parentStyleId, {
-          name,
-          palette,
-          renderingCues,
-          description,
-        })
+        name,
+        palette,
+        renderingCues,
+        description,
+      })
       : await stylesService.createStyle({
-          name,
-          palette,
-          renderingCues,
-          description,
-        });
+        name,
+        palette,
+        renderingCues,
+        description,
+      });
 
     return NextResponse.json({ style }, { status: 201 });
   } catch (error) {

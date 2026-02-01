@@ -17,11 +17,15 @@ export class StylesService extends BaseService<typeof styles, Style, NewStyle> {
   /**
    * Get all styles, grouped by style family (returns only latest version of each family)
    *
+   * @param options - Filter options
    * @returns Array of latest style versions with their version count
    */
-  async getLatestStyles(): Promise<(Style & { versionCount: number })[]> {
+  async getLatestStyles(options: { favoritesOnly?: boolean } = {}): Promise<(Style & { versionCount: number })[]> {
+    const { favoritesOnly } = options;
+
     // Get all styles ordered by creation date
     const allStyles = await db.query.styles.findMany({
+      where: favoritesOnly ? eq(styles.isFavorite, true) : undefined,
       orderBy: [desc(styles.createdAt)],
     });
 
@@ -227,6 +231,21 @@ export class StylesService extends BaseService<typeof styles, Style, NewStyle> {
 
       return deletedCount;
     });
+  }
+
+  /**
+   * Toggle favorite status for a style
+   *
+   * @param id - Style ID
+   * @returns Updated style
+   */
+  async toggleFavorite(id: string): Promise<Style | undefined> {
+    const style = await this.findById(id);
+    if (!style) {
+      throw new Error(`Style ${id} not found`);
+    }
+
+    return this.update(id, { isFavorite: !style.isFavorite });
   }
 }
 

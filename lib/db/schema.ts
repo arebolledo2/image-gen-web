@@ -33,6 +33,7 @@ export const styles = pgTable('styles', {
     finish: string;
   }>().notNull(),
   description: text('description'),
+  isFavorite: boolean('is_favorite').default(false).notNull(),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });
@@ -56,6 +57,7 @@ export const subjects = pgTable('subjects', {
   categoryId: uuid('category_id'), // New category association
   description: text('description'),
   isTransparent: boolean('is_transparent').default(true).notNull(),
+  isFavorite: boolean('is_favorite').default(false).notNull(),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });
@@ -105,6 +107,7 @@ export const batches = pgTable('batches', {
     count?: number;
     resolution?: string;
   }>(),
+  isFavorite: boolean('is_favorite').default(false).notNull(),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
   completedAt: timestamp('completed_at'),

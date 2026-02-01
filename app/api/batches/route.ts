@@ -11,10 +11,11 @@ export async function GET(request: NextRequest) {
     // Note: categoryId filter requires service enhancement to join through
     // batchPrompts → prompts → subjects for filtering
     const categoryId = searchParams.get('categoryId') || undefined;
+    const favoritesOnly = searchParams.get('favoritesOnly') === 'true';
 
     const [allBatches, totalCount] = await Promise.all([
-      batchesService.getAllBatchesWithDetails({ limit, offset, categoryId }),
-      batchesService.countBatches({ categoryId }),
+      batchesService.getAllBatchesWithDetails({ limit, offset, categoryId, favoritesOnly }),
+      batchesService.countBatches({ categoryId, favoritesOnly }),
     ]);
 
     return NextResponse.json({

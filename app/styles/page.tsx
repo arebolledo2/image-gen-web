@@ -5,7 +5,8 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Loader2, Palette } from "lucide-react";
+import { Plus, Loader2, Palette, Star } from "lucide-react";
+import { toast } from "sonner";
 
 interface Style {
   id: string;
@@ -23,11 +24,13 @@ interface Style {
     finish: string;
   };
   createdAt: string;
+  isFavorite: boolean;
 }
 
 export default function StylesPage() {
   const [styles, setStyles] = useState<Style[]>([]);
   const [loading, setLoading] = useState(true);
+  const [favoritesOnly, setFavoritesOnly] = useState(false);
 
   useEffect(() => {
     fetchStyles();
@@ -44,6 +47,27 @@ export default function StylesPage() {
       setLoading(false);
     }
   };
+
+  const handleToggleFavorite = async (e: React.MouseEvent, styleId: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    try {
+      const response = await fetch(`/api/styles/${styleId}/favorite`, {
+        method: 'PATCH',
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setStyles(styles.map(s =>
+          s.id === styleId ? { ...s, isFavorite: data.style.isFavorite } : s
+        ));
+      }
+    } catch (error) {
+      console.error('Error toggling favorite:', error);
+      toast.error("Failed to update favorite");
+    }
+  };
+
+  const filteredStyles = favoritesOnly ? styles.filter(s => s.isFavorite) : styles;
 
   if (loading) {
     return (
@@ -62,12 +86,23 @@ export default function StylesPage() {
             Manage your art styles and versions
           </p>
         </div>
-        <Link href="/styles/new">
-          <Button>
-            <Plus className="mr-2 h-4 w-4" />
-            New Style
+        <div className="flex gap-2">
+          <Button
+            variant={favoritesOnly ? "default" : "outline"}
+            size="icon"
+            onClick={() => setFavoritesOnly(!favoritesOnly)}
+            aria-label="Toggle favorites"
+            className={favoritesOnly ? "bg-yellow-500 hover:bg-yellow-600 text-white" : ""}
+          >
+            <Star className={`h-4 w-4 ${favoritesOnly ? 'fill-current' : ''}`} />
           </Button>
-        </Link>
+          <Link href="/styles/new">
+            <Button>
+              <Plus className="mr-2 h-4 w-4" />
+              New Style
+            </Button>
+          </Link>
+        </div>
       </div>
 
       {styles.length === 0 ? (
@@ -88,7 +123,7 @@ export default function StylesPage() {
         </Card>
       ) : (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {styles.map((style) => (
+          {filteredStyles.map((style) => (
             <Card key={style.id} className="hover:shadow-md transition-shadow">
               <CardHeader>
                 <div className="flex items-start justify-between">
@@ -109,6 +144,14 @@ export default function StylesPage() {
                       </CardDescription>
                     )}
                   </div>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 shrink-0"
+                    onClick={(e) => handleToggleFavorite(e, style.id)}
+                  >
+                    <Star className={`h-4 w-4 ${style.isFavorite ? 'fill-yellow-400 text-yellow-400' : 'text-muted-foreground'}`} />
+                  </Button>
                 </div>
               </CardHeader>
               <CardContent className="space-y-4">

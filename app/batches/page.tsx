@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Loader2, ImageIcon, Trash2 } from "lucide-react";
+import { Plus, Loader2, ImageIcon, Trash2, Star } from "lucide-react";
 import { toast } from "sonner";
 
 interface Batch {
@@ -24,6 +24,7 @@ interface Batch {
       fileName: string;
     }[];
   }[];
+  isFavorite: boolean;
 }
 
 interface Category {
@@ -40,6 +41,7 @@ export default function BatchesPage() {
   const [loadingMore, setLoadingMore] = useState(false);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+  const [favoritesOnly, setFavoritesOnly] = useState(false);
 
   useEffect(() => {
     fetchCategories();
@@ -48,7 +50,7 @@ export default function BatchesPage() {
   useEffect(() => {
     fetchBatches(1, false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filterCategoryId]);
+  }, [filterCategoryId, favoritesOnly]);
 
   const fetchCategories = async () => {
     try {
@@ -73,6 +75,9 @@ export default function BatchesPage() {
       url.searchParams.append('limit', '9');
       if (filterCategoryId !== 'all') {
         url.searchParams.append('categoryId', filterCategoryId);
+      }
+      if (favoritesOnly) {
+        url.searchParams.append('favoritesOnly', 'true');
       }
       const response = await fetch(url.toString());
       const data = await response.json();
@@ -141,6 +146,25 @@ export default function BatchesPage() {
     }
   };
 
+  const handleToggleFavorite = async (e: React.MouseEvent, batchId: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    try {
+      const response = await fetch(`/api/batches/${batchId}/favorite`, {
+        method: 'PATCH',
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setBatches(batches.map(b =>
+          b.id === batchId ? { ...b, isFavorite: data.batch.isFavorite } : b
+        ));
+      }
+    } catch (error) {
+      console.error('Error toggling favorite:', error);
+      toast.error("Failed to update favorite");
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
@@ -175,6 +199,15 @@ export default function BatchesPage() {
               ))}
             </SelectContent>
           </Select>
+          <Button
+            variant={favoritesOnly ? "default" : "outline"}
+            size="icon"
+            onClick={() => setFavoritesOnly(!favoritesOnly)}
+            aria-label="Toggle favorites"
+            className={favoritesOnly ? "bg-yellow-500 hover:bg-yellow-600 text-white" : ""}
+          >
+            <Star className={`h-4 w-4 ${favoritesOnly ? 'fill-current' : ''}`} />
+          </Button>
           <Link href="/batches/new">
             <Button>
               <Plus className="mr-2 h-4 w-4" />
@@ -273,6 +306,14 @@ export default function BatchesPage() {
                         onClick={(e) => handleDelete(e, batch.id, batch.name)}
                       >
                         <Trash2 className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7"
+                        onClick={(e) => handleToggleFavorite(e, batch.id)}
+                      >
+                        <Star className={`h-4 w-4 ${batch.isFavorite ? 'fill-yellow-400 text-yellow-400' : 'text-muted-foreground'}`} />
                       </Button>
                     </div>
                   </div>

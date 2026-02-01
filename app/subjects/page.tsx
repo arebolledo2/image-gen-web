@@ -10,7 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Loader2, Box, X, Tag } from "lucide-react";
+import { Plus, Loader2, Box, X, Tag, Star } from "lucide-react";
 import { AIAssistButton } from "@/components/agents/ai-assist-button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { toast } from "sonner";
@@ -28,6 +28,7 @@ interface Subject {
   version: number;
   description: string | null;
   isTransparent: boolean;
+  isFavorite: boolean;
   categoryId: string | null;
   createdAt: string;
   category?: Category;
@@ -39,6 +40,7 @@ export default function SubjectsPage() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [filterCategoryId, setFilterCategoryId] = useState<string>("all");
+  const [favoritesOnly, setFavoritesOnly] = useState(false);
 
   // New Subject Form State
   const [showNewForm, setShowNewForm] = useState(false);
@@ -204,6 +206,24 @@ export default function SubjectsPage() {
     }
   };
 
+  const handleToggleFavorite = async (e: React.MouseEvent, subjectId: string) => {
+    e.stopPropagation();
+    try {
+      const response = await fetch(`/api/subjects/${subjectId}/favorite`, {
+        method: 'PATCH',
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setSubjects(subjects.map(s =>
+          s.id === subjectId ? { ...s, isFavorite: data.subject.isFavorite } : s
+        ));
+      }
+    } catch (error) {
+      console.error('Error toggling favorite:', error);
+      toast.error("Failed to update favorite");
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
@@ -239,6 +259,15 @@ export default function SubjectsPage() {
               ))}
             </SelectContent>
           </Select>
+          <Button
+            variant={favoritesOnly ? "default" : "outline"}
+            size="icon"
+            onClick={() => setFavoritesOnly(!favoritesOnly)}
+            aria-label="Toggle favorites"
+            className={favoritesOnly ? "bg-yellow-500 hover:bg-yellow-600 text-white" : ""}
+          >
+            <Star className={`h-4 w-4 ${favoritesOnly ? 'fill-current' : ''}`} />
+          </Button>
           <Dialog open={showCategoryDialog} onOpenChange={setShowCategoryDialog}>
             <DialogTrigger asChild>
               <Button variant="outline">
@@ -420,9 +449,13 @@ export default function SubjectsPage() {
       )}
 
       {(() => {
-        const filteredSubjects = filterCategoryId === "all"
+        let filteredSubjects = filterCategoryId === "all"
           ? subjects
           : subjects.filter(s => s.categoryId === filterCategoryId);
+
+        if (favoritesOnly) {
+          filteredSubjects = filteredSubjects.filter(s => s.isFavorite);
+        }
 
         if (filteredSubjects.length === 0) {
           return (
@@ -502,6 +535,14 @@ export default function SubjectsPage() {
                         </CardDescription>
                       )}
                     </div>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 shrink-0"
+                      onClick={(e) => handleToggleFavorite(e, subject.id)}
+                    >
+                      <Star className={`h-4 w-4 ${subject.isFavorite ? 'fill-yellow-400 text-yellow-400' : 'text-muted-foreground'}`} />
+                    </Button>
                   </div>
                 </CardHeader>
               </Card>
