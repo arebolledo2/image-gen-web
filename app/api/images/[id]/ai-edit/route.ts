@@ -90,6 +90,33 @@ export async function POST(
       return NextResponse.json({ error: 'GEMINI_API_KEY not configured' }, { status: 500 });
     }
 
+    // Load the source image with Jimp to get dimensions
+    const sourceImage = await (Jimp as any).read(absolutePath);
+    const sourceWidth = sourceImage.bitmap.width;
+    const sourceHeight = sourceImage.bitmap.height;
+
+    // Helper to calculate aspect ratio string
+    const getGeminiAspectRatio = (width: number, height: number): string => {
+      const ratio = width / height;
+      if (ratio > 1.5) return '16:9';
+      if (ratio > 1.1) return '4:3';
+      if (ratio < 0.6) return '9:16';
+      if (ratio < 0.9) return '3:4';
+      return '1:1';
+    };
+
+    // Helper to calculate image size string
+    const getGeminiImageSize = (width: number, height: number): string => {
+      const maxDim = Math.max(width, height);
+      if (maxDim > 3072) return '4K';
+      if (maxDim > 2048) return '3K';
+      if (maxDim > 1024) return '2K';
+      return '1K';
+    };
+
+    const calculatedAspectRatio = getGeminiAspectRatio(sourceWidth, sourceHeight);
+    const calculatedImageSize = getGeminiImageSize(sourceWidth, sourceHeight);
+
     // Construct the full AI prompt
     const fullAiPrompt = `Edit this image according to the following instructions:
 
@@ -126,8 +153,8 @@ Edit instruction: ${userPrompt}`;
       generationConfig: {
         responseModalities: ['IMAGE'],
         imageConfig: {
-          aspectRatio: '1:1',
-          imageSize: '2K'
+          aspectRatio: calculatedAspectRatio,
+          imageSize: calculatedImageSize
         }
       }
     };
