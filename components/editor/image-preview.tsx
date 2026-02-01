@@ -84,13 +84,19 @@ export function ImagePreview({
           : `t=${cacheBuster}`
       }`;
 
-  // Load image into canvas for color sampling
+  // Reset preview state when sampling mode is disabled
   useEffect(() => {
     if (!isSampling) {
+      /* eslint-disable react-hooks/set-state-in-effect */
       setPreviewColor(null);
       setCursorPosition(null);
-      return;
+      /* eslint-enable react-hooks/set-state-in-effect */
     }
+  }, [isSampling]);
+
+  // Load image into canvas for color sampling
+  useEffect(() => {
+    if (!isSampling) return;
 
     const canvas = canvasRef.current;
     if (!canvas) return;

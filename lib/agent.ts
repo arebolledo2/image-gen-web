@@ -1,5 +1,5 @@
-import { google } from "@ai-sdk/google";
 import { ToolLoopAgent, tool, generateText, type InferAgentUIMessage } from "ai";
+import { geminiFlash, gemini25Flash } from "@/lib/ai/model";
 import { z } from "zod";
 import * as queries from "@/lib/db/queries";
 import { readImage } from "@/lib/storage/local-storage";
@@ -38,7 +38,7 @@ const AnalyzeImageSchema = z.object({
 });
 
 export const imageAgent = new ToolLoopAgent({
-    model: google("gemini-3-flash-preview"),
+    model: geminiFlash,
     instructions: `You are an intelligent agent that helps users create and manage game assets through AI image generation.
 
 You have access to the user's existing resources (batches, styles, subjects, images) and can create new ones.
@@ -116,7 +116,7 @@ When the user wants to create game assets, guide them through the workflow natur
 
                 // "Vision Worker" pattern: Call a vision model to analyze the image
                 const analysis = await generateText({
-                    model: google("gemini-2.5-flash"),
+                    model: gemini25Flash,
                     messages: [
                         {
                             role: "user",

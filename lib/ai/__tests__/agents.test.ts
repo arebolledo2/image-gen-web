@@ -11,6 +11,7 @@ import {
 // Mock the AI SDK
 vi.mock('ai', () => ({
   generateText: vi.fn(),
+  wrapLanguageModel: vi.fn((config) => config.model),
   Output: {
     object: vi.fn((config) => config),
   },
@@ -19,6 +20,11 @@ vi.mock('ai', () => ({
 // Mock Google AI SDK
 vi.mock('@ai-sdk/google', () => ({
   google: vi.fn((model) => ({ model })),
+}));
+
+// Mock AI SDK DevTools
+vi.mock('@ai-sdk/devtools', () => ({
+  devToolsMiddleware: vi.fn(() => ({})),
 }));
 
 import { generateText } from 'ai';
@@ -51,7 +57,7 @@ describe('createStyleAgent', () => {
     };
 
     vi.mocked(generateText).mockResolvedValue({
-      experimental_output: mockStyle,
+      output: mockStyle,
       text: '',
       finishReason: 'stop',
       usage: { promptTokens: 100, completionTokens: 200 },
@@ -70,7 +76,7 @@ describe('createStyleAgent', () => {
 
   it('should pass system prompt with hex color requirements', async () => {
     vi.mocked(generateText).mockResolvedValue({
-      experimental_output: {
+      output: {
         name: 'Test',
         description: 'Test style',
         palette: { primary: ['#FF0000'], accent: ['#00FF00'], background: '#0000FF' },
@@ -93,7 +99,7 @@ describe('createStyleAgent', () => {
 
   it('should use gemini-2.5-flash model', async () => {
     vi.mocked(generateText).mockResolvedValue({
-      experimental_output: {
+      output: {
         name: 'Test',
         description: 'Test',
         palette: { primary: ['#FFFFFF'], accent: ['#000000'], background: '#AAAAAA' },
@@ -128,7 +134,7 @@ describe('createPromptAgent', () => {
     };
 
     vi.mocked(generateText).mockResolvedValue({
-      experimental_output: mockPrompt,
+      output: mockPrompt,
       text: '',
       finishReason: 'stop',
       usage: { promptTokens: 0, completionTokens: 0 },
@@ -161,7 +167,7 @@ describe('createPromptAgent', () => {
 
   it('should work with minimal parameters', async () => {
     vi.mocked(generateText).mockResolvedValue({
-      experimental_output: { name: 'Test', template: 'test', tags: [] },
+      output: { name: 'Test', template: 'test', tags: [] },
       text: '',
       finishReason: 'stop',
       usage: { promptTokens: 0, completionTokens: 0 },
@@ -181,7 +187,7 @@ describe('createPromptAgent', () => {
 
   it('should include magenta background in system prompt when isTransparent is true', async () => {
     vi.mocked(generateText).mockResolvedValue({
-      experimental_output: { name: 'Test', template: 'test', tags: [] },
+      output: { name: 'Test', template: 'test', tags: [] },
       text: '',
       finishReason: 'stop',
       usage: { promptTokens: 0, completionTokens: 0 },
@@ -198,7 +204,7 @@ describe('createPromptAgent', () => {
 
   it('should NOT include magenta background in system prompt when isTransparent is false', async () => {
     vi.mocked(generateText).mockResolvedValue({
-      experimental_output: { name: 'Test', template: 'test', tags: [] },
+      output: { name: 'Test', template: 'test', tags: [] },
       text: '',
       finishReason: 'stop',
       usage: { promptTokens: 0, completionTokens: 0 },
@@ -220,7 +226,7 @@ describe('createPromptAgent', () => {
 
   it('should request sprite sheet specifications in system prompt', async () => {
     vi.mocked(generateText).mockResolvedValue({
-      experimental_output: { name: 'Test', template: 'test', tags: [] },
+      output: { name: 'Test', template: 'test', tags: [] },
       text: '',
       finishReason: 'stop',
       usage: { promptTokens: 0, completionTokens: 0 },
@@ -249,7 +255,7 @@ describe('suggestPromptVariations', () => {
     ];
 
     vi.mocked(generateText).mockResolvedValue({
-      experimental_output: { variations: mockVariations },
+      output: { variations: mockVariations },
       text: '',
       finishReason: 'stop',
       usage: { promptTokens: 0, completionTokens: 0 },
@@ -263,7 +269,7 @@ describe('suggestPromptVariations', () => {
 
   it('should use default count of 3', async () => {
     vi.mocked(generateText).mockResolvedValue({
-      experimental_output: { variations: ['v1', 'v2', 'v3'] },
+      output: { variations: ['v1', 'v2', 'v3'] },
       text: '',
       finishReason: 'stop',
       usage: { promptTokens: 0, completionTokens: 0 },
@@ -280,7 +286,7 @@ describe('suggestPromptVariations', () => {
 
   it('should maintain magenta background requirement when isTransparent is true', async () => {
     vi.mocked(generateText).mockResolvedValue({
-      experimental_output: { variations: ['var1', 'var2'] },
+      output: { variations: ['var1', 'var2'] },
       text: '',
       finishReason: 'stop',
       usage: { promptTokens: 0, completionTokens: 0 },
@@ -297,7 +303,7 @@ describe('suggestPromptVariations', () => {
 
   it('should NOT maintain magenta background requirement when isTransparent is false', async () => {
     vi.mocked(generateText).mockResolvedValue({
-      experimental_output: { variations: ['var1', 'var2'] },
+      output: { variations: ['var1', 'var2'] },
       text: '',
       finishReason: 'stop',
       usage: { promptTokens: 0, completionTokens: 0 },
@@ -315,7 +321,7 @@ describe('suggestPromptVariations', () => {
   it('should pass base prompt to generation', async () => {
     const basePrompt = 'red robot turret, top-down, magenta background';
     vi.mocked(generateText).mockResolvedValue({
-      experimental_output: { variations: ['v1'] },
+      output: { variations: ['v1'] },
       text: '',
       finishReason: 'stop',
       usage: { promptTokens: 0, completionTokens: 0 },
@@ -461,7 +467,7 @@ describe('createBatchMetadataAgent', () => {
     };
 
     vi.mocked(generateText).mockResolvedValue({
-      experimental_output: mockMetadata,
+      output: mockMetadata,
       text: '',
       finishReason: 'stop',
       usage: { promptTokens: 0, completionTokens: 0 },
@@ -479,7 +485,7 @@ describe('createBatchMetadataAgent', () => {
 
   it('should include naming guidelines in system prompt', async () => {
     vi.mocked(generateText).mockResolvedValue({
-      experimental_output: { name: 'Test', description: 'Test' },
+      output: { name: 'Test', description: 'Test' },
       text: '',
       finishReason: 'stop',
       usage: { promptTokens: 0, completionTokens: 0 },
@@ -523,7 +529,7 @@ describe('editStyleAgent', () => {
     };
 
     vi.mocked(generateText).mockResolvedValue({
-      experimental_output: mockModifiedStyle,
+      output: mockModifiedStyle,
       text: '',
       finishReason: 'stop',
       usage: { promptTokens: 100, completionTokens: 200 },
@@ -552,7 +558,7 @@ describe('editStyleAgent', () => {
 
   it('should include current style data in the system prompt', async () => {
     vi.mocked(generateText).mockResolvedValue({
-      experimental_output: {
+      output: {
         name: 'Test',
         description: 'Test',
         palette: { primary: ['#FF0000'], accent: ['#00FF00'], background: '#0000FF' },
@@ -600,7 +606,7 @@ describe('editStyleAgent', () => {
 
   it('should include user request in the prompt', async () => {
     vi.mocked(generateText).mockResolvedValue({
-      experimental_output: {
+      output: {
         name: 'Test',
         description: 'Test',
         palette: { primary: ['#FF0000'], accent: ['#00FF00'], background: '#0000FF' },

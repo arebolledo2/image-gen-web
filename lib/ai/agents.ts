@@ -1,5 +1,5 @@
-import { google } from '@ai-sdk/google';
 import { generateText, Output } from 'ai';
+import { geminiFlash } from './model';
 import { z } from 'zod';
 
 // Schema for style creation
@@ -91,16 +91,16 @@ Examples of high-quality style definitions:
 
 Provide a complete definition that captures the essence of the requested style.`;
 
-  const { experimental_output } = await generateText({
-    model: google('gemini-3-flash-preview'),
+  const { output } = await generateText({
+    model: geminiFlash,
     system: systemPrompt,
-    experimental_output: Output.object({
+    output: Output.object({
       schema: styleSchema,
     }),
     prompt: `Create a style based on: ${description}`,
   });
 
-  return experimental_output;
+  return output;
 }
 
 // Schema for prompt creation
@@ -186,16 +186,16 @@ ${styleName ? `Style: ${styleName}` : ''}
 ${styleKeywords?.length ? `Style Keywords: ${styleKeywords.join(', ')}` : ''}
 ${description ? `Description: ${description}` : ''}`;
 
-  const { experimental_output } = await generateText({
-    model: google('gemini-3-flash-preview'),
+  const { output } = await generateText({
+    model: geminiFlash,
     system: systemPrompt,
-    experimental_output: Output.object({
+    output: Output.object({
       schema: promptSchema,
     }),
     prompt: userPrompt,
   });
 
-  return experimental_output;
+  return output;
 }
 
 /**
@@ -242,10 +242,10 @@ Given a base prompt, create ${count} variations that:
 3. ${backgroundInstruction}
 4. Are suitable for generating diverse sprite variations`;
 
-  const { experimental_output } = await generateText({
-    model: google('gemini-3-flash-preview'),
+  const { output } = await generateText({
+    model: geminiFlash,
     system: systemPrompt,
-    experimental_output: Output.object({
+    output: Output.object({
       schema: z.object({
         variations: z.array(z.string()),
       }),
@@ -253,7 +253,7 @@ Given a base prompt, create ${count} variations that:
     prompt: `Create ${count} variations of this prompt:\n\n${basePrompt}`,
   });
 
-  return experimental_output.variations;
+  return output.variations;
 }
 
 /**
@@ -362,7 +362,7 @@ ${guidance.map(g => `- ${g.name}: ${g.description}`).join('\n')}`;
   }
 
   const { text } = await generateText({
-    model: google('gemini-3-flash-preview'),
+    model: geminiFlash,
     system: systemPrompt,
     prompt: userPrompt,
   });
@@ -396,16 +396,16 @@ Given the image generation prompt(s) for a batch, create a catchy, professional 
 Focus on game development themes like turrets, enemies, environments, or specific styles.
 The name should be concise (3-6 words) and the description should be 1-2 sentences summarizing the visual theme.`;
 
-  const { experimental_output } = await generateText({
-    model: google('gemini-3-flash-preview'),
+  const { output } = await generateText({
+    model: geminiFlash,
     system: systemPrompt,
-    experimental_output: Output.object({
+    output: Output.object({
       schema: batchMetadataSchema,
     }),
     prompt: `Generate batch metadata based on this prompt: ${promptText}`,
   });
 
-  return experimental_output;
+  return output;
 }
 
 /**
@@ -450,16 +450,16 @@ Input: "fire elemental"
 Name: "Fire Elemental: Infernal Combustion Titan"
 Description: "A towering humanoid figure composed of roiling flames and molten lava, with eyes that burn like miniature suns. Embers and ash constantly swirl around its form, while its footsteps leave scorched earth in their wake."`;
 
-  const { experimental_output } = await generateText({
-    model: google('gemini-3-flash-preview'),
+  const { output } = await generateText({
+    model: geminiFlash,
     system: systemPrompt,
-    experimental_output: Output.object({
+    output: Output.object({
       schema: subjectSchema,
     }),
     prompt: `Expand this concept into a detailed subject: ${concept}`,
   });
 
-  return experimental_output;
+  return output;
 }
 
 /**
@@ -518,7 +518,7 @@ CRITICAL RULES:
 5. ONLY output the final prompt text. Do not include any conversational filler, explanations, or "Here is the modified prompt:".`;
 
   const { text } = await generateText({
-    model: google('gemini-3-flash-preview'),
+    model: geminiFlash,
     system: systemPrompt,
     prompt: `Adjust this prompt:\n\n${basePrompt}\n\nBased on this suggestion: ${suggestion}`,
   });
@@ -589,16 +589,16 @@ Good examples:
 
 Keep it simple, focused, and game-ready. You're building a sound library, not a film score.`;
 
-  const { experimental_output } = await generateText({
-    model: google('gemini-3-flash-preview'),
+  const { output } = await generateText({
+    model: geminiFlash,
     system: systemPrompt,
-    experimental_output: Output.object({
+    output: Output.object({
       schema: audioPromptSchema,
     }),
     prompt: `Create a detailed audio generation prompt for this concept: ${concept}`,
   });
 
-  return experimental_output;
+  return output;
 }
 
 /**
@@ -670,14 +670,14 @@ The current style has:
 
 Modify this style according to the user's request and return a complete, updated style definition.`;
 
-  const { experimental_output } = await generateText({
-    model: google('gemini-3-flash-preview'),
+  const { output } = await generateText({
+    model: geminiFlash,
     system: systemPrompt,
-    experimental_output: Output.object({
+    output: Output.object({
       schema: styleSchema,
     }),
     prompt: `Modify the style based on this request: ${userRequest}`,
   });
 
-  return experimental_output;
+  return output;
 }
