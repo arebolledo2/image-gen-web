@@ -6,7 +6,12 @@ import { eq } from 'drizzle-orm';
 import type { AudioGenerationJob } from './audio-types';
 
 export const audioGenerationFunction = inngest.createFunction(
-  { id: 'audio-generation' },
+  {
+    id: 'audio-generation',
+    concurrency: {
+      limit: 5,
+    }
+  },
   { event: 'audio/generate' },
   async ({ event, step }) => {
     const job = event.data as AudioGenerationJob;

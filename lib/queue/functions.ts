@@ -6,7 +6,12 @@ import { eq } from 'drizzle-orm';
 import type { ImageGenerationJob } from './types';
 
 export const imageGenerationFunction = inngest.createFunction(
-  { id: 'image-generation' },
+  {
+    id: 'image-generation',
+    concurrency: {
+      limit: 10,
+    }
+  },
   { event: 'image/generate' },
   async ({ event, step }) => {
     const job = event.data as ImageGenerationJob;

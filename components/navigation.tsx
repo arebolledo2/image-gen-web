@@ -10,13 +10,13 @@ import { SettingsToggle } from "@/components/settings-toggle";
 const navItems = [
   { href: "/", label: "Dashboard" },
   { href: "/gallery", label: "Gallery" },
-  { href: "/chat", label: "Chat" },
   { href: "/batches", label: "Batches" },
-  { href: "/audio-gallery", label: "Audio Gallery" },
-  { href: "/audio-batches", label: "Audio Batches" },
   { href: "/styles", label: "Styles" },
   { href: "/subjects", label: "Subjects" },
   { href: "/guidance", label: "Guidance" },
+  { href: "/chat", label: "Chat" },
+  { href: "/audio-gallery", label: "Audio Gallery" },
+  { href: "/audio-batches", label: "Audio Batches" },
   { href: "/prompts", label: "Prompts" },
 ];
 

@@ -633,6 +633,39 @@ export class BatchesService extends BaseService<typeof batches, Batch, NewBatch>
 
     return this.update(id, { isFavorite: !batch.isFavorite });
   }
+
+  /**
+   * Get all batches associated with a specific style.
+   * A batch is associated with a style if any of its prompts use that style.
+   *
+   * @param styleId - Style ID to filter by
+   * @returns List of batches with basic details and preview images
+   */
+  async getBatchesByStyleId(styleId: string) {
+    return db.query.batches.findMany({
+      where: exists(
+        db.select()
+          .from(batchPrompts)
+          .innerJoin(prompts, eq(batchPrompts.promptId, prompts.id))
+          .where(
+            and(
+              eq(batchPrompts.batchId, batches.id),
+              eq(prompts.styleId, styleId)
+            )
+          )
+      ),
+      orderBy: [desc(batches.createdAt)],
+      with: {
+        generations: {
+          with: {
+            images: {
+              limit: 3,
+            },
+          },
+        },
+      },
+    });
+  }
 }
 
 // Export singleton instance

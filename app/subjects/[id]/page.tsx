@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, ArrowLeft, Trash2, Copy, Box, ChevronRight, Pencil, Save, X, Tag } from "lucide-react";
+import { Loader2, ArrowLeft, Trash2, Copy, Box, ChevronRight, Pencil, Save, X, Tag, ImageIcon, ExternalLink } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
@@ -39,6 +39,18 @@ interface Subject {
   }[];
 }
 
+interface SubjectImage {
+  id: string;
+  fileName: string;
+  createdAt: string;
+  generation: {
+    batch: {
+      id: string;
+      name: string;
+    };
+  };
+}
+
 export default function SubjectDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const router = useRouter();
@@ -53,6 +65,8 @@ export default function SubjectDetailPage({ params }: { params: Promise<{ id: st
   const [editDescription, setEditDescription] = useState("");
   const [editIsTransparent, setEditIsTransparent] = useState(true);
   const [selectedCategoryId, setSelectedCategoryId] = useState<string>("none");
+  const [images, setImages] = useState<SubjectImage[]>([]);
+  const [loadingImages, setLoadingImages] = useState(true);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -89,7 +103,22 @@ export default function SubjectDetailPage({ params }: { params: Promise<{ id: st
       }
     };
 
+    const fetchImages = async () => {
+      try {
+        const response = await fetch(`/api/subjects/${id}/images`);
+        if (response.ok) {
+          const data = await response.json();
+          setImages(data.images || []);
+        }
+      } catch (error) {
+        console.error("Error fetching subject images:", error);
+      } finally {
+        setLoadingImages(false);
+      }
+    };
+
     fetchData();
+    fetchImages();
   }, [id, router]);
 
   const handleDelete = async () => {
@@ -393,6 +422,56 @@ export default function SubjectDetailPage({ params }: { params: Promise<{ id: st
           </CardContent>
         </Card>
       )}
+
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle>Image Gallery</CardTitle>
+              <CardDescription>Images generated for this subject</CardDescription>
+            </div>
+            <Badge variant="secondary">{images.length} Images</Badge>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {loadingImages ? (
+            <div className="flex justify-center py-12">
+              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+            </div>
+          ) : images.length === 0 ? (
+            <div className="text-center py-12 text-muted-foreground bg-muted/20 rounded-lg border border-dashed">
+              <ImageIcon className="h-12 w-12 mx-auto mb-4 opacity-20" />
+              <p>No images found for this subject.</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+              {images.map((img) => (
+                <div
+                  key={img.id}
+                  className="group relative aspect-square rounded-lg overflow-hidden border bg-muted cursor-pointer transition-all hover:ring-2 hover:ring-primary/50"
+                  onClick={() => router.push(`/editor/${img.id}`)}
+                >
+                  <img
+                    src={`/api/images/${img.id}/file`}
+                    alt={subject.name}
+                    className="w-full h-full object-cover transition-transform group-hover:scale-110"
+                  />
+                  <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center p-2 text-center">
+                    <p className="text-[10px] text-white font-medium line-clamp-2 mb-1">
+                      {img.generation.batch.name}
+                    </p>
+                    <div className="flex gap-2">
+                      <Button size="icon" variant="secondary" className="h-7 w-7">
+                        <ExternalLink className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }

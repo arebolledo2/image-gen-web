@@ -5,7 +5,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Loader2, Palette, Star } from "lucide-react";
+import { Plus, Loader2, Palette, Star, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 interface Style {
@@ -25,6 +25,7 @@ interface Style {
   };
   createdAt: string;
   isFavorite: boolean;
+  previews?: { id: string }[];
 }
 
 export default function StylesPage() {
@@ -67,6 +68,31 @@ export default function StylesPage() {
     }
   };
 
+  const handleDelete = async (e: React.MouseEvent, styleId: string, styleName: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    if (!confirm(`Are you sure you want to delete style "${styleName}"?`)) {
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/styles/${styleId}`, {
+        method: 'DELETE',
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to delete style');
+      }
+
+      setStyles((prev) => prev.filter((s) => s.id !== styleId));
+      toast.success('Style deleted');
+    } catch (error) {
+      console.error('Error deleting style:', error);
+      toast.error('Failed to delete style');
+    }
+  };
+
   const filteredStyles = favoritesOnly ? styles.filter(s => s.isFavorite) : styles;
 
   if (loading) {
@@ -78,7 +104,7 @@ export default function StylesPage() {
   }
 
   return (
-    <div className="max-w-5xl mx-auto space-y-6">
+    <div className="max-w-7xl mx-auto space-y-6 px-4">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Styles</h1>
@@ -86,7 +112,7 @@ export default function StylesPage() {
             Manage your art styles and versions
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex items-center gap-2">
           <Button
             variant={favoritesOnly ? "default" : "outline"}
             size="icon"
@@ -122,87 +148,116 @@ export default function StylesPage() {
           </CardContent>
         </Card>
       ) : (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredStyles.map((style) => (
-            <Card key={style.id} className="hover:shadow-md transition-shadow">
-              <CardHeader>
-                <div className="flex items-start justify-between">
-                  <div className="space-y-1 flex-1">
-                    <CardTitle className="flex items-center gap-2">
-                      <Palette className="h-5 w-5" />
-                      <Link
-                        href={`/styles/${style.id}`}
-                        className="hover:underline"
-                      >
-                        {style.name}
-                      </Link>
-                      <Badge variant="outline">v{style.version}</Badge>
-                    </CardTitle>
-                    {style.description && (
-                      <CardDescription className="line-clamp-2">
-                        {style.description}
-                      </CardDescription>
-                    )}
-                  </div>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8 shrink-0"
-                    onClick={(e) => handleToggleFavorite(e, style.id)}
-                  >
-                    <Star className={`h-4 w-4 ${style.isFavorite ? 'fill-yellow-400 text-yellow-400' : 'text-muted-foreground'}`} />
-                  </Button>
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div>
-                  <h4 className="text-sm font-medium mb-2">Palette</h4>
-                  <div className="flex gap-1">
-                    {Array.isArray(style.palette) ? (
-                      style.palette.slice(0, 5).map((color, i) => (
+            <Card key={style.id} className="hover:shadow-md transition-shadow overflow-hidden flex flex-col">
+              <Link href={`/styles/${style.id}`} className="block">
+                <div className="aspect-[16/9] bg-muted relative flex flex-col border-b">
+                  {style.previews && style.previews.length > 0 ? (
+                    <div className="flex w-full h-full">
+                      {style.previews.map((img) => (
                         <div
-                          key={i}
-                          className="w-8 h-8 rounded border"
-                          style={{ backgroundColor: color }}
-                          title={color}
-                        />
-                      ))
-                    ) : (
-                      <>
-                        {style.palette.primary.slice(0, 3).map((color, i) => (
+                          key={img.id}
+                          className="relative flex-1 border-r last:border-r-0 overflow-hidden"
+                        >
+                          <img
+                            src={`/api/images/${img.id}/file?size=thumbnail`}
+                            alt={style.name}
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="flex-1 flex">
+                      {Array.isArray(style.palette) ? (
+                        style.palette.slice(0, 3).map((color, i) => (
                           <div
                             key={i}
-                            className="w-8 h-8 rounded border"
+                            className="flex-1"
                             style={{ backgroundColor: color }}
-                            title={color}
                           />
-                        ))}
-                        {style.palette.accent.slice(0, 2).map((color, i) => (
-                          <div
-                            key={i}
-                            className="w-8 h-8 rounded border"
-                            style={{ backgroundColor: color }}
-                            title={color}
-                          />
-                        ))}
-                      </>
-                    )}
+                        ))
+                      ) : (
+                        <>
+                          {style.palette.primary.slice(0, 2).map((color, i) => (
+                            <div
+                              key={`p-${i}`}
+                              className="flex-1"
+                              style={{ backgroundColor: color }}
+                            />
+                          ))}
+                          {style.palette.accent.slice(0, 1).map((color, i) => (
+                            <div
+                              key={`a-${i}`}
+                              className="flex-1"
+                              style={{ backgroundColor: color }}
+                            />
+                          ))}
+                        </>
+                      )}
+                    </div>
+                  )}
+                  <div className="absolute top-2 right-2 flex gap-2">
+                    <Badge variant="secondary" className="bg-background/80 backdrop-blur-sm border-0">
+                      v{style.version}
+                    </Badge>
                   </div>
                 </div>
+              </Link>
+              <CardHeader className="p-4 space-y-1">
+                <div className="flex items-center justify-between gap-2">
+                  <CardTitle className="text-lg truncate">
+                    <Link href={`/styles/${style.id}`} className="hover:underline flex items-center gap-2">
+                      <Palette className="h-4 w-4 shrink-0 text-muted-foreground" />
+                      {style.name}
+                    </Link>
+                  </CardTitle>
+                </div>
+                {style.description && (
+                  <CardDescription className="line-clamp-2 min-h-[2.5rem]">
+                    {style.description}
+                  </CardDescription>
+                )}
+              </CardHeader>
+              <CardContent className="p-4 pt-0 mt-auto space-y-3">
                 <div className="flex flex-wrap gap-1">
                   {Array.isArray(style.renderingCues) ? (
-                    style.renderingCues.slice(0, 3).map((cue) => (
-                      <Badge key={cue} variant="secondary" className="text-xs">
+                    style.renderingCues.slice(0, 4).map((cue) => (
+                      <Badge key={cue} variant="outline" className="text-[10px] px-1.5 py-0">
                         {cue}
                       </Badge>
                     ))
                   ) : (
-                    style.renderingCues.materials.slice(0, 2).map((material) => (
-                      <Badge key={material} variant="secondary" className="text-xs">
+                    style.renderingCues.materials.slice(0, 3).map((material) => (
+                      <Badge key={material} variant="outline" className="text-[10px] px-1.5 py-0">
                         {material}
                       </Badge>
                     ))
                   )}
+                </div>
+                <div className="flex items-center justify-between text-sm text-muted-foreground pt-2 border-t">
+                  <div className="flex items-center gap-1 text-[10px]">
+                    {new Date(style.createdAt).toLocaleDateString()}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                      onClick={(e) => handleDelete(e, style.id, style.name)}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7"
+                      onClick={(e) => handleToggleFavorite(e, style.id)}
+                    >
+                      <Star className={`h-4 w-4 ${style.isFavorite ? 'fill-yellow-400 text-yellow-400' : 'text-muted-foreground'}`} />
+                    </Button>
+                  </div>
                 </div>
               </CardContent>
             </Card>

@@ -1,5 +1,5 @@
 import { db } from '@/lib/db';
-import { styles, Style, NewStyle } from '@/lib/db/schema';
+import { styles, Style, NewStyle, prompts, batchPrompts, generations, images } from '@/lib/db/schema';
 import { desc, eq } from 'drizzle-orm';
 import { BaseService } from './base.service';
 
@@ -32,6 +32,16 @@ export class StylesService extends BaseService<typeof styles, Style, NewStyle> {
     // Group by style family (find root parent for each style)
     const styleMap = new Map<string, Style>();
     const versionCounts = new Map<string, number>();
+
+    // Get style previews (latest 3 images for each style)
+    const allPrompts = await db.query.prompts.findMany();
+    const allBatchPrompts = await db.query.batchPrompts.findMany();
+    const allGenerations = await db.query.generations.findMany({
+      where: eq(generations.status, 'success'),
+    });
+    const allImages = await db.query.images.findMany({
+      orderBy: [desc(images.createdAt)],
+    });
 
     for (const style of allStyles) {
       // Find the root style (traverse up the parent chain)
@@ -67,23 +77,48 @@ export class StylesService extends BaseService<typeof styles, Style, NewStyle> {
       }
     }
 
-    // Convert to array with version counts
-    return Array.from(styleMap.values()).map(style => ({
-      ...style,
-      versionCount: versionCounts.get(
-        style.parentStyleId ?
-          (allStyles.find(s => {
-            let root = style;
-            while (root.parentStyleId) {
-              const p = allStyles.find(x => x.id === root.parentStyleId);
-              if (!p) break;
-              root = p;
-            }
-            return s.id === root.id;
-          })?.id || style.id)
-          : style.id
-      ) || 1,
-    }));
+    // Convert to array with version counts and previews
+    return Array.from(styleMap.values()).map(style => {
+      const rootIdForCount = style.parentStyleId ?
+        (allStyles.find(s => {
+          let root = style;
+          while (root.parentStyleId) {
+            const p = allStyles.find(x => x.id === root.parentStyleId);
+            if (!p) break;
+            root = p;
+          }
+          return s.id === root.id;
+        })?.id || style.id)
+        : style.id;
+
+      // Find preview images for this style
+      // 1. Find all prompts using this style
+      const stylePromptIds = allPrompts
+        .filter(p => p.styleId === style.id)
+        .map(p => p.id);
+      
+      // 2. Find batch prompts for these prompts
+      const styleBatchPromptIds = allBatchPrompts
+        .filter(bp => bp.promptId && stylePromptIds.includes(bp.promptId))
+        .map(bp => bp.id);
+      
+      // 3. Find generations for these batch prompts
+      const styleGenIds = allGenerations
+        .filter(g => styleBatchPromptIds.includes(g.batchPromptId))
+        .map(g => g.id);
+      
+      // 4. Find images for these generations
+      const previews = allImages
+        .filter(img => styleGenIds.includes(img.generationId))
+        .slice(0, 3)
+        .map(img => ({ id: img.id }));
+
+      return {
+        ...style,
+        versionCount: versionCounts.get(rootIdForCount) || 1,
+        previews,
+      };
+    });
   }
 
   /**

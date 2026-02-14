@@ -1,6 +1,6 @@
 import { db } from '@/lib/db';
-import { subjects, Subject, NewSubject } from '@/lib/db/schema';
-import { eq, desc, and } from 'drizzle-orm';
+import { subjects, Subject, NewSubject, images, generations, batchPrompts, prompts } from '@/lib/db/schema';
+import { eq, desc, and, exists } from 'drizzle-orm';
 import { BaseService } from './base.service';
 
 /**
@@ -70,10 +70,9 @@ export class SubjectsService extends BaseService<typeof subjects, Subject, NewSu
       }
     }
 
-    return Array.from(subjectMap.values()).map(subject => ({
-      ...subject,
-      versionCount: versionCounts.get(
-        subject.parentSubjectId ?
+    const subjectsWithPreviews = await Promise.all(
+      Array.from(subjectMap.values()).map(async subject => {
+        const rootId = subject.parentSubjectId ?
           (allSubjects.find(s => {
             let root = subject;
             while (root.parentSubjectId) {
@@ -83,9 +82,36 @@ export class SubjectsService extends BaseService<typeof subjects, Subject, NewSu
             }
             return s.id === root.id;
           })?.id || subject.id)
-          : subject.id
-      ) || 1,
-    }));
+          : subject.id;
+
+        // Get preview images for this subject family
+        // This is a bit expensive in a loop, but fine for small number of families
+        const previews = await db.query.images.findMany({
+          where: exists(
+            db.select()
+              .from(generations)
+              .innerJoin(batchPrompts, eq(generations.batchPromptId, batchPrompts.id))
+              .innerJoin(prompts, eq(batchPrompts.promptId, prompts.id))
+              .where(
+                and(
+                  eq(images.generationId, generations.id),
+                  eq(prompts.subjectId, subject.id) // Just use current version's images for simplicity
+                )
+              )
+          ),
+          orderBy: [desc(images.createdAt)],
+          limit: 3,
+        });
+
+        return {
+          ...subject,
+          versionCount: versionCounts.get(rootId) || 1,
+          previews: previews.map(p => ({ id: p.id })),
+        };
+      })
+    );
+
+    return subjectsWithPreviews;
   }
 
   /**

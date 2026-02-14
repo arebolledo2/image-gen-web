@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -10,7 +11,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Loader2, Box, X, Tag, Star } from "lucide-react";
+import { Plus, Loader2, Box, X, Tag, Star, Trash2 } from "lucide-react";
 import { AIAssistButton } from "@/components/agents/ai-assist-button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { toast } from "sonner";
@@ -32,6 +33,7 @@ interface Subject {
   categoryId: string | null;
   createdAt: string;
   category?: Category;
+  previews?: { id: string }[];
 }
 
 export default function SubjectsPage() {
@@ -224,6 +226,31 @@ export default function SubjectsPage() {
     }
   };
 
+  const handleDelete = async (e: React.MouseEvent, subjectId: string, subjectName: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    if (!confirm(`Are you sure you want to delete subject "${subjectName}"?`)) {
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/subjects/${subjectId}`, {
+        method: 'DELETE',
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to delete subject');
+      }
+
+      setSubjects((prev) => prev.filter((s) => s.id !== subjectId));
+      toast.success('Subject deleted');
+    } catch (error) {
+      console.error('Error deleting subject:', error);
+      toast.error('Failed to delete subject');
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
@@ -233,7 +260,7 @@ export default function SubjectsPage() {
   }
 
   return (
-    <div className="max-w-5xl mx-auto space-y-6">
+    <div className="max-w-7xl mx-auto space-y-6 px-4">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Subjects</h1>
@@ -485,41 +512,61 @@ export default function SubjectsPage() {
         }
 
         return (
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {filteredSubjects.map((subject) => (
-              <Card
-                key={subject.id}
-                className="hover:shadow-md transition-shadow cursor-pointer relative overflow-hidden"
-                onClick={() => router.push(`/subjects/${subject.id}`)}
-              >
-                {subject.category && (
-                  <div
-                    className="absolute top-0 right-0 w-12 h-12 bg-muted transform translate-x-6 -translate-y-6 rotate-45"
-                    style={{ backgroundColor: subject.category.color + '20' || '#3b82f620' }}
-                  />
-                )}
-                <CardHeader className="relative">
-                  <div className="flex items-start justify-between">
-                    <div className="space-y-2 flex-1">
-                      <div className="flex flex-wrap items-center gap-1.5">
-                        <CardTitle className="flex items-center gap-2">
-                          <Box className="h-4 w-4" />
-                          {subject.name}
-                        </CardTitle>
-                        <Badge variant="outline" className="text-[10px] px-1 h-4">v{subject.version}</Badge>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {filteredSubjects.map((subject) => {
+              const previewImages = subject.previews?.slice(0, 3) || [];
+
+              return (
+                <Card key={subject.id} className="hover:shadow-md transition-shadow overflow-hidden flex flex-col group">
+                  <Link href={`/subjects/${subject.id}`} className="block">
+                    <div className="aspect-[16/9] bg-muted relative flex border-b">
+                      {previewImages.length > 0 ? (
+                        <div className="flex w-full h-full">
+                          {previewImages.map((img) => (
+                            <div
+                              key={img.id}
+                              className="relative flex-1 border-r last:border-r-0 overflow-hidden"
+                            >
+                              <img
+                                src={`/api/images/${img.id}/file?size=thumbnail`}
+                                alt={subject.name}
+                                className="w-full h-full object-cover"
+                              />
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="flex items-center justify-center w-full h-full text-muted-foreground">
+                          <Box className="h-10 w-10 opacity-20" />
+                        </div>
+                      )}
+                      <div className="absolute top-2 right-2 flex gap-2">
+                        <Badge variant="secondary" className="bg-background/80 backdrop-blur-sm border-0">
+                          v{subject.version}
+                        </Badge>
                         {subject.isTransparent && (
-                          <Badge variant="secondary" className="bg-pink-500/10 text-pink-600 border-pink-200 text-[10px] px-1 h-4">
-                            T
+                          <Badge variant="secondary" className="bg-pink-500 text-white border-0">
+                            Transparent
                           </Badge>
                         )}
                       </div>
-
-                      {subject.category && (
+                    </div>
+                  </Link>
+                  <CardHeader className="p-4 space-y-1">
+                    <div className="flex items-center justify-between gap-2">
+                      <CardTitle className="text-lg truncate">
+                        <Link href={`/subjects/${subject.id}`} className="hover:underline flex items-center gap-2">
+                          <Box className="h-4 w-4 shrink-0 text-muted-foreground" />
+                          {subject.name}
+                        </Link>
+                      </CardTitle>
+                    </div>
+                    {subject.category && (
+                      <div className="pb-1">
                         <Badge
-                          variant="secondary"
+                          variant="outline"
                           className="text-[10px] h-5"
                           style={{
-                            backgroundColor: subject.category.color + '20' || '#3b82f620',
                             color: subject.category.color || '#3b82f6',
                             borderColor: subject.category.color + '40' || '#3b82f640'
                           }}
@@ -527,26 +574,42 @@ export default function SubjectsPage() {
                           <Tag className="mr-1 h-3 w-3" />
                           {subject.category.name}
                         </Badge>
-                      )}
-
-                      {subject.description && (
-                        <CardDescription className="line-clamp-2 text-xs">
-                          {subject.description}
-                        </CardDescription>
-                      )}
+                      </div>
+                    )}
+                    {subject.description && (
+                      <CardDescription className="line-clamp-2 min-h-[2.5rem]">
+                        {subject.description}
+                      </CardDescription>
+                    )}
+                  </CardHeader>
+                  <CardContent className="p-4 pt-0 mt-auto">
+                    <div className="flex items-center justify-between text-sm text-muted-foreground pt-2 border-t">
+                      <div className="flex items-center gap-1 text-[10px]">
+                        {new Date(subject.createdAt).toLocaleDateString()}
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                          onClick={(e) => handleDelete(e, subject.id, subject.name)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7"
+                          onClick={(e) => handleToggleFavorite(e, subject.id)}
+                        >
+                          <Star className={`h-4 w-4 ${subject.isFavorite ? 'fill-yellow-400 text-yellow-400' : 'text-muted-foreground'}`} />
+                        </Button>
+                      </div>
                     </div>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8 shrink-0"
-                      onClick={(e) => handleToggleFavorite(e, subject.id)}
-                    >
-                      <Star className={`h-4 w-4 ${subject.isFavorite ? 'fill-yellow-400 text-yellow-400' : 'text-muted-foreground'}`} />
-                    </Button>
-                  </div>
-                </CardHeader>
-              </Card>
-            ))}
+                  </CardContent>
+                </Card>
+              );
+            })}
           </div>
         );
       })()}

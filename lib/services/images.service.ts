@@ -4,8 +4,8 @@
  */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { db } from '@/lib/db';
-import { images, squishAnimations, imageEdits, Image, NewImage, SquishAnimation, ImageEdit, generations } from '@/lib/db/schema';
-import { eq, desc, inArray } from 'drizzle-orm';
+import { images, squishAnimations, imageEdits, Image, NewImage, SquishAnimation, ImageEdit, generations, batchPrompts, prompts } from '@/lib/db/schema';
+import { eq, desc, inArray, exists, and } from 'drizzle-orm';
 import { BaseService } from './base.service';
 
 /**
@@ -353,6 +353,45 @@ export class ImagesService extends BaseService<typeof images, Image, NewImage> {
       withAnimations: batchImages.filter(img => img.squishAnimations.length > 0).length,
       withEdits: batchImages.filter(img => img.imageEdits.length > 0).length,
     };
+  }
+
+  /**
+   * Get all images associated with a specific subject.
+   *
+   * @param subjectId - Subject ID to filter by
+   * @param options - Query options
+   * @returns Images for the subject
+   */
+  async getImagesBySubjectId(
+    subjectId: string,
+    options: { limit?: number; offset?: number } = {}
+  ) {
+    const { limit = 50, offset = 0 } = options;
+
+    return db.query.images.findMany({
+      where: exists(
+        db.select()
+          .from(generations)
+          .innerJoin(batchPrompts, eq(generations.batchPromptId, batchPrompts.id))
+          .innerJoin(prompts, eq(batchPrompts.promptId, prompts.id))
+          .where(
+            and(
+              eq(images.generationId, generations.id),
+              eq(prompts.subjectId, subjectId)
+            )
+          )
+      ),
+      orderBy: [desc(images.createdAt)],
+      limit,
+      offset,
+      with: {
+        generation: {
+          with: {
+            batch: true,
+          },
+        },
+      },
+    });
   }
 }
 
