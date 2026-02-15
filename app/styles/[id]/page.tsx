@@ -4,20 +4,14 @@ import { useEffect, useState, use } from "react";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, ArrowLeft, Trash2, Palette, ChevronRight, Copy, Pencil, Save, X, Plus, Sparkles, Layers } from "lucide-react";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
+import { Loader2, ArrowLeft, Trash2, Copy, Pencil, Save, X } from "lucide-react";
+import { StyleEditForm } from "@/components/styles/style-edit-form";
+import { StylePaletteDisplay } from "@/components/styles/style-palette-display";
+import { StyleRenderingCuesDisplay } from "@/components/styles/style-rendering-cues-display";
+import { StyleLineage } from "@/components/styles/style-lineage";
+import { StyleBatchesSection } from "@/components/styles/style-batches-section";
 
 interface Style {
   id: string;
@@ -80,11 +74,6 @@ export default function StyleDetailPage({ params }: { params: Promise<{ id: stri
   const [editMaterials, setEditMaterials] = useState<string[]>([]);
   const [editEffects, setEditEffects] = useState<string[]>([]);
   const [editFinish, setEditFinish] = useState("");
-
-  // AI Assist state
-  const [aiDialogOpen, setAiDialogOpen] = useState(false);
-  const [aiRequest, setAiRequest] = useState("");
-  const [aiLoading, setAiLoading] = useState(false);
 
   useEffect(() => {
     const fetchStyle = async () => {
@@ -240,60 +229,6 @@ export default function StyleDetailPage({ params }: { params: Promise<{ id: stri
     setEditing(false);
   };
 
-  const handleAiAssist = async () => {
-    if (!aiRequest.trim()) return;
-
-    setAiLoading(true);
-    try {
-      const response = await fetch("/api/agents/edit-style", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          currentStyle: {
-            name: editName,
-            description: editDescription,
-            palette: {
-              primary: editPrimaryColors,
-              accent: editAccentColors,
-              background: editBackground,
-            },
-            renderingCues: {
-              materials: editMaterials,
-              effects: editEffects,
-              finish: editFinish,
-            },
-          },
-          userRequest: aiRequest,
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error("Failed to get AI suggestions");
-      }
-
-      const data = await response.json();
-      const newStyle = data.style;
-
-      // Update edit state with AI suggestions
-      setEditName(newStyle.name);
-      setEditDescription(newStyle.description || "");
-      setEditPrimaryColors(newStyle.palette.primary);
-      setEditAccentColors(newStyle.palette.accent);
-      setEditBackground(newStyle.palette.background);
-      setEditMaterials(newStyle.renderingCues.materials);
-      setEditEffects(newStyle.renderingCues.effects);
-      setEditFinish(newStyle.renderingCues.finish);
-
-      setAiDialogOpen(false);
-      setAiRequest("");
-    } catch (error) {
-      console.error("Error with AI assist:", error);
-      toast.error("Failed to get AI suggestions");
-    } finally {
-      setAiLoading(false);
-    }
-  };
-
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
@@ -365,412 +300,29 @@ export default function StyleDetailPage({ params }: { params: Promise<{ id: stri
       </div>
 
       {editing && (
-        <Card>
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <div>
-                <CardTitle>Edit Style</CardTitle>
-                <CardDescription>Modify all style details including colors and rendering cues</CardDescription>
-              </div>
-              <Dialog open={aiDialogOpen} onOpenChange={setAiDialogOpen}>
-                <DialogTrigger asChild>
-                  <Button variant="outline" size="sm">
-                    <Sparkles className="mr-2 h-4 w-4" />
-                    AI Assist
-                  </Button>
-                </DialogTrigger>
-                <DialogContent>
-                  <DialogHeader>
-                    <DialogTitle>AI Style Assist</DialogTitle>
-                    <DialogDescription>
-                      Describe how you want to modify the style and AI will update it for you.
-                    </DialogDescription>
-                  </DialogHeader>
-                  <div className="py-4">
-                    <Textarea
-                      value={aiRequest}
-                      onChange={(e) => setAiRequest(e.target.value)}
-                      placeholder="e.g., make the colors warmer, add a sunset theme, make it more vibrant..."
-                      rows={3}
-                    />
-                  </div>
-                  <DialogFooter>
-                    <Button variant="outline" onClick={() => setAiDialogOpen(false)} disabled={aiLoading}>
-                      Cancel
-                    </Button>
-                    <Button onClick={handleAiAssist} disabled={aiLoading || !aiRequest.trim()}>
-                      {aiLoading ? (
-                        <>
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          Generating...
-                        </>
-                      ) : (
-                        <>
-                          <Sparkles className="mr-2 h-4 w-4" />
-                          Apply AI Changes
-                        </>
-                      )}
-                    </Button>
-                  </DialogFooter>
-                </DialogContent>
-              </Dialog>
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Name</label>
-              <Input
-                value={editName}
-                onChange={(e) => setEditName(e.target.value)}
-                placeholder="Style name"
-              />
-            </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Description</label>
-              <Textarea
-                value={editDescription}
-                onChange={(e) => setEditDescription(e.target.value)}
-                placeholder="Style description"
-                rows={4}
-              />
-            </div>
-
-            <div className="border-t pt-6">
-              <h3 className="text-lg font-semibold mb-4">Color Palette</h3>
-
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <label className="text-sm font-medium">Primary Colors</label>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setEditPrimaryColors([...editPrimaryColors, "#000000"])}
-                    >
-                      <Plus className="h-3 w-3 mr-1" />
-                      Add Color
-                    </Button>
-                  </div>
-                  <div className="flex flex-wrap gap-2">
-                    {editPrimaryColors.map((color, i) => (
-                      <div key={i} className="flex items-center gap-2 p-2 border rounded">
-                        <Input
-                          type="color"
-                          value={color}
-                          onChange={(e) => {
-                            const updated = [...editPrimaryColors];
-                            updated[i] = e.target.value;
-                            setEditPrimaryColors(updated);
-                          }}
-                          className="w-12 h-8"
-                        />
-                        <Input
-                          type="text"
-                          value={color}
-                          onChange={(e) => {
-                            const updated = [...editPrimaryColors];
-                            updated[i] = e.target.value;
-                            setEditPrimaryColors(updated);
-                          }}
-                          className="w-24 font-mono text-xs"
-                        />
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => setEditPrimaryColors(editPrimaryColors.filter((_, idx) => idx !== i))}
-                        >
-                          <X className="h-3 w-3" />
-                        </Button>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <label className="text-sm font-medium">Accent Colors</label>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setEditAccentColors([...editAccentColors, "#000000"])}
-                    >
-                      <Plus className="h-3 w-3 mr-1" />
-                      Add Color
-                    </Button>
-                  </div>
-                  <div className="flex flex-wrap gap-2">
-                    {editAccentColors.map((color, i) => (
-                      <div key={i} className="flex items-center gap-2 p-2 border rounded">
-                        <Input
-                          type="color"
-                          value={color}
-                          onChange={(e) => {
-                            const updated = [...editAccentColors];
-                            updated[i] = e.target.value;
-                            setEditAccentColors(updated);
-                          }}
-                          className="w-12 h-8"
-                        />
-                        <Input
-                          type="text"
-                          value={color}
-                          onChange={(e) => {
-                            const updated = [...editAccentColors];
-                            updated[i] = e.target.value;
-                            setEditAccentColors(updated);
-                          }}
-                          className="w-24 font-mono text-xs"
-                        />
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => setEditAccentColors(editAccentColors.filter((_, idx) => idx !== i))}
-                        >
-                          <X className="h-3 w-3" />
-                        </Button>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Background Color</label>
-                  <div className="flex items-center gap-2">
-                    <Input
-                      type="color"
-                      value={editBackground}
-                      onChange={(e) => setEditBackground(e.target.value)}
-                      className="w-12 h-8"
-                    />
-                    <Input
-                      type="text"
-                      value={editBackground}
-                      onChange={(e) => setEditBackground(e.target.value)}
-                      className="w-32 font-mono text-xs"
-                    />
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="border-t pt-6">
-              <h3 className="text-lg font-semibold mb-4">Rendering Cues</h3>
-
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <label className="text-sm font-medium">Materials</label>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setEditMaterials([...editMaterials, ""])}
-                    >
-                      <Plus className="h-3 w-3 mr-1" />
-                      Add Material
-                    </Button>
-                  </div>
-                  <div className="flex flex-wrap gap-2">
-                    {editMaterials.map((material, i) => (
-                      <div key={i} className="flex items-center gap-2">
-                        <Input
-                          value={material}
-                          onChange={(e) => {
-                            const updated = [...editMaterials];
-                            updated[i] = e.target.value;
-                            setEditMaterials(updated);
-                          }}
-                          placeholder="e.g., glass, metal, wood"
-                          className="w-48"
-                        />
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => setEditMaterials(editMaterials.filter((_, idx) => idx !== i))}
-                        >
-                          <X className="h-3 w-3" />
-                        </Button>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <label className="text-sm font-medium">Effects</label>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setEditEffects([...editEffects, ""])}
-                    >
-                      <Plus className="h-3 w-3 mr-1" />
-                      Add Effect
-                    </Button>
-                  </div>
-                  <div className="flex flex-wrap gap-2">
-                    {editEffects.map((effect, i) => (
-                      <div key={i} className="flex items-center gap-2">
-                        <Input
-                          value={effect}
-                          onChange={(e) => {
-                            const updated = [...editEffects];
-                            updated[i] = e.target.value;
-                            setEditEffects(updated);
-                          }}
-                          placeholder="e.g., glow, shadow, blur"
-                          className="w-48"
-                        />
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => setEditEffects(editEffects.filter((_, idx) => idx !== i))}
-                        >
-                          <X className="h-3 w-3" />
-                        </Button>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Finish</label>
-                  <Input
-                    value={editFinish}
-                    onChange={(e) => setEditFinish(e.target.value)}
-                    placeholder="e.g., matte, glossy, satin"
-                  />
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+        <StyleEditForm
+          editName={editName}
+          setEditName={setEditName}
+          editDescription={editDescription}
+          setEditDescription={setEditDescription}
+          editPrimaryColors={editPrimaryColors}
+          setEditPrimaryColors={setEditPrimaryColors}
+          editAccentColors={editAccentColors}
+          setEditAccentColors={setEditAccentColors}
+          editBackground={editBackground}
+          setEditBackground={setEditBackground}
+          editMaterials={editMaterials}
+          setEditMaterials={setEditMaterials}
+          editEffects={editEffects}
+          setEditEffects={setEditEffects}
+          editFinish={editFinish}
+          setEditFinish={setEditFinish}
+        />
       )}
 
       <div className="grid gap-6 md:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle>Color Palette</CardTitle>
-            <CardDescription>Primary, accent, and background colors</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            {Array.isArray(style.palette) ? (
-              <div>
-                <h4 className="text-sm font-medium mb-3">Colors</h4>
-                <div className="flex flex-wrap gap-2">
-                  {style.palette.map((color, i) => (
-                    <div key={i} className="flex flex-col items-center gap-1">
-                      <div
-                        className="w-12 h-12 rounded-md border shadow-sm"
-                        style={{ backgroundColor: color }}
-                      />
-                      <span className="text-[10px] font-mono">{color}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            ) : (
-              <>
-                <div>
-                  <h4 className="text-sm font-medium mb-3">Primary Colors</h4>
-                  <div className="flex flex-wrap gap-2">
-                    {style.palette.primary.map((color, i) => (
-                      <div key={i} className="flex flex-col items-center gap-1">
-                        <div
-                          className="w-12 h-12 rounded-md border shadow-sm"
-                          style={{ backgroundColor: color }}
-                        />
-                        <span className="text-[10px] font-mono">{color}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                <div>
-                  <h4 className="text-sm font-medium mb-3">Accent Colors</h4>
-                  <div className="flex flex-wrap gap-2">
-                    {style.palette.accent.map((color, i) => (
-                      <div key={i} className="flex flex-col items-center gap-1">
-                        <div
-                          className="w-12 h-12 rounded-md border shadow-sm"
-                          style={{ backgroundColor: color }}
-                        />
-                        <span className="text-[10px] font-mono">{color}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                <div>
-                  <h4 className="text-sm font-medium mb-3">Background</h4>
-                  <div className="flex flex-col items-start gap-1">
-                    <div
-                      className="w-12 h-12 rounded-md border shadow-sm"
-                      style={{ backgroundColor: style.palette.background }}
-                    />
-                    <span className="text-[10px] font-mono">{style.palette.background}</span>
-                  </div>
-                </div>
-              </>
-            )}
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Rendering Cues</CardTitle>
-            <CardDescription>Materials, effects, and finish</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            {Array.isArray(style.renderingCues) ? (
-              <div>
-                <h4 className="text-sm font-medium mb-3">Rendering Cues</h4>
-                <div className="flex flex-wrap gap-2">
-                  {style.renderingCues.map((cue) => (
-                    <Badge key={cue} variant="secondary">
-                      {cue}
-                    </Badge>
-                  ))}
-                </div>
-              </div>
-            ) : (
-              <>
-                <div>
-                  <h4 className="text-sm font-medium mb-3">Materials</h4>
-                  <div className="flex flex-wrap gap-2">
-                    {style.renderingCues.materials.map((material) => (
-                      <Badge key={material} variant="secondary">
-                        {material}
-                      </Badge>
-                    ))}
-                  </div>
-                </div>
-
-                <div>
-                  <h4 className="text-sm font-medium mb-3">Effects</h4>
-                  <div className="flex flex-wrap gap-2">
-                    {style.renderingCues.effects.map((effect) => (
-                      <Badge key={effect} variant="outline">
-                        {effect}
-                      </Badge>
-                    ))}
-                  </div>
-                </div>
-
-                <div>
-                  <h4 className="text-sm font-medium mb-3">Finish</h4>
-                  <Badge>{style.renderingCues.finish}</Badge>
-                </div>
-              </>
-            )}
-          </CardContent>
-        </Card>
+        <StylePaletteDisplay palette={style.palette} />
+        <StyleRenderingCuesDisplay renderingCues={style.renderingCues} />
       </div>
 
       <Card>
@@ -784,132 +336,12 @@ export default function StyleDetailPage({ params }: { params: Promise<{ id: stri
         </CardContent>
       </Card>
 
-      {(style.parentStyle || (style.childStyles && style.childStyles.length > 0)) && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Style Lineage</CardTitle>
-            <CardDescription>Related versions and parent styles</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {style.parentStyle && (
-              <div>
-                <h4 className="text-sm font-medium mb-2 text-muted-foreground uppercase tracking-wider">Parent Style</h4>
-                <Button
-                  variant="outline"
-                  className="w-full justify-between"
-                  onClick={() => router.push(`/styles/${style.parentStyle!.id}`)}
-                >
-                  <span className="flex items-center gap-2">
-                    <Palette className="h-4 w-4" />
-                    {style.parentStyle.name}
-                  </span>
-                  <ChevronRight className="h-4 w-4" />
-                </Button>
-              </div>
-            )}
+      <StyleLineage
+        parentStyle={style.parentStyle}
+        childStyles={style.childStyles}
+      />
 
-            {style.childStyles && style.childStyles.length > 0 && (
-              <div>
-                <h4 className="text-sm font-medium mb-2 text-muted-foreground uppercase tracking-wider">Child Styles</h4>
-                <div className="grid gap-2">
-                  {style.childStyles.map((child) => (
-                    <Button
-                      key={child.id}
-                      variant="outline"
-                      className="w-full justify-between"
-                      onClick={() => router.push(`/styles/${child.id}`)}
-                    >
-                      <span className="flex items-center gap-2">
-                        <Palette className="h-4 w-4" />
-                        {child.name}
-                        <Badge variant="secondary" className="text-[10px]">v{child.version}</Badge>
-                      </span>
-                      <ChevronRight className="h-4 w-4" />
-                    </Button>
-                  ))}
-                </div>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      )}
-
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle>Batches</CardTitle>
-              <CardDescription>Generations that use this style</CardDescription>
-            </div>
-            <Badge variant="secondary">{batches.length} Batches</Badge>
-          </div>
-        </CardHeader>
-        <CardContent>
-          {loadingBatches ? (
-            <div className="flex justify-center py-8">
-              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-            </div>
-          ) : batches.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground bg-muted/20 rounded-lg border border-dashed">
-              <Layers className="h-8 w-8 mx-auto mb-2 opacity-20" />
-              <p>No batches found for this style.</p>
-            </div>
-          ) : (
-            <div className="grid gap-4 md:grid-cols-2">
-              {batches.map((batch) => {
-                // Get up to 3 images as previews
-                const previewImages = batch.generations.flatMap(g => g.images).slice(0, 3);
-                
-                return (
-                  <Button
-                    key={batch.id}
-                    variant="outline"
-                    className="h-auto p-4 justify-between hover:bg-muted/50 transition-colors group"
-                    onClick={() => router.push(`/batches/${batch.id}`)}
-                  >
-                    <div className="flex items-center gap-6 text-left overflow-hidden">
-                      <div className="flex -space-x-12">
-                        {previewImages.length > 0 ? (
-                          previewImages.map((img, i) => (
-                            <div
-                              key={img.id}
-                              className="w-16 h-16 rounded bg-muted flex items-center justify-center overflow-hidden border shadow-sm transition-transform group-hover:translate-x-2"
-                              style={{
-                                zIndex: 10 - i,
-                                transform: `scale(${1 - i * 0.1})`
-                              }}
-                            >
-                              <img
-                                src={`/api/images/${img.id}/file`}
-                                alt={batch.name}
-                                className="w-full h-full object-cover"
-                              />
-                            </div>
-                          ))
-                        ) : (
-                          <div className="w-16 h-16 rounded bg-muted flex items-center justify-center overflow-hidden border">
-                            <Layers className="h-8 w-8 text-muted-foreground/50" />
-                          </div>
-                        )}
-                      </div>
-                      <div className="overflow-hidden">
-                        <div className="font-semibold truncate max-w-[250px]">{batch.name}</div>
-                        <div className="text-xs text-muted-foreground flex gap-2 items-center mt-1">
-                          <Badge variant="outline" className="text-[10px] h-4 px-1">
-                            {batch.status}
-                          </Badge>
-                          <span>{new Date(batch.createdAt).toLocaleDateString()}</span>
-                        </div>
-                      </div>
-                    </div>
-                    <ChevronRight className="h-4 w-4 text-muted-foreground" />
-                  </Button>
-                );
-              })}
-            </div>
-          )}
-        </CardContent>
-      </Card>
+      <StyleBatchesSection batches={batches} loading={loadingBatches} />
     </div>
   );
 }

@@ -4,17 +4,16 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Badge } from "@/components/ui/badge";
-import { Loader2, Plus, X, Palette, Box, Compass, Sparkles, Wand2, EyeOff, Star } from "lucide-react";
+import { Loader2, Plus, X, Wand2 } from "lucide-react";
 import { AIAssistButton } from "@/components/agents/ai-assist-button";
 import { DEFAULT_RESOLUTION, getResolutionPresetsForProvider, type ProviderType } from "@/lib/config/resolution-presets";
 import { useSettings } from "@/components/providers/settings-provider";
-import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
+import { ConstructModeSelector } from "@/components/batch/construct-mode-selector";
+import { BatchDefaultsForm } from "@/components/batch/batch-defaults-form";
 
 interface Entity {
   id: string;
@@ -69,10 +68,8 @@ export default function NewBatchPage() {
   const [defaultCount, setDefaultCount] = useState(1);
   const [resolution, setResolution] = useState<string>(DEFAULT_RESOLUTION);
 
-  // Get available resolutions for the current provider
   const availableResolutions = getResolutionPresetsForProvider(provider);
 
-  // Handle provider change - reset resolution if current one isn't supported
   const handleProviderChange = (newProvider: ProviderType) => {
     setProvider(newProvider);
     const newAvailableResolutions = getResolutionPresetsForProvider(newProvider);
@@ -82,19 +79,13 @@ export default function NewBatchPage() {
     }
   };
 
-  // Selection mode: 'preset' or 'construct'
   const [mode, setMode] = useState<'preset' | 'construct'>('preset');
-
-  // For 'preset' mode
   const [selectedPresetId, setSelectedPresetId] = useState("");
-
-  // For 'construct' mode
   const [styleId, setStyleId] = useState("");
   const [omitStyle, setOmitStyle] = useState(false);
   const [selectedSubjectIds, setSelectedSubjectIds] = useState<string[]>([]);
   const [selectedGuidanceIds, setSelectedGuidanceIds] = useState<string[]>([]);
 
-  // Preview and final prompts
   const [composing, setComposing] = useState(false);
   const [previewPrompts, setPreviewPrompts] = useState<{ subjectName: string; promptText: string; promptId?: string }[]>([]);
   const [prompts, setPrompts] = useState<BatchPrompt[]>([]);
@@ -143,31 +134,6 @@ export default function NewBatchPage() {
     );
   };
 
-  const [metadataLoading, setMetadataLoading] = useState(false);
-  const handleGenerateMetadata = async () => {
-    if (prompts.length === 0) return;
-
-    setMetadataLoading(true);
-    try {
-      const combinedPrompt = prompts.map(p => p.promptText).join('\n');
-      const response = await fetch('/api/agents/create-batch-metadata', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ promptText: combinedPrompt }),
-      });
-
-      if (!response.ok) throw new Error('Failed to generate metadata');
-      const data = await response.json();
-      setName(data.name);
-      setDescription(data.description);
-    } catch (error) {
-      console.error('Error generating metadata:', error);
-      toast.error('Failed to generate metadata');
-    } finally {
-      setMetadataLoading(false);
-    }
-  };
-
   const handleConstructPreview = async () => {
     if (mode === 'preset') {
       const preset = presets.find(p => p.id === selectedPresetId);
@@ -194,7 +160,7 @@ export default function NewBatchPage() {
           return {
             subjectName: subject?.name || 'Unknown',
             promptText: data.promptText,
-            promptId: data.promptId  // Capture the promptId from the API response
+            promptId: data.promptId
           };
         });
 
@@ -348,133 +314,26 @@ export default function NewBatchPage() {
                 </div>
               </div>
             ) : (
-              <div className="space-y-6">
-                <div className="grid md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <Label className="flex items-center gap-2"><Palette className="h-4 w-4" /> Style</Label>
-                      <div className="flex items-center space-x-2">
-                        <Switch
-                          id="omitStyle"
-                          checked={omitStyle}
-                          onCheckedChange={(checked: boolean) => {
-                            setOmitStyle(checked);
-                            if (checked) setStyleId("");
-                          }}
-                        />
-                        <label
-                          htmlFor="omitStyle"
-                          className="text-sm font-medium flex items-center gap-1 text-muted-foreground cursor-pointer"
-                        >
-                          <EyeOff className="h-3 w-3" />
-                          Omit Style
-                        </label>
-                      </div>
-                    </div>
-                    <Select
-                      value={styleId}
-                      onValueChange={setStyleId}
-                      disabled={omitStyle}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select style..." />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {(stylesFavoritesOnly ? styles.filter(s => s.isFavorite) : styles).map((s) => (
-                          <SelectItem key={s.id} value={s.id}>
-                            <span className="flex items-center gap-2">
-                              {s.isFavorite && <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />}
-                              {s.name}
-                            </span>
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <div className="flex items-center gap-2 mt-1">
-                      <Button
-                        type="button"
-                        variant={stylesFavoritesOnly ? "default" : "outline"}
-                        size="sm"
-                        onClick={() => setStylesFavoritesOnly(!stylesFavoritesOnly)}
-                        className={`h-6 text-xs ${stylesFavoritesOnly ? "bg-yellow-500 hover:bg-yellow-600 text-white" : ""}`}
-                      >
-                        <Star className={`h-3 w-3 mr-1 ${stylesFavoritesOnly ? 'fill-current' : ''}`} />
-                        Favorites Only
-                      </Button>
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <Label className="flex items-center gap-2"><Box className="h-4 w-4" /> Subjects</Label>
-                      <Select value={filterCategoryId} onValueChange={setFilterCategoryId}>
-                        <SelectTrigger className="w-[160px] h-8 text-xs">
-                          <SelectValue placeholder="Filter by category..." />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="all">All Categories</SelectItem>
-                          {categories.map((cat) => (
-                            <SelectItem key={cat.id} value={cat.id}>
-                              <div className="flex items-center gap-2">
-                                <div className="w-2 h-2 rounded-full" style={{ backgroundColor: cat.color || '#3b82f6' }} />
-                                {cat.name}
-                              </div>
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <Button
-                        type="button"
-                        variant={subjectsFavoritesOnly ? "default" : "outline"}
-                        size="icon"
-                        onClick={() => setSubjectsFavoritesOnly(!subjectsFavoritesOnly)}
-                        className={`h-8 w-8 ${subjectsFavoritesOnly ? "bg-yellow-500 hover:bg-yellow-600 text-white" : ""}`}
-                      >
-                        <Star className={`h-3 w-3 ${subjectsFavoritesOnly ? 'fill-current' : ''}`} />
-                      </Button>
-                    </div>
-                    <div className="flex flex-wrap gap-2 p-2 border rounded-md min-h-[42px] max-h-[200px] overflow-y-auto">
-                      {(filterCategoryId === "all" ? subjects : subjects.filter(s => s.categoryId === filterCategoryId))
-                        .filter(s => !subjectsFavoritesOnly || s.isFavorite)
-                        .map((s) => {
-                          const subjectCategory = categories.find(c => c.id === s.categoryId);
-                          return (
-                            <Badge
-                              key={s.id}
-                              variant={selectedSubjectIds.includes(s.id) ? "default" : "outline"}
-                              className={`cursor-pointer transition-colors ${s.isTransparent && !selectedSubjectIds.includes(s.id) ? "border-pink-200 text-pink-600" : ""}`}
-                              onClick={() => toggleSubject(s.id)}
-                              style={subjectCategory && !selectedSubjectIds.includes(s.id) ? {
-                                borderColor: subjectCategory.color + '60' || undefined,
-                              } : undefined}
-                            >
-                              {subjectCategory && (
-                                <div className="w-1.5 h-1.5 rounded-full mr-1" style={{ backgroundColor: subjectCategory.color || '#3b82f6' }} />
-                              )}
-                              {s.name}
-                              {s.isTransparent && <span className="ml-1 text-[8px] opacity-70">★</span>}
-                            </Badge>
-                          );
-                        })}
-                    </div>
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <Label className="flex items-center gap-2"><Compass className="h-4 w-4" /> Guidance</Label>
-                  <div className="flex flex-wrap gap-2">
-                    {guidanceList.map((g) => (
-                      <Badge
-                        key={g.id}
-                        variant={selectedGuidanceIds.includes(g.id) ? "default" : "outline"}
-                        className="cursor-pointer"
-                        onClick={() => toggleGuidance(g.id)}
-                      >
-                        {g.name}
-                      </Badge>
-                    ))}
-                  </div>
-                </div>
-              </div>
+              <ConstructModeSelector
+                styles={styles}
+                subjects={subjects}
+                categories={categories}
+                guidanceList={guidanceList}
+                styleId={styleId}
+                setStyleId={setStyleId}
+                omitStyle={omitStyle}
+                setOmitStyle={setOmitStyle}
+                selectedSubjectIds={selectedSubjectIds}
+                toggleSubject={toggleSubject}
+                selectedGuidanceIds={selectedGuidanceIds}
+                toggleGuidance={toggleGuidance}
+                filterCategoryId={filterCategoryId}
+                setFilterCategoryId={setFilterCategoryId}
+                stylesFavoritesOnly={stylesFavoritesOnly}
+                setStylesFavoritesOnly={setStylesFavoritesOnly}
+                subjectsFavoritesOnly={subjectsFavoritesOnly}
+                setSubjectsFavoritesOnly={setSubjectsFavoritesOnly}
+              />
             )}
 
             <Button
@@ -578,89 +437,20 @@ export default function NewBatchPage() {
               </CardContent>
             </Card>
 
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0">
-                <div>
-                  <CardTitle>Batch Information</CardTitle>
-                </div>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={handleGenerateMetadata}
-                  disabled={metadataLoading}
-                >
-                  {metadataLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />}
-                  AI Assist
-                </Button>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="name">Batch Name *</Label>
-                  <Input
-                    id="name"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    placeholder="e.g., Arctic Exploration Sprites"
-                    required
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="description">Description</Label>
-                  <Textarea
-                    id="description"
-                    value={description}
-                    onChange={(e) => setDescription(e.target.value)}
-                    placeholder="Optional description..."
-                    rows={2}
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="provider">Generation Provider</Label>
-                  <Select value={provider} onValueChange={(value: ProviderType) => handleProviderChange(value)}>
-                    <SelectTrigger id="provider">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="gemini">⚡ Google Gemini 2.5 (Fast, 1K only)</SelectItem>
-                      <SelectItem value="gemini3">✨ Google Gemini 3 Pro (1K-4K)</SelectItem>
-                      <SelectItem value="comfyui">🎨 ComfyUI (Advanced)</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="resolution">Image Resolution</Label>
-                  <Select value={resolution} onValueChange={setResolution}>
-                    <SelectTrigger id="resolution">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {availableResolutions.map((preset) => (
-                        <SelectItem key={preset.id} value={preset.id}>
-                          {preset.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="count">Images per Prompt</Label>
-                  <Input
-                    id="count"
-                    type="number"
-                    min="1"
-                    max="10"
-                    value={defaultCount}
-                    onChange={(e) => setDefaultCount(parseInt(e.target.value))}
-                    className="w-32"
-                  />
-                </div>
-              </CardContent>
-            </Card>
+            <BatchDefaultsForm
+              name={name}
+              setName={setName}
+              description={description}
+              setDescription={setDescription}
+              provider={provider}
+              onProviderChange={handleProviderChange}
+              resolution={resolution}
+              setResolution={setResolution}
+              availableResolutions={availableResolutions}
+              defaultCount={defaultCount}
+              setDefaultCount={setDefaultCount}
+              promptTexts={prompts.map(p => p.promptText)}
+            />
 
             <div className="flex gap-4">
               <Button

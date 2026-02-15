@@ -12,6 +12,7 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Vendored from Vercel AI SDK — not project code, do not lint or refactor
     "components/ai-elements/**",
   ]),
   // Enforce no explicit any types

@@ -19,7 +19,7 @@ export default defineConfig({
       exclude: [
         'node_modules/',
         '.next/',
-        'app/**',
+        'components/ai-elements/**', // Vendored from Vercel AI SDK
         '**/*.config.*',
         '**/types.ts',
         '**/*.d.ts',
