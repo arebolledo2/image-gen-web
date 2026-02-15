@@ -6,7 +6,7 @@
  */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { db } from '@/lib/db';
-import { batches, batchPrompts, generations, Batch, NewBatch, NewGeneration, Generation } from '@/lib/db/schema';
+import { batches, generations, Batch, NewBatch, NewGeneration, Generation } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
 import type { BatchPromptOverrides, BatchDefaults } from '@/lib/types/common';
 

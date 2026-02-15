@@ -25,6 +25,18 @@ vi.mock('@/lib/db', () => {
         findFirst: vi.fn(),
         findMany: vi.fn(),
       },
+      prompts: {
+        findMany: vi.fn().mockResolvedValue([]),
+      },
+      batchPrompts: {
+        findMany: vi.fn().mockResolvedValue([]),
+      },
+      generations: {
+        findMany: vi.fn().mockResolvedValue([]),
+      },
+      images: {
+        findMany: vi.fn().mockResolvedValue([]),
+      },
     },
   };
 
@@ -44,6 +56,25 @@ vi.mock('@/lib/db/schema', () => ({
     version: 'version',
     parentStyleId: 'parentStyleId',
     createdAt: 'createdAt',
+    isFavorite: 'isFavorite',
+  },
+  generations: {
+    id: 'id',
+    status: 'status',
+    batchPromptId: 'batchPromptId',
+  },
+  images: {
+    id: 'id',
+    createdAt: 'createdAt',
+    generationId: 'generationId',
+  },
+  prompts: {
+    id: 'id',
+    styleId: 'styleId',
+  },
+  batchPrompts: {
+    id: 'id',
+    promptId: 'promptId',
   },
 }));
 

@@ -1,5 +1,5 @@
 import { db } from '@/lib/db';
-import { styles, Style, NewStyle, prompts, batchPrompts, generations, images } from '@/lib/db/schema';
+import { styles, Style, NewStyle, generations, images } from '@/lib/db/schema';
 import { desc, eq } from 'drizzle-orm';
 import { BaseService } from './base.service';
 

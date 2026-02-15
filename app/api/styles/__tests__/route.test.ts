@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * API Route Tests: /api/styles
  *
@@ -44,7 +43,7 @@ describe('GET /api/styles - service integration', () => {
       { id: '1', name: 'Cyberpunk', version: 1 },
       { id: '2', name: 'Pixel Art', version: 1 },
     ];
-    vi.mocked(stylesService.getLatestStyles).mockResolvedValue(mockStyles);
+    vi.mocked(stylesService.getLatestStyles).mockResolvedValue(mockStyles as any);
 
     const result = await stylesService.getLatestStyles({ favoritesOnly: false });
 
@@ -60,30 +59,30 @@ describe('POST /api/styles - service integration', () => {
 
   it('should create a new style via createStyle', async () => {
     const newStyle = { id: '1', name: 'Pixel Art', version: 1 };
-    vi.mocked(stylesService.createStyle).mockResolvedValue(newStyle);
+    vi.mocked(stylesService.createStyle).mockResolvedValue(newStyle as any);
 
     const result = await stylesService.createStyle({
       name: 'Pixel Art',
-      palette: { primary: ['#FF0000'] },
-      renderingCues: { materials: ['Metal'] },
+      palette: { primary: ['#FF0000'] } as any,
+      renderingCues: { materials: ['Metal'] } as any,
     });
 
     expect(result).toEqual(newStyle);
     expect(stylesService.createStyle).toHaveBeenCalledWith({
       name: 'Pixel Art',
-      palette: { primary: ['#FF0000'] },
-      renderingCues: { materials: ['Metal'] },
+      palette: { primary: ['#FF0000'] } as any,
+      renderingCues: { materials: ['Metal'] } as any,
     });
   });
 
   it('should create a version via createStyleVersion when parentStyleId provided', async () => {
     const versionStyle = { id: '2', name: 'Pixel Art v2', parentStyleId: '1', version: 2 };
-    vi.mocked(stylesService.createStyleVersion).mockResolvedValue(versionStyle);
+    vi.mocked(stylesService.createStyleVersion).mockResolvedValue(versionStyle as any);
 
     const result = await stylesService.createStyleVersion('1', {
       name: 'Pixel Art v2',
-      palette: { primary: ['#00FF00'] },
-      renderingCues: { materials: ['Wood'] },
+      palette: { primary: ['#00FF00'] } as any,
+      renderingCues: { materials: ['Wood'] } as any,
     });
 
     expect(result).toEqual(versionStyle);
@@ -96,7 +95,7 @@ describe('POST /api/styles - service integration', () => {
     vi.mocked(stylesService.createStyle).mockRejectedValue(new Error('Duplicate name'));
 
     await expect(
-      stylesService.createStyle({ name: 'Dup', palette: {}, renderingCues: {} })
+      stylesService.createStyle({ name: 'Dup', palette: {} as any, renderingCues: {} as any })
     ).rejects.toThrow('Duplicate name');
   });
 });

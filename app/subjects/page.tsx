@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -37,7 +37,6 @@ interface Subject {
 }
 
 export default function SubjectsPage() {
-  const router = useRouter();
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
@@ -527,10 +526,13 @@ export default function SubjectsPage() {
                               key={img.id}
                               className="relative flex-1 border-r last:border-r-0 overflow-hidden"
                             >
-                              <img
+                              <Image
                                 src={`/api/images/${img.id}/file?size=thumbnail`}
                                 alt={subject.name}
-                                className="w-full h-full object-cover"
+                                fill
+                                sizes="(max-width: 768px) 33vw, 15vw"
+                                className="object-cover"
+                                unoptimized
                               />
                             </div>
                           ))}

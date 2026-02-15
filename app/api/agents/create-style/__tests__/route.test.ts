@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * API Route Tests: /api/agents/create-style
  *
@@ -22,10 +21,17 @@ describe('POST /api/agents/create-style - agent integration', () => {
   it('should call createStyleAgent with description', async () => {
     const mockStyle = {
       name: 'Neon Cyberpunk',
-      palette: { primary: ['#FF00FF'], secondary: ['#00FFFF'] },
-      renderingCues: { materials: ['Neon'], lighting: ['Glow'] },
+      description: 'A neon cyberpunk aesthetic',
+      palette: { primary: ['#FF00FF'], accent: ['#00FFFF'], background: '#000000' },
+      artisticDirection: {
+        visualStyle: 'Cyberpunk',
+        lighting: 'Neon',
+        cameraPerspective: 'Eye-level',
+        levelOfDetail: 'High',
+      },
+      renderingCues: { materials: ['Neon'], effects: ['Glow'], finish: 'Matte' },
     };
-    vi.mocked(createStyleAgent).mockResolvedValue(mockStyle);
+    vi.mocked(createStyleAgent).mockResolvedValue(mockStyle as any);
 
     const result = await createStyleAgent('A neon cyberpunk aesthetic');
 
@@ -36,10 +42,17 @@ describe('POST /api/agents/create-style - agent integration', () => {
   it('should return complete style structure', async () => {
     const mockStyle = {
       name: 'Pixel Art Fantasy',
-      palette: { primary: ['#2a7f3e'], accent: ['#ffd700'] },
-      renderingCues: { materials: ['Pixel'], mood: ['Whimsical'] },
+      description: 'A whimsical pixel art fantasy style',
+      palette: { primary: ['#2a7f3e'], accent: ['#ffd700'], background: '#ffffff' },
+      artisticDirection: {
+        visualStyle: 'Pixel Art',
+        lighting: 'Natural',
+        cameraPerspective: 'Side-view',
+        levelOfDetail: 'Medium',
+      },
+      renderingCues: { materials: ['Pixel'], effects: ['Whimsical'], finish: 'Glossy' },
     };
-    vi.mocked(createStyleAgent).mockResolvedValue(mockStyle);
+    vi.mocked(createStyleAgent).mockResolvedValue(mockStyle as any);
 
     const result = await createStyleAgent('A whimsical pixel art fantasy style');
 

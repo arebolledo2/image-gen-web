@@ -1,6 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -72,10 +73,13 @@ export function StyleBatchesSection({ batches, loading }: StyleBatchesSectionPro
                               transform: `scale(${1 - i * 0.1})`
                             }}
                           >
-                            <img
+                            <Image
                               src={`/api/images/${img.id}/file`}
                               alt={batch.name}
-                              className="w-full h-full object-cover"
+                              fill
+                              sizes="64px"
+                              className="object-cover"
+                              unoptimized
                             />
                           </div>
                         ))

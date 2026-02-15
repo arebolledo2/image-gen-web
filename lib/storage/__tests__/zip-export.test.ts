@@ -251,9 +251,14 @@ describe('ZIP Export Utilities', () => {
 
       vi.mocked(readImage).mockRejectedValueOnce(new Error('File not found'));
 
+      // Silence console.error for this test as it's an expected failure
+      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
       // Should not throw, should continue processing
       const zipBuffer = await createBatchZip(mockBatch);
       expect(zipBuffer).toBeInstanceOf(Buffer);
+
+      consoleSpy.mockRestore();
     });
 
     it('should skip metadata file when disabled', async () => {

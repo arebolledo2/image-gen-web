@@ -3,6 +3,7 @@
 import { useEffect, useState, use } from "react";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -451,10 +452,13 @@ export default function SubjectDetailPage({ params }: { params: Promise<{ id: st
                   className="group relative aspect-square rounded-lg overflow-hidden border bg-muted cursor-pointer transition-all hover:ring-2 hover:ring-primary/50"
                   onClick={() => router.push(`/editor/${img.id}`)}
                 >
-                  <img
+                  <Image
                     src={`/api/images/${img.id}/file`}
                     alt={subject.name}
-                    className="w-full h-full object-cover transition-transform group-hover:scale-110"
+                    fill
+                    sizes="(max-width: 768px) 50vw, (max-width: 1200px) 33vw, 20vw"
+                    className="object-cover transition-transform group-hover:scale-110"
+                    unoptimized
                   />
                   <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center p-2 text-center">
                     <p className="text-[10px] text-white font-medium line-clamp-2 mb-1">
