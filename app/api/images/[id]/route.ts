@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { images, generations, batches, batchPrompts } from '@/lib/db/schema';
+import { images } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
 
 export async function GET(
@@ -10,51 +10,76 @@ export async function GET(
   try {
     const { id } = await params;
 
-    const result = await db
-      .select({
-        id: images.id,
-        filePath: images.filePath,
-        fileName: images.fileName,
-        mediaType: images.mediaType,
-        isFavorite: images.isFavorite,
-        transparentFilePath: images.transparentFilePath,
-        createdAt: images.createdAt,
-        batchId: batches.id,
-        batchName: batches.name,
-        batchPromptId: batchPrompts.id,
-        batchPromptText: batchPrompts.promptText,
-      })
-      .from(images)
-      .leftJoin(generations, eq(images.generationId, generations.id))
-      .leftJoin(batches, eq(generations.batchId, batches.id))
-      .leftJoin(batchPrompts, eq(generations.batchPromptId, batchPrompts.id))
-      .where(eq(images.id, id))
-      .limit(1);
+    const imageRecord = await db.query.images.findFirst({
+      where: eq(images.id, id),
+      with: {
+        generation: {
+          with: {
+            batch: true,
+            batchPrompt: {
+              with: {
+                prompt: {
+                  with: {
+                    style: true,
+                    subject: true,
+                    promptGuidance: {
+                      with: {
+                        guidance: true,
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    });
 
-    if (result.length === 0) {
+    if (!imageRecord) {
       return NextResponse.json(
         { error: 'Image not found' },
         { status: 404 }
       );
     }
 
-    const row = result[0];
+    const batchPrompt = imageRecord.generation?.batchPrompt ?? null;
+    const prompt = batchPrompt?.prompt ?? null;
+
     const response = {
-      id: row.id,
-      filePath: row.filePath,
-      fileName: row.fileName,
-      mediaType: row.mediaType,
-      isFavorite: row.isFavorite,
-      transparentFilePath: row.transparentFilePath,
-      createdAt: row.createdAt,
+      id: imageRecord.id,
+      filePath: imageRecord.filePath,
+      fileName: imageRecord.fileName,
+      mediaType: imageRecord.mediaType,
+      isFavorite: imageRecord.isFavorite,
+      transparentFilePath: imageRecord.transparentFilePath,
+      flippedFilePath: imageRecord.flippedFilePath,
+      createdAt: imageRecord.createdAt,
       generation: {
-        batch: row.batchId ? {
-          id: row.batchId,
-          name: row.batchName,
+        batch: imageRecord.generation?.batch ? {
+          id: imageRecord.generation.batch.id,
+          name: imageRecord.generation.batch.name,
         } : null,
-        batchPrompt: row.batchPromptId ? {
-          id: row.batchPromptId,
-          promptText: row.batchPromptText,
+        batchPrompt: batchPrompt ? {
+          id: batchPrompt.id,
+          promptText: batchPrompt.promptText,
+          prompt: prompt ? {
+            style: prompt.style ? {
+              id: prompt.style.id,
+              name: prompt.style.name,
+            } : null,
+            subject: prompt.subject ? {
+              id: prompt.subject.id,
+              name: prompt.subject.name,
+            } : null,
+            guidance: prompt.promptGuidance
+              .map((pg) => pg.guidance)
+              .filter((item): item is NonNullable<typeof item> => Boolean(item))
+              .map((item) => ({
+                id: item.id,
+                name: item.name,
+              })),
+          } : null,
         } : null,
       },
     };

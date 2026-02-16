@@ -3,7 +3,7 @@
 import { useChat } from "@ai-sdk/react";
 import { lastAssistantMessageIsCompleteWithApprovalResponses } from "ai";
 import type { FileUIPart } from "ai";
-import { X, MessageSquare } from "lucide-react";
+import { X, MessageSquare, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { ChatMessages } from "./chat-messages";
@@ -13,7 +13,7 @@ import { useChatSidebar } from "./chat-sidebar-provider";
 export function ChatSidebar() {
     const { isOpen, isVisible, close } = useChatSidebar();
 
-    const { messages, sendMessage, status, addToolApprovalResponse } = useChat({
+    const { messages, sendMessage, status, setMessages, addToolApprovalResponse } = useChat({
         id: "sidebar-chat",
         sendAutomaticallyWhen: lastAssistantMessageIsCompleteWithApprovalResponses,
     });
@@ -66,14 +66,25 @@ export function ChatSidebar() {
                         <MessageSquare className="h-4 w-4" />
                         <span className="font-medium text-sm">Chat</span>
                     </div>
-                    <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-7 w-7 p-0"
-                        onClick={close}
-                    >
-                        <X className="h-4 w-4" />
-                    </Button>
+                    <div className="flex items-center gap-1">
+                        <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-7 w-7 p-0"
+                            onClick={() => setMessages([])}
+                            title="New chat"
+                        >
+                            <Plus className="h-4 w-4" />
+                        </Button>
+                        <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-7 w-7 p-0"
+                            onClick={close}
+                        >
+                            <X className="h-4 w-4" />
+                        </Button>
+                    </div>
                 </div>
 
                 <div className="flex-1 overflow-hidden">

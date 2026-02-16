@@ -76,6 +76,9 @@ export function useImageTransparency() {
       } else {
         // Automatically switch to transparent view for regular images
         setShowTransparent(prev => ({ ...prev, [image.id]: true }));
+        if (onVersionChange) {
+          onVersionChange('transparent');
+        }
       }
 
       // Call success callback with updated image

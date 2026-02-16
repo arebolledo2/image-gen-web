@@ -42,6 +42,20 @@ export interface GalleryImage {
     batchPrompt: {
       id: string;
       promptText: string;
+      prompt?: {
+        style: {
+          id: string;
+          name: string;
+        } | null;
+        subject: {
+          id: string;
+          name: string;
+        } | null;
+        guidance: Array<{
+          id: string;
+          name: string;
+        }>;
+      } | null;
     } | null;
   };
 }
@@ -417,7 +431,7 @@ export function ImageGalleryModal({
                       variant="ghost"
                       size="icon"
                       className="h-12 w-12 rounded-full bg-black/20 text-white hover:bg-black/40"
-                      onClick={() => onOpenEditor?.(currentImage.id)}
+                      onClick={() => window.open(`/editor/${currentImage.id}`, '_blank')}
                       title="Open in Editor"
                     >
                       <Edit className="h-8 w-8" />

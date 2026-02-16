@@ -1,6 +1,18 @@
 import { tool } from "ai";
 import { z } from "zod";
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+    return typeof value === "object" && value !== null;
+}
+
+function truncateText(value: string, maxLength: number): string {
+    if (value.length <= maxLength) {
+        return value;
+    }
+
+    return `${value.substring(0, maxLength)}...`;
+}
+
 // Schema for creating a prompt with AI
 const CreatePromptWithAISchema = z.object({
     assetType: z.string().describe("Type of asset to generate (e.g., 'turret', 'enemy', 'background')"),
@@ -33,15 +45,26 @@ export const createPromptWithAI = tool({
             throw new Error(error.error || 'Failed to create prompt with AI');
         }
 
-        const result = await response.json();
+        const result: unknown = await response.json();
+        const promptPayload = isRecord(result) && isRecord(result.prompt) ? result.prompt : result;
+
+        if (!isRecord(promptPayload) || typeof promptPayload.template !== "string") {
+            throw new Error("Invalid create-prompt response: missing template");
+        }
+
+        const name = typeof promptPayload.name === "string" ? promptPayload.name : "AI Prompt";
+        const tags = Array.isArray(promptPayload.tags)
+            ? promptPayload.tags.filter((tag): tag is string => typeof tag === "string")
+            : [];
+
         return {
             success: true,
             prompt: {
-                name: result.name,
-                template: result.template,
-                tags: result.tags
+                name,
+                template: promptPayload.template,
+                tags
             },
-            message: `Generated prompt: "${result.template.substring(0, 100)}..."`
+            message: `Generated prompt: "${truncateText(promptPayload.template, 100)}"`
         };
     }
 });
@@ -61,11 +84,25 @@ export const adjustPrompt = tool({
             throw new Error(error.error || 'Failed to adjust prompt');
         }
 
-        const { adjustedPrompt } = await response.json();
+        const result: unknown = await response.json();
+        const adjustedPrompt = isRecord(result)
+            ? typeof result.adjustedPrompt === "string"
+                ? result.adjustedPrompt
+                : typeof result.promptText === "string"
+                    ? result.promptText
+                    : typeof result.prompt === "string"
+                        ? result.prompt
+                        : undefined
+            : undefined;
+
+        if (typeof adjustedPrompt !== "string") {
+            throw new Error("Invalid adjust-prompt response: missing adjusted prompt text");
+        }
+
         return {
             success: true,
-            originalPrompt: params.basePrompt.substring(0, 50) + '...',
-            adjustedPrompt: adjustedPrompt.substring(0, 100) + '...',
+            originalPrompt: truncateText(params.basePrompt, 50),
+            adjustedPrompt: truncateText(adjustedPrompt, 100),
             fullPrompt: adjustedPrompt,
             message: 'Successfully adjusted prompt based on suggestion'
         };
