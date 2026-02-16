@@ -4,11 +4,12 @@ import { z } from "zod";
 // Type for image data from API
 interface ImageData {
     id: string;
+    fileName: string;
     filePath: string;
     isFavorite: boolean;
     createdAt: string;
     generation?: {
-        batch?: { name: string };
+        batch?: { id: string; name: string };
         batchPrompt?: { promptText: string };
     };
 }
@@ -26,6 +27,19 @@ export const getImages = tool({
     description: "Query generated images with optional filtering by batch, favorites, or search terms. Use this to see what images have been generated.",
     inputSchema: GetImagesSchema,
     execute: async (params) => {
+        const toPromptSnippet = (promptText: unknown): string | undefined => {
+            if (typeof promptText !== "string" || promptText.trim().length === 0) {
+                return undefined;
+            }
+
+            const trimmed = promptText.trim();
+            if (trimmed.length <= 100) {
+                return trimmed;
+            }
+
+            return `${trimmed.slice(0, 100)}...`;
+        };
+
         const searchParams = new URLSearchParams();
 
         if (params.batchId) searchParams.append('batchId', params.batchId);
@@ -50,11 +64,13 @@ export const getImages = tool({
             hasMore,
             images: images.map((img: ImageData) => ({
                 id: img.id,
+                fileName: img.fileName,
                 filePath: img.filePath,
                 isFavorite: img.isFavorite,
                 createdAt: img.createdAt,
+                batchId: img.generation?.batch?.id,
                 batch: img.generation?.batch?.name,
-                prompt: img.generation?.batchPrompt?.promptText?.substring(0, 100) + '...'
+                prompt: toPromptSnippet(img.generation?.batchPrompt?.promptText),
             }))
         };
     }

@@ -5,11 +5,12 @@ import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Tool, ToolHeader, ToolContent, ToolInput, ToolOutput } from "@/components/ai-elements/tool";
 import type { ChatAddToolApproveResponseFunction, ToolUIPart } from "ai";
-import { isBatchMutationTool, parseGetImagesOutput } from "./chat-tool-utils";
+import { isBatchMutationTool, parseGetImagesOutput, type GetImagesPreviewData } from "./chat-tool-utils";
 
 interface ChatToolRendererProps {
     part: ToolUIPart;
     addToolApprovalResponse: ChatAddToolApproveResponseFunction;
+    onOpenGetImagesPreview: (data: GetImagesPreviewData) => void;
 }
 
 function formatToolTitle(name: string): string {
@@ -31,12 +32,28 @@ function formatToolTitle(name: string): string {
     return titles[name] || name;
 }
 
-function GetImagesPreview({ data }: { data: NonNullable<ReturnType<typeof parseGetImagesOutput>> }) {
+function GetImagesPreview({
+    data,
+    onOpenGetImagesPreview,
+}: {
+    data: NonNullable<ReturnType<typeof parseGetImagesOutput>>;
+    onOpenGetImagesPreview: (data: GetImagesPreviewData) => void;
+}) {
     return (
         <div className="space-y-3 p-4">
-            <p className="text-xs uppercase tracking-wide text-muted-foreground">
-                Image Results {typeof data.count === "number" ? `(${data.count})` : ""}
-            </p>
+            <div className="flex items-center justify-between gap-2">
+                <p className="text-xs uppercase tracking-wide text-muted-foreground">
+                    Image Results {typeof data.count === "number" ? `(${data.count})` : ""}
+                </p>
+                <Button
+                    variant="secondary"
+                    size="sm"
+                    disabled={data.images.length === 0}
+                    onClick={() => onOpenGetImagesPreview(data)}
+                >
+                    Preview in pane
+                </Button>
+            </div>
             {data.images.length === 0 ? (
                 <p className="text-sm text-muted-foreground">No images matched this query.</p>
             ) : (
@@ -78,7 +95,11 @@ function GetImagesPreview({ data }: { data: NonNullable<ReturnType<typeof parseG
     );
 }
 
-export function ChatToolRenderer({ part, addToolApprovalResponse }: ChatToolRendererProps) {
+export function ChatToolRenderer({
+    part,
+    addToolApprovalResponse,
+    onOpenGetImagesPreview,
+}: ChatToolRendererProps) {
     const toolName = part.type.replace(/^tool-/, "");
     const shouldRenderApprovalActions =
         isBatchMutationTool(toolName) &&
@@ -144,7 +165,10 @@ export function ChatToolRenderer({ part, addToolApprovalResponse }: ChatToolRend
                 )}
 
                 {toolName === "getImages" && getImagesPreviewData && (
-                    <GetImagesPreview data={getImagesPreviewData} />
+                    <GetImagesPreview
+                        data={getImagesPreviewData}
+                        onOpenGetImagesPreview={onOpenGetImagesPreview}
+                    />
                 )}
 
                 {showToolOutput && (

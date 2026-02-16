@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useRef } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useChat } from "@ai-sdk/react";
 import type { FileUIPart } from "ai";
 import { lastAssistantMessageIsCompleteWithApprovalResponses } from "ai";
@@ -10,8 +10,21 @@ import { History, PanelLeftClose, PanelLeft, PlusCircle } from "lucide-react";
 import { ChatMessages } from "./chat-messages";
 import { ChatInput } from "./chat-input";
 import { ChatSessionPanel } from "./chat-session-panel";
+import { ChatImagePreviewPane } from "./chat-image-preview-pane";
+import { ImageGalleryModal, type GalleryImage } from "@/components/image-gallery-modal";
 import { useChatHistory } from "@/lib/hooks/use-chat-history";
 import { useChatSessions } from "@/lib/hooks/use-chat-sessions";
+import type { GetImagesPreviewData } from "./chat-tool-utils";
+
+const EMPTY_VERSION_MAP: Record<string, string> = {};
+const EMPTY_ANIMATIONS_MAP: Record<string, never[]> = {};
+
+interface PreviewPaneState {
+    sessionId: string | null;
+    isOpen: boolean;
+    data: GetImagesPreviewData | null;
+    selectedIndex: number | null;
+}
 
 export function ChatInterface() {
     const {
@@ -37,6 +50,12 @@ export function ChatInterface() {
         id: activeSessionId ?? "default",
         messages: initialMessages,
         sendAutomaticallyWhen: lastAssistantMessageIsCompleteWithApprovalResponses,
+    });
+    const [previewPaneState, setPreviewPaneState] = useState<PreviewPaneState>({
+        sessionId: activeSessionId ?? null,
+        isOpen: false,
+        data: null,
+        selectedIndex: null,
     });
 
     const isLoaded = sessionsLoaded && historyLoaded;
@@ -106,9 +125,67 @@ export function ChatInterface() {
     };
 
     const isLoading = status !== "ready";
+    const isPreviewForActiveSession = previewPaneState.sessionId === (activeSessionId ?? null);
+    const isPreviewPaneOpen = isPreviewForActiveSession && previewPaneState.isOpen;
+    const previewData = isPreviewForActiveSession ? previewPaneState.data : null;
+    const selectedPreviewImageIndex = isPreviewForActiveSession ? previewPaneState.selectedIndex : null;
+    const previewImages = useMemo(() => previewData?.images ?? [], [previewData]);
+
+    const previewGalleryImages = useMemo<GalleryImage[]>(() => {
+        return previewImages.map((image) => {
+            const hasBatchMetadata = Boolean(image.batchId || image.batch);
+
+            return {
+                id: image.id,
+                filePath: image.filePath ?? "",
+                fileName: image.fileName ?? `${image.id}.png`,
+                mediaType: "image/png",
+                isFavorite: image.isFavorite ?? false,
+                transparentFilePath: null,
+                flippedFilePath: null,
+                createdAt: image.createdAt ?? new Date(0).toISOString(),
+                generation: {
+                    batch: hasBatchMetadata
+                        ? {
+                            id: image.batchId ?? `chat-batch-${image.id}`,
+                            name: image.batch ?? "Unknown Batch",
+                        }
+                        : null,
+                    batchPrompt: image.prompt
+                        ? {
+                            id: `chat-prompt-${image.id}`,
+                            promptText: image.prompt,
+                        }
+                        : null,
+                },
+            };
+        });
+    }, [previewImages]);
+
+    const safeSelectedPreviewImageIndex =
+        selectedPreviewImageIndex !== null && selectedPreviewImageIndex < previewGalleryImages.length
+            ? selectedPreviewImageIndex
+            : null;
+
+    const handleClosePreviewPane = useCallback(() => {
+        setPreviewPaneState((prevState) => ({
+            ...prevState,
+            isOpen: false,
+            selectedIndex: null,
+        }));
+    }, []);
+
+    const handleOpenGetImagesPreview = useCallback((data: GetImagesPreviewData) => {
+        setPreviewPaneState({
+            sessionId: activeSessionId ?? null,
+            isOpen: true,
+            data,
+            selectedIndex: null,
+        });
+    }, [activeSessionId]);
 
     return (
-        <Card className="flex flex-row h-[calc(100vh-130px)] shadow-lg overflow-hidden border-none bg-background/50 backdrop-blur-md">
+        <Card className="relative flex h-[calc(100vh-130px)] flex-row overflow-hidden border-none bg-background/50 shadow-lg backdrop-blur-md">
             {isPanelOpen && (
                 <ChatSessionPanel
                     sessions={sessions}
@@ -161,6 +238,7 @@ export function ChatInterface() {
                     <ChatMessages
                         messages={messages}
                         addToolApprovalResponse={addToolApprovalResponse}
+                        onOpenGetImagesPreview={handleOpenGetImagesPreview}
                     />
                 </div>
 
@@ -172,6 +250,47 @@ export function ChatInterface() {
                     />
                 </div>
             </div>
+            {isPreviewPaneOpen && (
+                <div className="hidden w-96 shrink-0 border-l lg:block">
+                    <ChatImagePreviewPane
+                        images={previewImages}
+                        onClose={handleClosePreviewPane}
+                        onSelectImage={(index) => setPreviewPaneState((prevState) => ({
+                            ...prevState,
+                            selectedIndex: index,
+                        }))}
+                    />
+                </div>
+            )}
+            {isPreviewPaneOpen && (
+                <div className="absolute inset-0 z-20 border-l bg-background lg:hidden">
+                    <ChatImagePreviewPane
+                        images={previewImages}
+                        onClose={handleClosePreviewPane}
+                        onSelectImage={(index) => setPreviewPaneState((prevState) => ({
+                            ...prevState,
+                            selectedIndex: index,
+                        }))}
+                    />
+                </div>
+            )}
+            <ImageGalleryModal
+                images={previewGalleryImages}
+                selectedIndex={safeSelectedPreviewImageIndex}
+                onClose={() => setPreviewPaneState((prevState) => ({
+                    ...prevState,
+                    selectedIndex: null,
+                }))}
+                onNavigate={(index) => setPreviewPaneState((prevState) => ({
+                    ...prevState,
+                    selectedIndex: index,
+                }))}
+                selectedVersion={EMPTY_VERSION_MAP}
+                onSelectedVersionChange={() => undefined}
+                squishAnimations={EMPTY_ANIMATIONS_MAP}
+                aiAnimations={EMPTY_ANIMATIONS_MAP}
+                readOnly
+            />
         </Card>
     );
 }

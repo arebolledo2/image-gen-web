@@ -18,13 +18,19 @@ import { Reasoning, ReasoningTrigger, ReasoningContent } from "@/components/ai-e
 import { MessageSquare } from "lucide-react";
 import { ChatToolRenderer } from "./chat-tool-renderer";
 import type { ChatAddToolApproveResponseFunction, UIMessage, ReasoningUIPart, ToolUIPart, FileUIPart } from "ai";
+import type { GetImagesPreviewData } from "./chat-tool-utils";
 
 interface ChatMessagesProps {
     messages: UIMessage[];
     addToolApprovalResponse: ChatAddToolApproveResponseFunction;
+    onOpenGetImagesPreview: (data: GetImagesPreviewData) => void;
 }
 
-export function ChatMessages({ messages, addToolApprovalResponse }: ChatMessagesProps) {
+export function ChatMessages({
+    messages,
+    addToolApprovalResponse,
+    onOpenGetImagesPreview,
+}: ChatMessagesProps) {
     return (
         <Conversation className="h-full">
             <ConversationContent>
@@ -80,6 +86,7 @@ export function ChatMessages({ messages, addToolApprovalResponse }: ChatMessages
                                                 key={index}
                                                 part={toolPart}
                                                 addToolApprovalResponse={addToolApprovalResponse}
+                                                onOpenGetImagesPreview={onOpenGetImagesPreview}
                                             />
                                         );
                                     }

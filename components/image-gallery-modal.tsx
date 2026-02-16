@@ -51,13 +51,14 @@ interface ImageGalleryModalProps {
   selectedIndex: number | null;
   onClose: () => void;
   onNavigate: (index: number) => void;
-  onToggleFavorite: (e: React.MouseEvent, image: GalleryImage) => Promise<void>;
-  onOpenEditor: (imageId: string) => void;
+  onToggleFavorite?: (e: React.MouseEvent, image: GalleryImage) => Promise<void>;
+  onOpenEditor?: (imageId: string) => void;
   // Version viewing (read-only)
   selectedVersion: Record<string, string>;
   onSelectedVersionChange: (imageId: string, version: string) => void;
   squishAnimations: Record<string, any[]>;
   aiAnimations: Record<string, any[]>;
+  readOnly?: boolean;
 }
 
 export function ImageGalleryModal({
@@ -71,6 +72,7 @@ export function ImageGalleryModal({
   onSelectedVersionChange,
   squishAnimations,
   aiAnimations,
+  readOnly = false,
 }: ImageGalleryModalProps) {
   const [copied, setCopied] = useState(false);
   const lastScrollTime = useRef(0);
@@ -317,149 +319,150 @@ export function ImageGalleryModal({
                 </Button>
               </div>
 
-              {/* Controls Overlay */}
-              <div className="absolute top-4 left-4 flex flex-col gap-4">
-                {/* Version Selector - Button Grid */}
-                <div className="flex flex-col gap-2 pointer-events-auto max-w-xs">
-                  <div className="flex flex-wrap gap-2">
-                    {/* Original Version */}
+              {!readOnly && (
+                <div className="absolute top-4 left-4 flex flex-col gap-4">
+                  {/* Version Selector - Button Grid */}
+                  <div className="flex flex-col gap-2 pointer-events-auto max-w-xs">
+                    <div className="flex flex-wrap gap-2">
+                      {/* Original Version */}
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className={`h-8 px-3 text-xs rounded-lg ${(selectedVersion[currentImage.id] || 'original') === 'original'
+                          ? 'bg-white/20 text-white border border-white/30'
+                          : 'bg-black/40 text-white/70 hover:bg-black/50 hover:text-white'
+                          }`}
+                        onClick={() => onSelectedVersionChange(currentImage.id, 'original')}
+                      >
+                        Original
+                      </Button>
+
+                      {/* Transparent Version */}
+                      {currentImage.transparentFilePath && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className={`h-8 px-3 text-xs rounded-lg ${selectedVersion[currentImage.id] === 'transparent'
+                            ? 'bg-white/20 text-white border border-white/30'
+                            : 'bg-black/40 text-white/70 hover:bg-black/50 hover:text-white'
+                            }`}
+                          onClick={() => onSelectedVersionChange(currentImage.id, 'transparent')}
+                        >
+                          Transparent
+                        </Button>
+                      )}
+
+                      {/* Flipped Version */}
+                      {currentImage.flippedFilePath && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className={`h-8 px-3 text-xs rounded-lg ${selectedVersion[currentImage.id] === 'flipped'
+                            ? 'bg-white/20 text-white border border-white/30'
+                            : 'bg-black/40 text-white/70 hover:bg-black/50 hover:text-white'
+                            }`}
+                          onClick={() => onSelectedVersionChange(currentImage.id, 'flipped')}
+                        >
+                          Flipped
+                        </Button>
+                      )}
+
+                      {/* Squish Animations */}
+                      {squishAnimations[currentImage.id]?.map((animation: any) => (
+                        <Button
+                          key={`squish-${animation.id}`}
+                          variant="ghost"
+                          size="sm"
+                          className={`h-8 px-3 text-xs rounded-lg ${selectedVersion[currentImage.id] === `squish-${animation.id}`
+                            ? 'bg-white/20 text-white border border-white/30'
+                            : 'bg-black/40 text-white/70 hover:bg-black/50 hover:text-white'
+                            }`}
+                          onClick={() => onSelectedVersionChange(currentImage.id, `squish-${animation.id}`)}
+                        >
+                          Squish {animation.frameCount}f @{animation.intensity}%
+                        </Button>
+                      ))}
+
+                      {/* AI Animations */}
+                      {aiAnimations[currentImage.id]?.map((animation: any) => (
+                        <Button
+                          key={`ai-${animation.id}`}
+                          variant="ghost"
+                          size="sm"
+                          className={`h-8 px-3 text-xs rounded-lg ${selectedVersion[currentImage.id] === `ai-${animation.id}`
+                            ? 'bg-white/20 text-white border border-white/30'
+                            : 'bg-black/40 text-white/70 hover:bg-black/50 hover:text-white'
+                            }`}
+                          onClick={() => onSelectedVersionChange(currentImage.id, `ai-${animation.id}`)}
+                          title={animation.aiPrompt}
+                        >
+                          AI {animation.metadata?.gridSize || 2}×{animation.metadata?.gridSize || 2}
+                        </Button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="flex gap-2">
                     <Button
                       variant="ghost"
-                      size="sm"
-                      className={`h-8 px-3 text-xs rounded-lg ${(selectedVersion[currentImage.id] || 'original') === 'original'
-                        ? 'bg-white/20 text-white border border-white/30'
-                        : 'bg-black/40 text-white/70 hover:bg-black/50 hover:text-white'
-                        }`}
-                      onClick={() => onSelectedVersionChange(currentImage.id, 'original')}
+                      size="icon"
+                      className={`h-12 w-12 rounded-full bg-black/20 hover:bg-black/40 ${currentImage.isFavorite ? 'text-red-500' : 'text-white'}`}
+                      onClick={(e) => onToggleFavorite?.(e, currentImage)}
+                      title="Favorite"
                     >
-                      Original
+                      <Heart className={`h-8 w-8 ${currentImage.isFavorite ? 'fill-current' : ''}`} />
                     </Button>
 
-                    {/* Transparent Version */}
-                    {currentImage.transparentFilePath && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className={`h-8 px-3 text-xs rounded-lg ${selectedVersion[currentImage.id] === 'transparent'
-                          ? 'bg-white/20 text-white border border-white/30'
-                          : 'bg-black/40 text-white/70 hover:bg-black/50 hover:text-white'
-                          }`}
-                        onClick={() => onSelectedVersionChange(currentImage.id, 'transparent')}
-                      >
-                        Transparent
-                      </Button>
-                    )}
-
-                    {/* Flipped Version */}
-                    {currentImage.flippedFilePath && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className={`h-8 px-3 text-xs rounded-lg ${selectedVersion[currentImage.id] === 'flipped'
-                          ? 'bg-white/20 text-white border border-white/30'
-                          : 'bg-black/40 text-white/70 hover:bg-black/50 hover:text-white'
-                          }`}
-                        onClick={() => onSelectedVersionChange(currentImage.id, 'flipped')}
-                      >
-                        Flipped
-                      </Button>
-                    )}
-
-                    {/* Squish Animations */}
-                    {squishAnimations[currentImage.id]?.map((animation: any) => (
-                      <Button
-                        key={`squish-${animation.id}`}
-                        variant="ghost"
-                        size="sm"
-                        className={`h-8 px-3 text-xs rounded-lg ${selectedVersion[currentImage.id] === `squish-${animation.id}`
-                          ? 'bg-white/20 text-white border border-white/30'
-                          : 'bg-black/40 text-white/70 hover:bg-black/50 hover:text-white'
-                          }`}
-                        onClick={() => onSelectedVersionChange(currentImage.id, `squish-${animation.id}`)}
-                      >
-                        Squish {animation.frameCount}f @{animation.intensity}%
-                      </Button>
-                    ))}
-
-                    {/* AI Animations */}
-                    {aiAnimations[currentImage.id]?.map((animation: any) => (
-                      <Button
-                        key={`ai-${animation.id}`}
-                        variant="ghost"
-                        size="sm"
-                        className={`h-8 px-3 text-xs rounded-lg ${selectedVersion[currentImage.id] === `ai-${animation.id}`
-                          ? 'bg-white/20 text-white border border-white/30'
-                          : 'bg-black/40 text-white/70 hover:bg-black/50 hover:text-white'
-                          }`}
-                        onClick={() => onSelectedVersionChange(currentImage.id, `ai-${animation.id}`)}
-                        title={animation.aiPrompt}
-                      >
-                        AI {animation.metadata?.gridSize || 2}×{animation.metadata?.gridSize || 2}
-                      </Button>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="flex gap-2">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className={`h-12 w-12 rounded-full bg-black/20 hover:bg-black/40 ${currentImage.isFavorite ? 'text-red-500' : 'text-white'}`}
-                    onClick={(e) => onToggleFavorite(e, currentImage)}
-                    title="Favorite"
-                  >
-                    <Heart className={`h-8 w-8 ${currentImage.isFavorite ? 'fill-current' : ''}`} />
-                  </Button>
-
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-12 w-12 rounded-full bg-black/20 text-white hover:bg-black/40"
-                    onClick={() => onOpenEditor(currentImage.id)}
-                    title="Open in Editor"
-                  >
-                    <Edit className="h-8 w-8" />
-                  </Button>
-
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-12 w-12 rounded-full bg-black/20 text-white hover:bg-black/40"
-                    asChild
-                  >
-                    <a
-                      href={
-                        selectedVersion[currentImage.id]?.startsWith('squish-')
-                          ? `/api/squish-animations/${selectedVersion[currentImage.id].replace('squish-', '')}/file`
-                          : selectedVersion[currentImage.id]?.startsWith('ai-')
-                            ? `/api/squish-animations/${selectedVersion[currentImage.id].replace('ai-', '')}/file`
-                            : `/api/images/${currentImage.id}/file${selectedVersion[currentImage.id] === 'transparent'
-                              ? '?version=transparent'
-                              : selectedVersion[currentImage.id] === 'flipped'
-                                ? '?version=flipped'
-                                : ''
-                            }`
-                      }
-                      download={currentImage.fileName}
-                      title="Download"
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-12 w-12 rounded-full bg-black/20 text-white hover:bg-black/40"
+                      onClick={() => onOpenEditor?.(currentImage.id)}
+                      title="Open in Editor"
                     >
-                      <Download className="h-8 w-8" />
-                    </a>
-                  </Button>
+                      <Edit className="h-8 w-8" />
+                    </Button>
 
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className={`h-12 w-12 rounded-full bg-black/20 hover:bg-black/40 transition-colors ${copied ? 'text-green-500' : 'text-white'}`}
-                    onClick={() => handleCopyFileName(currentImage)}
-                    title="Copy Filename"
-                  >
-                    {copied ? <Check className="h-8 w-8" /> : <Copy className="h-8 w-8" />}
-                  </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-12 w-12 rounded-full bg-black/20 text-white hover:bg-black/40"
+                      asChild
+                    >
+                      <a
+                        href={
+                          selectedVersion[currentImage.id]?.startsWith('squish-')
+                            ? `/api/squish-animations/${selectedVersion[currentImage.id].replace('squish-', '')}/file`
+                            : selectedVersion[currentImage.id]?.startsWith('ai-')
+                              ? `/api/squish-animations/${selectedVersion[currentImage.id].replace('ai-', '')}/file`
+                              : `/api/images/${currentImage.id}/file${selectedVersion[currentImage.id] === 'transparent'
+                                ? '?version=transparent'
+                                : selectedVersion[currentImage.id] === 'flipped'
+                                  ? '?version=flipped'
+                                  : ''
+                              }`
+                        }
+                        download={currentImage.fileName}
+                        title="Download"
+                      >
+                        <Download className="h-8 w-8" />
+                      </a>
+                    </Button>
+
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className={`h-12 w-12 rounded-full bg-black/20 hover:bg-black/40 transition-colors ${copied ? 'text-green-500' : 'text-white'}`}
+                      onClick={() => handleCopyFileName(currentImage)}
+                      title="Copy Filename"
+                    >
+                      {copied ? <Check className="h-8 w-8" /> : <Copy className="h-8 w-8" />}
+                    </Button>
+                  </div>
+
+                  {/* Removed transparency and animation controls - now available in editor page */}
                 </div>
-
-                {/* Removed transparency and animation controls - now available in editor page */}
-              </div>
+              )}
 
               {/* Info Overlay - positioned to avoid left controls */}
               <div className="absolute bottom-4 left-4 right-4 text-white text-xs flex flex-col md:flex-row items-start md:items-end justify-between gap-4 pointer-events-none">

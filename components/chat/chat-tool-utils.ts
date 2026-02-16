@@ -1,8 +1,12 @@
 export interface GetImagesPreviewItem {
     id: string;
+    fileName?: string;
+    batchId?: string;
     batch?: string;
     prompt?: string;
     isFavorite?: boolean;
+    createdAt?: string;
+    filePath?: string;
 }
 
 export interface GetImagesPreviewData {
@@ -37,9 +41,13 @@ export function parseGetImagesOutput(output: unknown): GetImagesPreviewData | nu
         .filter((image) => typeof image.id === "string")
         .map((image) => ({
             id: image.id as string,
+            fileName: typeof image.fileName === "string" ? image.fileName : undefined,
+            batchId: typeof image.batchId === "string" ? image.batchId : undefined,
             batch: typeof image.batch === "string" ? image.batch : undefined,
             prompt: typeof image.prompt === "string" ? image.prompt : undefined,
             isFavorite: typeof image.isFavorite === "boolean" ? image.isFavorite : undefined,
+            createdAt: typeof image.createdAt === "string" ? image.createdAt : undefined,
+            filePath: typeof image.filePath === "string" ? image.filePath : undefined,
         }));
 
     return {

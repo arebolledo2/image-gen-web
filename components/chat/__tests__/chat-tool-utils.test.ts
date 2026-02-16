@@ -22,9 +22,13 @@ describe("parseGetImagesOutput", () => {
             images: [
                 {
                     id: "img-1",
+                    fileName: "turret-01.png",
+                    batchId: "batch-1",
                     batch: "Turret Batch",
                     prompt: "isometric turret asset",
                     isFavorite: true,
+                    createdAt: "2026-02-16T00:00:00.000Z",
+                    filePath: "/batches/batch-1/turret-01.png",
                 },
                 {
                     id: "img-2",
@@ -39,15 +43,23 @@ describe("parseGetImagesOutput", () => {
             images: [
                 {
                     id: "img-1",
+                    fileName: "turret-01.png",
+                    batchId: "batch-1",
                     batch: "Turret Batch",
                     prompt: "isometric turret asset",
                     isFavorite: true,
+                    createdAt: "2026-02-16T00:00:00.000Z",
+                    filePath: "/batches/batch-1/turret-01.png",
                 },
                 {
                     id: "img-2",
+                    fileName: undefined,
+                    batchId: undefined,
                     batch: undefined,
                     prompt: undefined,
                     isFavorite: undefined,
+                    createdAt: undefined,
+                    filePath: undefined,
                 },
             ],
         });
@@ -66,7 +78,60 @@ describe("parseGetImagesOutput", () => {
             count: undefined,
             total: undefined,
             hasMore: undefined,
-            images: [{ id: "img-1", batch: undefined, prompt: "valid", isFavorite: undefined }],
+            images: [{
+                id: "img-1",
+                fileName: undefined,
+                batchId: undefined,
+                batch: undefined,
+                prompt: "valid",
+                isFavorite: undefined,
+                createdAt: undefined,
+                filePath: undefined,
+            }],
+        });
+    });
+
+    it("keeps backward compatibility when metadata fields are missing", () => {
+        const parsed = parseGetImagesOutput({
+            images: [{ id: "img-1", batch: "Batch A", prompt: "legacy payload" }],
+        });
+
+        expect(parsed).toEqual({
+            count: undefined,
+            total: undefined,
+            hasMore: undefined,
+            images: [{
+                id: "img-1",
+                fileName: undefined,
+                batchId: undefined,
+                batch: "Batch A",
+                prompt: "legacy payload",
+                isFavorite: undefined,
+                createdAt: undefined,
+                filePath: undefined,
+            }],
+        });
+    });
+
+    it("drops malformed prompt values to avoid unsafe rendering", () => {
+        const parsed = parseGetImagesOutput({
+            images: [{ id: "img-1", prompt: 42 }],
+        });
+
+        expect(parsed).toEqual({
+            count: undefined,
+            total: undefined,
+            hasMore: undefined,
+            images: [{
+                id: "img-1",
+                fileName: undefined,
+                batchId: undefined,
+                batch: undefined,
+                prompt: undefined,
+                isFavorite: undefined,
+                createdAt: undefined,
+                filePath: undefined,
+            }],
         });
     });
 
