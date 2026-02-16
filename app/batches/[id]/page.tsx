@@ -223,6 +223,26 @@ export default function BatchDetailPage() {
     await refetchBatch();
   }, [refetchBatch]);
 
+  const handleAdjustAllPrompts = useCallback(async (
+    suggestion: string,
+    referenceImageIds: string[]
+  ): Promise<void> => {
+    const response = await fetch('/api/agents/adjust-batch-prompts', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        batchId: params.id,
+        suggestion,
+        promptStyle,
+        referenceImageIds
+      })
+    });
+
+    if (!response.ok) throw new Error('Failed to adjust all prompts');
+    await refetchBatch();
+    toast.success('All prompts adjusted successfully');
+  }, [params.id, promptStyle, refetchBatch]);
+
   const handleAdjustPrompt = useCallback(async (
     promptId: string,
     suggestion: string,
@@ -310,6 +330,7 @@ export default function BatchDetailPage() {
         promptStyle={promptStyle}
         onPromptUpdate={handlePromptUpdate}
         onAdjustPrompt={handleAdjustPrompt}
+        onAdjustAllPrompts={handleAdjustAllPrompts}
       />
 
       <ImageGalleryModal

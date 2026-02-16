@@ -20,6 +20,7 @@ interface BatchPromptsListProps {
   promptStyle?: string;
   onPromptUpdate: (promptId: string, newText: string) => Promise<void>;
   onAdjustPrompt: (promptId: string, suggestion: string, currentText: string, referenceImageIds: string[]) => Promise<string>;
+  onAdjustAllPrompts: (suggestion: string, referenceImageIds: string[]) => Promise<void>;
 }
 
 export const BatchPromptsList = memo(function BatchPromptsList({
@@ -30,6 +31,7 @@ export const BatchPromptsList = memo(function BatchPromptsList({
   promptStyle: _promptStyle,
   onPromptUpdate,
   onAdjustPrompt,
+  onAdjustAllPrompts,
 }: BatchPromptsListProps) {
   const [editingPromptId, setEditingPromptId] = useState<string | null>(null);
   const [editPromptText, setEditPromptText] = useState("");
@@ -60,11 +62,23 @@ export const BatchPromptsList = memo(function BatchPromptsList({
 
   return (
     <Card>
-      <CardHeader>
-        <CardTitle>Prompts</CardTitle>
-        <CardDescription>
-          {prompts.length} prompt(s) in this batch
-        </CardDescription>
+      <CardHeader className="flex flex-row items-center justify-between space-y-0">
+        <div>
+          <CardTitle>Prompts</CardTitle>
+          <CardDescription>
+            {prompts.length} prompt(s) in this batch
+          </CardDescription>
+        </div>
+        {batchStatus === 'draft' && prompts.length > 0 && (
+          <AIAssistButtonWithReferences
+            label="AI Adjust All"
+            title="Adjust All Prompts"
+            description="Apply a suggestion to all prompts in this batch."
+            placeholder="e.g., make everything more futuristic, switch to warm tones..."
+            batchId={batchId}
+            onGenerate={onAdjustAllPrompts}
+          />
+        )}
       </CardHeader>
       <CardContent className="space-y-4">
         {prompts.map((prompt, index) => (
