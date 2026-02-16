@@ -10,18 +10,21 @@ import {
 import {
     Message,
     MessageContent,
-    MessageResponse
+    MessageResponse,
+    MessageAttachment,
+    MessageAttachments,
 } from "@/components/ai-elements/message";
 import { Reasoning, ReasoningTrigger, ReasoningContent } from "@/components/ai-elements/reasoning";
 import { MessageSquare } from "lucide-react";
 import { ChatToolRenderer } from "./chat-tool-renderer";
-import type { UIMessage, ReasoningUIPart, ToolUIPart } from "ai";
+import type { ChatAddToolApproveResponseFunction, UIMessage, ReasoningUIPart, ToolUIPart, FileUIPart } from "ai";
 
 interface ChatMessagesProps {
     messages: UIMessage[];
+    addToolApprovalResponse: ChatAddToolApproveResponseFunction;
 }
 
-export function ChatMessages({ messages }: ChatMessagesProps) {
+export function ChatMessages({ messages, addToolApprovalResponse }: ChatMessagesProps) {
     return (
         <Conversation className="h-full">
             <ConversationContent>
@@ -44,12 +47,28 @@ export function ChatMessages({ messages }: ChatMessagesProps) {
                                         );
                                     }
 
+                                    if (part.type === "file") {
+                                        return (
+                                            <MessageAttachments
+                                                key={index}
+                                                className={message.role === "assistant" ? "ml-0" : undefined}
+                                            >
+                                                <MessageAttachment data={part as FileUIPart} />
+                                            </MessageAttachments>
+                                        );
+                                    }
+
                                     if (part.type === "reasoning") {
-                                        const reasoningPart = part as ReasoningUIPart & { reasoning: string };
+                                        const reasoningPart = part as ReasoningUIPart & { reasoning?: string };
+                                        const reasoningText = reasoningPart.text || reasoningPart.reasoning || "";
+                                        if (!reasoningText) {
+                                            return null;
+                                        }
+
                                         return (
                                             <Reasoning key={index} isStreaming={message.role === "assistant" && index === message.parts.length - 1}>
                                                 <ReasoningTrigger />
-                                                <ReasoningContent>{reasoningPart.reasoning}</ReasoningContent>
+                                                <ReasoningContent>{reasoningText}</ReasoningContent>
                                             </Reasoning>
                                         );
                                     }
@@ -60,6 +79,7 @@ export function ChatMessages({ messages }: ChatMessagesProps) {
                                             <ChatToolRenderer
                                                 key={index}
                                                 part={toolPart}
+                                                addToolApprovalResponse={addToolApprovalResponse}
                                             />
                                         );
                                     }

@@ -32,6 +32,7 @@ const ExecuteBatchSchema = z.object({
 export const createBatch = tool({
     description: "Create a new image generation batch with one or more prompts. This prepares the batch but does NOT execute it. Use executeBatch afterward to start generation.",
     inputSchema: CreateBatchSchema,
+    needsApproval: true,
     execute: async (params) => {
         const response = await fetch(`${process.env.NEXT_PUBLIC_URL || 'http://localhost:3000'}/api/batches`, {
             method: 'POST',
@@ -63,6 +64,7 @@ export const createBatch = tool({
 export const executeBatch = tool({
     description: "Execute a batch to start image generation. This queues the batch jobs in Inngest. The batch must have been created first using createBatch.",
     inputSchema: ExecuteBatchSchema,
+    needsApproval: true,
     execute: async ({ batchId }) => {
         const response = await fetch(`${process.env.NEXT_PUBLIC_URL || 'http://localhost:3000'}/api/batches/${batchId}/execute`, {
             method: 'POST',

@@ -2,6 +2,8 @@
 
 import React, { useEffect, useRef } from "react";
 import { useChat } from "@ai-sdk/react";
+import type { FileUIPart } from "ai";
+import { lastAssistantMessageIsCompleteWithApprovalResponses } from "ai";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { History, PanelLeftClose, PanelLeft, PlusCircle } from "lucide-react";
@@ -31,9 +33,10 @@ export function ChatInterface() {
         saveMessages,
     } = useChatHistory(activeSessionId ?? "default");
 
-    const { messages, sendMessage, status, setMessages } = useChat({
+    const { messages, sendMessage, status, setMessages, addToolApprovalResponse } = useChat({
         id: activeSessionId ?? "default",
         messages: initialMessages,
+        sendAutomaticallyWhen: lastAssistantMessageIsCompleteWithApprovalResponses,
     });
 
     const isLoaded = sessionsLoaded && historyLoaded;
@@ -56,22 +59,40 @@ export function ChatInterface() {
     }, [messages, isLoaded, saveMessages, activeSessionId, updateSessionTimestamp]);
 
     const handleSendMessage = (content: { text: string; files: { url: string; mediaType?: string; filename?: string }[] }) => {
+        const hasText = content.text.trim().length > 0;
+        const hasFiles = content.files.length > 0;
+
+        if (!hasText && !hasFiles) {
+            return;
+        }
+
         // Auto-title: set session title from the first message sent in a "New Chat"
         if (activeSessionId) {
             const session = sessions.find(s => s.id === activeSessionId);
-            if (session && session.title === "New Chat" && content.text) {
+            if (session && session.title === "New Chat" && hasText) {
                 const title = content.text.slice(0, 50) + (content.text.length > 50 ? "..." : "");
                 renameSession(activeSessionId, title);
             }
         }
 
-        sendMessage(
-            { text: content.text },
-            {
-                // @ts-expect-error - experimental_attachments may not be in the local type definition but is supported by the runtime
-                experimental_attachments: content.files
-            }
-        );
+        const files: FileUIPart[] = content.files.map((file) => ({
+            url: file.url,
+            mediaType: file.mediaType ?? "application/octet-stream",
+            filename: file.filename,
+            type: "file",
+        }));
+
+        if (hasText && hasFiles) {
+            sendMessage({ text: content.text, files });
+            return;
+        }
+
+        if (hasText) {
+            sendMessage({ text: content.text });
+            return;
+        }
+
+        sendMessage({ files });
     };
 
     const handleNewSession = () => {
@@ -137,7 +158,10 @@ export function ChatInterface() {
                 </div>
 
                 <div className="flex-1 overflow-hidden relative">
-                    <ChatMessages messages={messages} />
+                    <ChatMessages
+                        messages={messages}
+                        addToolApprovalResponse={addToolApprovalResponse}
+                    />
                 </div>
 
                 <div className="p-4 bg-transparent">
