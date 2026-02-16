@@ -70,19 +70,33 @@ The application follows a modern serverless-ready architecture:
     ```
     This starts both the Next.js app and the Inngest dev server.
 
-> For more detailed setup instructions, including local PostgreSQL configuration, see the [SETUP_GUIDE.md](./SETUP_GUIDE.md).
+## 📚 Documentation
+
+Comprehensive documentation lives in [`doc/`](./doc/index.md):
+
+| Document | Description |
+|----------|-------------|
+| [index.md](./doc/index.md) | Overview, quick reference, navigation |
+| [architecture.md](./doc/architecture.md) | System architecture, tech stack, file structure |
+| [database.md](./doc/database.md) | Schema (15 tables, 6 enums), relations, migrations |
+| [services.md](./doc/services.md) | Service layer (10 services), transactions, versioning |
+| [ai-agents.md](./doc/ai-agents.md) | AI agents, model config, tools, chat agent |
+| [api-reference.md](./doc/api-reference.md) | Complete REST API reference (18 route groups) |
+| [queue.md](./doc/queue.md) | Inngest job queue, retry config |
+| [storage.md](./doc/storage.md) | Image storage, thumbnails, ZIP export |
+| [providers.md](./doc/providers.md) | Image & audio generation providers |
+| [development.md](./doc/development.md) | Setup, env vars, npm scripts, testing |
+| [conventions.md](./doc/conventions.md) | Code patterns, common recipes |
 
 ## 📜 Available Scripts
 
-- `npm run dev`: Starts Next.js and Inngest in development mode.
+- `npm run dev`: Starts Next.js, Inngest, and audio-gen in development mode.
 - `npm run build`: Builds the application for production.
 - `npm run db:push`: Syncs the database schema with your Drizzle definitions.
 - `npm run db:studio`: Opens a GUI for exploring your database.
-- `npm run test`: Executes the test suite using Vitest.
+- `npm run test`: Runs type checking + linting + test suite.
 
-## 🤝 Contributing
-
-Contributions are welcome! Please feel free to submit a Pull Request.
+See [doc/development.md](./doc/development.md) for the full list of 18 npm scripts.
 
 ## 📄 License
 
