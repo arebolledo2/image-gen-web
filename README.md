@@ -1,6 +1,6 @@
 # Image Gen Web
 
-A powerful web orchestration platform for large-scale image generation, built with Next.js 15, Vercel AI SDK, and Inngest.
+A powerful web orchestration platform for large-scale image generation, built with Next.js 16, Vercel AI SDK, and Inngest.
 
 ## 🚀 Overview
 
@@ -20,7 +20,7 @@ Image Gen Web provides a sophisticated interface for managing the entire lifecyc
 
 ## 🛠️ Tech Stack
 
-- **Framework**: [Next.js 15](https://nextjs.org/) (App Router)
+- **Framework**: [Next.js 16](https://nextjs.org/) (App Router)
 - **Database**: [PostgreSQL](https://www.postgresql.org/) with [Drizzle ORM](https://orm.drizzle.team/)
 - **AI Integration**: [Vercel AI SDK](https://sdk.vercel.ai/) & [Google Gemini](https://ai.google.dev/)
 - **Job Queue**: [Inngest](https://www.inngest.com/)
