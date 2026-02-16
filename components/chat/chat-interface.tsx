@@ -15,6 +15,11 @@ import { ImageGalleryModal, type GalleryImage } from "@/components/image-gallery
 import { useChatHistory } from "@/lib/hooks/use-chat-history";
 import { useChatSessions } from "@/lib/hooks/use-chat-sessions";
 import type { GetImagesPreviewData } from "./chat-tool-utils";
+import {
+    getMessageDigest,
+    getPersistenceDecision,
+    shouldPersistSessionUpdate,
+} from "./chat-session-persistence";
 
 const EMPTY_VERSION_MAP: Record<string, string> = {};
 const EMPTY_ANIMATIONS_MAP: Record<string, never[]> = {};
@@ -59,23 +64,54 @@ export function ChatInterface() {
     });
 
     const isLoaded = sessionsLoaded && historyLoaded;
+    const messagesDigest = useMemo(() => getMessageDigest(messages), [messages]);
 
     // When session changes, sync messages from localStorage
     const prevSessionRef = useRef(activeSessionId);
+    const hydratedSessionIdRef = useRef<string | null>(null);
+    const persistedMessageDigestBySessionRef = useRef<Record<string, string>>({});
     useEffect(() => {
         if (prevSessionRef.current !== activeSessionId) {
             prevSessionRef.current = activeSessionId;
+            hydratedSessionIdRef.current = null;
             setMessages(initialMessages);
         }
     }, [activeSessionId, initialMessages, setMessages]);
 
     // Save messages to history whenever they change
     useEffect(() => {
-        if (isLoaded && messages.length > 0 && activeSessionId) {
-            saveMessages(messages);
-            updateSessionTimestamp(activeSessionId);
+        if (!isLoaded || !activeSessionId) {
+            return;
         }
-    }, [messages, isLoaded, saveMessages, activeSessionId, updateSessionTimestamp]);
+
+        const { shouldPersist, nextHydratedSessionId } = getPersistenceDecision({
+            activeSessionId,
+            hydratedSessionId: hydratedSessionIdRef.current,
+            messages,
+            initialMessages,
+        });
+
+        hydratedSessionIdRef.current = nextHydratedSessionId;
+        const justHydrated = !shouldPersist && nextHydratedSessionId === activeSessionId;
+        if (justHydrated) {
+            persistedMessageDigestBySessionRef.current[activeSessionId] = messagesDigest;
+        }
+
+        const shouldPersistUpdate = shouldPersistSessionUpdate({
+            shouldPersistAfterHydration: shouldPersist,
+            messageCount: messages.length,
+            currentDigest: messagesDigest,
+            lastPersistedDigest: persistedMessageDigestBySessionRef.current[activeSessionId],
+        });
+
+        if (!shouldPersistUpdate) {
+            return;
+        }
+
+        saveMessages(messages);
+        updateSessionTimestamp(activeSessionId);
+        persistedMessageDigestBySessionRef.current[activeSessionId] = messagesDigest;
+    }, [messages, messagesDigest, initialMessages, isLoaded, saveMessages, activeSessionId, updateSessionTimestamp]);
 
     const handleSendMessage = (content: { text: string; files: { url: string; mediaType?: string; filename?: string }[] }) => {
         const hasText = content.text.trim().length > 0;
