@@ -7,10 +7,36 @@ import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Palette, Box, Compass, EyeOff, Star } from "lucide-react";
 
-interface Entity {
+export interface StyleEntity {
   id: string;
   name: string;
   isFavorite?: boolean;
+  description?: string | null;
+  palette?: {
+    primary?: string[];
+    accent?: string[];
+    background?: string;
+  } | null;
+  renderingCues?: {
+    materials?: string[];
+    effects?: string[];
+    finish?: string;
+  } | null;
+}
+
+export interface SubjectEntity {
+  id: string;
+  name: string;
+  isFavorite: boolean;
+  isTransparent: boolean;
+  categoryId: string | null;
+  description?: string | null;
+}
+
+export interface GuidanceEntity {
+  id: string;
+  name: string;
+  description: string;
 }
 
 interface Category {
@@ -19,17 +45,11 @@ interface Category {
   color: string | null;
 }
 
-interface SubjectEntity extends Entity {
-  isTransparent: boolean;
-  categoryId: string | null;
-  isFavorite: boolean;
-}
-
 interface ConstructModeSelectorProps {
-  styles: Entity[];
+  styles: StyleEntity[];
   subjects: SubjectEntity[];
   categories: Category[];
-  guidanceList: Entity[];
+  guidanceList: GuidanceEntity[];
   styleId: string;
   setStyleId: (id: string) => void;
   omitStyle: boolean;
@@ -44,6 +64,105 @@ interface ConstructModeSelectorProps {
   setStylesFavoritesOnly: (val: boolean) => void;
   subjectsFavoritesOnly: boolean;
   setSubjectsFavoritesOnly: (val: boolean) => void;
+}
+
+function StyleDetailPanel({ style }: { style: StyleEntity }) {
+  const { description, palette, renderingCues } = style;
+  const hasContent = description || palette || renderingCues;
+  if (!hasContent) return null;
+
+  return (
+    <div className="mt-2 p-3 rounded-md border bg-muted/30 space-y-3 text-sm animate-in fade-in-0 slide-in-from-top-1 duration-150">
+      {description && (
+        <p className="text-muted-foreground">{description}</p>
+      )}
+      {palette && (
+        <div className="space-y-1.5">
+          <div className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Palette</div>
+          <div className="flex flex-wrap items-center gap-3">
+            {palette.primary && palette.primary.length > 0 && (
+              <div className="flex items-center gap-1.5">
+                <span className="text-[10px] text-muted-foreground">Primary</span>
+                <div className="flex gap-0.5">
+                  {palette.primary.map((color, i) => (
+                    <div
+                      key={i}
+                      className="w-4 h-4 rounded-sm border border-border"
+                      style={{ backgroundColor: color }}
+                      title={color}
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
+            {palette.accent && palette.accent.length > 0 && (
+              <div className="flex items-center gap-1.5">
+                <span className="text-[10px] text-muted-foreground">Accent</span>
+                <div className="flex gap-0.5">
+                  {palette.accent.map((color, i) => (
+                    <div
+                      key={i}
+                      className="w-4 h-4 rounded-sm border border-border"
+                      style={{ backgroundColor: color }}
+                      title={color}
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
+            {palette.background && (
+              <div className="flex items-center gap-1.5">
+                <span className="text-[10px] text-muted-foreground">BG</span>
+                <div
+                  className="w-4 h-4 rounded-sm border border-border"
+                  style={{ backgroundColor: palette.background }}
+                  title={palette.background}
+                />
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+      {renderingCues && (
+        <div className="space-y-1.5">
+          <div className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Rendering Cues</div>
+          <div className="flex flex-wrap gap-1">
+            {renderingCues.materials?.map((m, i) => (
+              <Badge key={`m-${i}`} variant="secondary" className="text-[10px] h-5">{m}</Badge>
+            ))}
+            {renderingCues.effects?.map((e, i) => (
+              <Badge key={`e-${i}`} variant="secondary" className="text-[10px] h-5">{e}</Badge>
+            ))}
+            {renderingCues.finish && (
+              <Badge variant="outline" className="text-[10px] h-5">{renderingCues.finish}</Badge>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function SelectedItemsDetail<T extends { id: string; name: string; description?: string | null }>({
+  items,
+  selectedIds,
+}: {
+  items: T[];
+  selectedIds: string[];
+}) {
+  const selectedItems = items.filter(item => selectedIds.includes(item.id) && item.description);
+  if (selectedItems.length === 0) return null;
+
+  return (
+    <div className="mt-2 p-3 rounded-md border bg-muted/30 space-y-2 text-sm animate-in fade-in-0 slide-in-from-top-1 duration-150">
+      {selectedItems.map(item => (
+        <div key={item.id} className="flex gap-2">
+          <span className="font-medium text-foreground shrink-0">{item.name}</span>
+          <span className="text-muted-foreground">{item.description}</span>
+        </div>
+      ))}
+    </div>
+  );
 }
 
 export function ConstructModeSelector({
@@ -66,6 +185,8 @@ export function ConstructModeSelector({
   subjectsFavoritesOnly,
   setSubjectsFavoritesOnly,
 }: ConstructModeSelectorProps) {
+  const selectedStyle = styles.find(s => s.id === styleId);
+
   return (
     <div className="space-y-6">
       <div className="grid md:grid-cols-2 gap-4">
@@ -121,6 +242,7 @@ export function ConstructModeSelector({
               Favorites Only
             </Button>
           </div>
+          {selectedStyle && <StyleDetailPanel style={selectedStyle} />}
         </div>
         <div className="space-y-2">
           <div className="flex items-center justify-between">
@@ -175,6 +297,9 @@ export function ConstructModeSelector({
                 );
               })}
           </div>
+          {selectedSubjectIds.length > 0 && (
+            <SelectedItemsDetail items={subjects} selectedIds={selectedSubjectIds} />
+          )}
         </div>
       </div>
 
@@ -192,6 +317,9 @@ export function ConstructModeSelector({
             </Badge>
           ))}
         </div>
+        {selectedGuidanceIds.length > 0 && (
+          <SelectedItemsDetail items={guidanceList} selectedIds={selectedGuidanceIds} />
+        )}
       </div>
     </div>
   );

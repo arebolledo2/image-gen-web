@@ -4,39 +4,19 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Loader2, Plus, X, Wand2 } from "lucide-react";
 import { AIAssistButton } from "@/components/agents/ai-assist-button";
 import { DEFAULT_RESOLUTION, getResolutionPresetsForProvider, type ProviderType } from "@/lib/config/resolution-presets";
 import { useSettings } from "@/components/providers/settings-provider";
 import { toast } from "sonner";
-import { ConstructModeSelector } from "@/components/batch/construct-mode-selector";
+import { ConstructModeSelector, type StyleEntity, type SubjectEntity, type GuidanceEntity } from "@/components/batch/construct-mode-selector";
 import { BatchDefaultsForm } from "@/components/batch/batch-defaults-form";
-
-interface Entity {
-  id: string;
-  name: string;
-  isFavorite?: boolean;
-}
 
 interface Category {
   id: string;
   name: string;
   color: string | null;
-}
-
-interface SubjectEntity extends Entity {
-  isTransparent: boolean;
-  categoryId: string | null;
-  isFavorite: boolean;
-}
-
-interface PromptPreset {
-  id: string;
-  name: string;
-  promptText: string;
 }
 
 interface BatchPrompt {
@@ -53,11 +33,10 @@ export default function NewBatchPage() {
   const [loading, setLoading] = useState(false);
   const [dataLoading, setDataLoading] = useState(true);
 
-  const [styles, setStyles] = useState<Entity[]>([]);
+  const [styles, setStyles] = useState<StyleEntity[]>([]);
   const [subjects, setSubjects] = useState<SubjectEntity[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
-  const [guidanceList, setGuidanceList] = useState<Entity[]>([]);
-  const [presets, setPresets] = useState<PromptPreset[]>([]);
+  const [guidanceList, setGuidanceList] = useState<GuidanceEntity[]>([]);
   const [filterCategoryId, setFilterCategoryId] = useState<string>("all");
   const [stylesFavoritesOnly, setStylesFavoritesOnly] = useState(false);
   const [subjectsFavoritesOnly, setSubjectsFavoritesOnly] = useState(false);
@@ -79,8 +58,6 @@ export default function NewBatchPage() {
     }
   };
 
-  const [mode, setMode] = useState<'preset' | 'construct'>('preset');
-  const [selectedPresetId, setSelectedPresetId] = useState("");
   const [styleId, setStyleId] = useState("");
   const [omitStyle, setOmitStyle] = useState(false);
   const [selectedSubjectIds, setSelectedSubjectIds] = useState<string[]>([]);
@@ -96,25 +73,22 @@ export default function NewBatchPage() {
 
   const fetchData = async () => {
     try {
-      const [stylesRes, subjectsRes, categoriesRes, guidanceRes, presetsRes] = await Promise.all([
+      const [stylesRes, subjectsRes, categoriesRes, guidanceRes] = await Promise.all([
         fetch('/api/styles'),
         fetch('/api/subjects'),
         fetch('/api/subject-categories'),
         fetch('/api/guidance'),
-        fetch('/api/prompts'),
       ]);
-      const [stylesData, subjectsData, categoriesData, guidanceData, presetsData] = await Promise.all([
+      const [stylesData, subjectsData, categoriesData, guidanceData] = await Promise.all([
         stylesRes.json(),
         subjectsRes.json(),
         categoriesRes.json(),
         guidanceRes.json(),
-        presetsRes.json(),
       ]);
       setStyles(stylesData.styles || []);
       setSubjects(subjectsData.subjects || []);
       setCategories(categoriesData.categories || []);
       setGuidanceList(guidanceData.guidance || []);
-      setPresets(presetsData.prompts || []);
     } catch (error) {
       console.error('Error fetching data:', error);
     } finally {
@@ -135,42 +109,35 @@ export default function NewBatchPage() {
   };
 
   const handleConstructPreview = async () => {
-    if (mode === 'preset') {
-      const preset = presets.find(p => p.id === selectedPresetId);
-      if (preset) {
-        setPreviewPrompts([{ subjectName: 'Preset', promptText: preset.promptText, promptId: preset.id }]);
-      }
-    } else {
-      if ((!omitStyle && !styleId) || selectedSubjectIds.length === 0) return;
-      setComposing(true);
-      try {
-        const promises = selectedSubjectIds.map(async (subId) => {
-          const subject = subjects.find(s => s.id === subId);
-          const response = await fetch('/api/agents/compose-prompt', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              styleId: omitStyle ? undefined : styleId,
-              subjectId: subId,
-              guidanceIds: selectedGuidanceIds,
-              promptStyle
-            })
-          });
-          const data = await response.json();
-          return {
-            subjectName: subject?.name || 'Unknown',
-            promptText: data.promptText,
-            promptId: data.promptId
-          };
+    if ((!omitStyle && !styleId) || selectedSubjectIds.length === 0) return;
+    setComposing(true);
+    try {
+      const promises = selectedSubjectIds.map(async (subId) => {
+        const subject = subjects.find(s => s.id === subId);
+        const response = await fetch('/api/agents/compose-prompt', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            styleId: omitStyle ? undefined : styleId,
+            subjectId: subId,
+            guidanceIds: selectedGuidanceIds,
+            promptStyle
+          })
         });
+        const data = await response.json();
+        return {
+          subjectName: subject?.name || 'Unknown',
+          promptText: data.promptText,
+          promptId: data.promptId
+        };
+      });
 
-        const results = await Promise.all(promises);
-        setPreviewPrompts(results);
-      } catch (error) {
-        console.error('Error composing prompts:', error);
-      } finally {
-        setComposing(false);
-      }
+      const results = await Promise.all(promises);
+      setPreviewPrompts(results);
+    } catch (error) {
+      console.error('Error composing prompts:', error);
+    } finally {
+      setComposing(false);
     }
   };
 
@@ -267,83 +234,42 @@ export default function NewBatchPage() {
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-6">
-        {/* Step 1: Prompt Selection/Construction */}
+        {/* Step 1: Construct Prompt */}
         <Card>
           <CardHeader>
-            <CardTitle>1. Select or Construct Prompt</CardTitle>
-            <CardDescription>Select a preset or build a new prompt building blocks</CardDescription>
+            <CardTitle>1. Construct Prompt</CardTitle>
+            <CardDescription>Build a prompt from building blocks</CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
-            <div className="flex gap-1 p-1 bg-muted rounded-lg w-fit">
-              <Button
-                type="button"
-                variant={mode === 'preset' ? "default" : "ghost"}
-                size="sm"
-                onClick={() => setMode('preset')}
-                className={mode === 'preset' ? "bg-background text-foreground shadow-sm hover:bg-background" : ""}
-              >
-                Use Preset
-              </Button>
-              <Button
-                type="button"
-                variant={mode === 'construct' ? "default" : "ghost"}
-                size="sm"
-                onClick={() => setMode('construct')}
-                className={mode === 'construct' ? "bg-background text-foreground shadow-sm hover:bg-background" : ""}
-              >
-                Construct New
-              </Button>
-            </div>
-
-            {mode === 'preset' ? (
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <Label>Select Prompt Preset</Label>
-                  <Select value={selectedPresetId} onValueChange={setSelectedPresetId}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select a preset..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {presets.map((preset) => (
-                        <SelectItem key={preset.id} value={preset.id}>
-                          {preset.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-            ) : (
-              <ConstructModeSelector
-                styles={styles}
-                subjects={subjects}
-                categories={categories}
-                guidanceList={guidanceList}
-                styleId={styleId}
-                setStyleId={setStyleId}
-                omitStyle={omitStyle}
-                setOmitStyle={setOmitStyle}
-                selectedSubjectIds={selectedSubjectIds}
-                toggleSubject={toggleSubject}
-                selectedGuidanceIds={selectedGuidanceIds}
-                toggleGuidance={toggleGuidance}
-                filterCategoryId={filterCategoryId}
-                setFilterCategoryId={setFilterCategoryId}
-                stylesFavoritesOnly={stylesFavoritesOnly}
-                setStylesFavoritesOnly={setStylesFavoritesOnly}
-                subjectsFavoritesOnly={subjectsFavoritesOnly}
-                setSubjectsFavoritesOnly={setSubjectsFavoritesOnly}
-              />
-            )}
+            <ConstructModeSelector
+              styles={styles}
+              subjects={subjects}
+              categories={categories}
+              guidanceList={guidanceList}
+              styleId={styleId}
+              setStyleId={setStyleId}
+              omitStyle={omitStyle}
+              setOmitStyle={setOmitStyle}
+              selectedSubjectIds={selectedSubjectIds}
+              toggleSubject={toggleSubject}
+              selectedGuidanceIds={selectedGuidanceIds}
+              toggleGuidance={toggleGuidance}
+              filterCategoryId={filterCategoryId}
+              setFilterCategoryId={setFilterCategoryId}
+              stylesFavoritesOnly={stylesFavoritesOnly}
+              setStylesFavoritesOnly={setStylesFavoritesOnly}
+              subjectsFavoritesOnly={subjectsFavoritesOnly}
+              setSubjectsFavoritesOnly={setSubjectsFavoritesOnly}
+            />
 
             <Button
               type="button"
               className="w-full"
               onClick={handleConstructPreview}
-              disabled={composing || (mode === 'preset' && !selectedPresetId) || (mode === 'construct' && ((!omitStyle && !styleId) || selectedSubjectIds.length === 0))}
+              disabled={composing || ((!omitStyle && !styleId) || selectedSubjectIds.length === 0)}
             >
               {composing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Wand2 className="mr-2 h-4 w-4" />}
-              {mode === 'preset' ? "Preview Preset" : `Construct Previews (${selectedSubjectIds.length})`}
+              {`Construct Previews (${selectedSubjectIds.length})`}
             </Button>
           </CardContent>
         </Card>
