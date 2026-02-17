@@ -438,6 +438,35 @@ export const audioFilesRelations = relations(audioFiles, ({ one }) => ({
   }),
 }));
 
+// Composer Layouts table
+export const composerLayouts = pgTable('composer_layouts', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  name: text('name').notNull(),
+  data: json('data').$type<{
+    assets: {
+      id: string;
+      imageId: string;
+      fileName: string;
+      src: string;
+      x: number;
+      y: number;
+      width: number;
+      height: number;
+      naturalWidth: number;
+      naturalHeight: number;
+      zIndex: number;
+    }[];
+    background: string | {
+      type: "image";
+      imageId: string;
+      fileName: string;
+      src: string;
+    };
+  }>().notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+
 // Type exports
 export type Style = typeof styles.$inferSelect;
 export type NewStyle = typeof styles.$inferInsert;
@@ -471,3 +500,5 @@ export type AudioFile = typeof audioFiles.$inferSelect;
 export type NewAudioFile = typeof audioFiles.$inferInsert;
 export type SubjectCategory = typeof subjectCategories.$inferSelect;
 export type NewSubjectCategory = typeof subjectCategories.$inferInsert;
+export type ComposerLayout = typeof composerLayouts.$inferSelect;
+export type NewComposerLayout = typeof composerLayouts.$inferInsert;

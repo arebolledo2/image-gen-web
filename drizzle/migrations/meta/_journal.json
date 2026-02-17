@@ -22,6 +22,13 @@
       "when": 1766421540810,
       "tag": "0002_many_celestials",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1771323932275,
+      "tag": "0003_classy_carmella_unuscione",
+      "breakpoints": true
     }
   ]
 }

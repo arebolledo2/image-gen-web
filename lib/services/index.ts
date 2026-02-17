@@ -34,3 +34,4 @@ export { audioBatchesService, AudioBatchesService } from './audio-batches.servic
 export { audioFilesService, AudioFilesService } from './audio-files.service';
 export { subjectCategoriesService, SubjectCategoriesService } from './subject-categories.service';
 export { batchExecutionService, BatchExecutionService } from './batch-execution.service';
+export { composerLayoutsService, ComposerLayoutsService } from './composer-layouts.service';

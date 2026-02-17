@@ -78,6 +78,14 @@ function composerReducer(
     case "CLEAR_ALL":
       return { ...initialState };
 
+    case "LOAD_LAYOUT":
+      return {
+        ...state,
+        assets: action.payload.assets,
+        background: action.payload.background,
+        selectedAssetId: null,
+      };
+
     default:
       return state;
   }

@@ -39,7 +39,8 @@ export type ComposerAction =
   | { type: "SEND_TO_BACK"; payload: string }
   | { type: "SET_BACKGROUND"; payload: BackgroundValue }
   | { type: "SET_ZOOM"; payload: number }
-  | { type: "CLEAR_ALL" };
+  | { type: "CLEAR_ALL" }
+  | { type: "LOAD_LAYOUT"; payload: { assets: SceneAsset[]; background: BackgroundValue } };
 
 export function isSolidBackground(bg: BackgroundValue): bg is SolidBackground {
   return typeof bg === "string";
