@@ -187,7 +187,8 @@ export function SceneAsset({
         alt={asset.fileName}
         draggable={false}
         className="w-full h-full select-none"
-        style={{ imageRendering: "pixelated" }}
+
+
         onPointerDown={handleDragStart}
         onPointerMove={handleDragMove}
         onPointerUp={handleDragEnd}

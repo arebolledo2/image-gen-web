@@ -121,7 +121,7 @@ export function SceneCanvas({
           backgroundImage: `url(${background.src})`,
           backgroundSize: "cover",
           backgroundPosition: "center",
-          imageRendering: "pixelated" as const,
+          imageRendering: "auto" as const,
         }
       : {}),
   };
