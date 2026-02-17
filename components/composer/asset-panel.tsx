@@ -33,7 +33,7 @@ function ScaleControl({
 
   function commitInput() {
     const parsed = parseInt(inputValue, 10);
-    if (!isNaN(parsed) && parsed >= 10 && parsed <= 800) {
+    if (!isNaN(parsed) && parsed >= 2 && parsed <= 800) {
       onScaleChange(parsed);
     } else {
       setInputValue(currentScale.toString());
@@ -52,7 +52,7 @@ function ScaleControl({
           onKeyDown={(e) => {
             if (e.key === "Enter") commitInput();
           }}
-          min={10}
+          min={2}
           max={800}
           className="h-7 w-20 text-xs text-right"
         />
@@ -61,9 +61,9 @@ function ScaleControl({
       <Slider
         value={[currentScale]}
         onValueChange={([val]) => onScaleChange(val)}
-        min={10}
+        min={2}
         max={800}
-        step={5}
+        step={1}
         className="w-full"
       />
     </div>
