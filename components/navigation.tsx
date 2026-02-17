@@ -18,6 +18,7 @@ const navItems = [
   { href: "/audio-gallery", label: "Audio Gallery" },
   { href: "/audio-batches", label: "Audio Batches" },
   { href: "/prompts", label: "Prompts" },
+  { href: "/composer", label: "Composer" },
 ];
 
 export function Navigation() {
