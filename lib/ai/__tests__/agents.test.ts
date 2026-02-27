@@ -68,7 +68,7 @@ describe('createStyleAgent', () => {
     expect(result).toEqual(mockStyle);
     expect(generateText).toHaveBeenCalledWith(
       expect.objectContaining({
-        model: expect.objectContaining({ model: 'gemini-3-flash-preview' }),
+        model: expect.objectContaining({ model: 'gemini-3.1-flash-preview' }),
         prompt: 'Create a style based on: futuristic neon style',
       })
     );
@@ -115,7 +115,7 @@ describe('createStyleAgent', () => {
 
     expect(generateText).toHaveBeenCalledWith(
       expect.objectContaining({
-        model: expect.objectContaining({ model: 'gemini-3-flash-preview' }),
+        model: expect.objectContaining({ model: 'gemini-3.1-flash-preview' }),
       })
     );
   });

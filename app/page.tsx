@@ -89,7 +89,7 @@ export default function Home() {
         </CardHeader>
         <CardContent>
           <p className="text-sm text-muted-foreground">
-            Our AI agents powered by Gemini Flash 3.0 can help you create professional styles,
+            Our AI agents powered by Gemini 3.1 Flash Preview can help you create professional styles,
             generate optimized prompts, and suggest variations for your assets.
           </p>
         </CardContent>

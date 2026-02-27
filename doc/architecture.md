@@ -136,7 +136,7 @@ lib/
 │   │   ├── prompt-tools.ts
 │   │   ├── style-tools.ts
 │   │   └── subject-tools.ts
-│   ├── model.ts            # AI model factory (Gemini 3 Flash, 2.5 Flash)
+│   ├── model.ts            # AI model factory (Gemini 3.1 Flash, 2.5 Flash)
 │   └── image-generation.ts # Image generation utilities
 ├── db/
 │   ├── schema.ts           # All 15 tables, 6 enums, relations

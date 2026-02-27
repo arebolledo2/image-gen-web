@@ -11,7 +11,7 @@ async function inspect() {
 
     try {
         const result = streamText({
-            model: google('gemini-3-flash-preview'),
+            model: google('gemini-3.1-flash-preview'),
             messages: [{ role: 'user', content: 'hi' }],
         });
 

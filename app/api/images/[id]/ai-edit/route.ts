@@ -207,7 +207,7 @@ Edit instruction: ${userPrompt}`;
 
     // Generate descriptive name using Gemini 2.5 Flash
     const { text: generatedName } = await generateText({
-      model: google('gemini-3-flash-preview'),
+      model: google('gemini-3.1-flash-preview'),
       prompt: `Generate a concise descriptive name (3-5 words) for this image edit. User instruction: "${userPrompt}". Output only the name, nothing else.`,
     });
 

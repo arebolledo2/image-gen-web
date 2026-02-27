@@ -12,8 +12,8 @@ The image-gen-web platform uses **Vercel AI SDK 6** with **Google Gemini** to po
 
 | Export | Description |
 |--------|-------------|
-| `getModel(modelId?)` | Factory wrapping Google AI models with DevTools middleware (dev only). Default: `gemini-3-flash-preview` |
-| `geminiFlash` | `gemini-3-flash-preview` instance |
+| `getModel(modelId?)` | Factory wrapping Google AI models with DevTools middleware (dev only). Default: `gemini-3.1-flash-preview` |
+| `geminiFlash` | `gemini-3.1-flash-preview` instance |
 | `gemini25Flash` | `gemini-2.5-flash` instance |
 | `gemini25FlashImage` | `gemini-2.5-flash-image-preview` instance |
 

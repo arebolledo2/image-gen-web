@@ -73,7 +73,7 @@ Good examples:
     const userPrompt = `Analyze this game sprite image (Subject: ${subjectName}, Style: ${styleName}) and suggest a creative animation that would work as a sprite sheet with 4-16 frames. Base your suggestion on what you actually see in the image.`;
 
     const { text } = await generateText({
-      model: google('gemini-3-flash-preview'),
+      model: google('gemini-3.1-flash-preview'),
       messages: [
         {
           role: 'user' as const,
