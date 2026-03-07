@@ -1,11 +1,18 @@
+// Provider type definitions for image generation (separate from AI chat model providers)
+
+export interface ImageProvider {
+  name: 'gemini' | 'gemini3' | 'comfyui';
+  testConnection(): Promise<boolean>;
+  generateImage(options: GenerationOptions): Promise<GenerationResult>;
+}
+
 export interface GenerationOptions {
   prompt: string;
   batchId: string;
   batchPromptId: string;
   runNumber: number;
-  generationId: string; // pre-created generation record
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  parameters?: Record<string, any>;
+  generationId: string;
+  parameters?: Record<string, unknown>;
 }
 
 export interface GenerationResult {
@@ -17,12 +24,12 @@ export interface GenerationResult {
     mediaType: string;
     fileSize?: number;
   }>;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  metadata: Record<string, any>;
+  metadata: Record<string, unknown>;
 }
 
-export interface ImageProvider {
-  name: 'gemini' | 'gemini3' | 'comfyui';
-  testConnection(): Promise<boolean>;
-  generateImage(options: GenerationOptions): Promise<GenerationResult>;
+export type AIProvider = 'ollama' | 'gemini';
+
+export interface OllamaConfig {
+  baseUrl: string;
+  model: string;
 }

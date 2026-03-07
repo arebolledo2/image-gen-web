@@ -2,20 +2,54 @@
 
 ## Overview
 
-The image-gen-web platform uses **Vercel AI SDK 6** with **Google Gemini** to power AI agents for prompt composition, style generation, batch metadata, and more. A `ToolLoopAgent` provides autonomous multi-step workflows via chat.
+The image-gen-web platform uses **Vercel AI SDK 6** with configurable AI models for agentic workflows. The system now supports both **Google Gemini** (cloud) and **Ollama** (local) providers.
 
 - Agent functions: modular files under `lib/ai/agents/`
 - Agent tools: `lib/ai/tools/`
-- Model configuration: `lib/ai/model.ts`
+- Model configuration: `lib/ai/model.ts` - uses provider factory pattern
+- Settings UI: `components/providers/ai-model-settings.tsx`
 
-## Model Configuration (`lib/ai/model.ts`)
+## AI Model Providers
 
-| Export | Description |
-|--------|-------------|
-| `getModel(modelId?)` | Factory wrapping Google AI models with DevTools middleware (dev only). Default: `gemini-3.1-flash-preview` |
-| `geminiFlash` | `gemini-3.1-flash-preview` instance |
-| `gemini25Flash` | `gemini-2.5-flash` instance |
-| `gemini25FlashImage` | `gemini-2.5-flash-image-preview` instance |
+### Environment Variables
+
+The system supports two AI model providers, configured via environment variables or runtime settings.
+
+```env
+# Provider selection (default: "gemini")
+AI_MODEL_PROVIDER=ollama  # or "gemini"
+
+# Ollama configuration (when provider is ollama)
+OLLAMA_BASE_URL=http://localhost:11434
+OLLAMA_DEFAULT_MODEL=qwen3.5:9b-q8_0
+```
+
+### Model Selection
+
+The `lib/ai/model.ts` file implements a factory pattern for model selection:
+
+| Export | Description | Default |
+|--------|--|---------|
+| `getChatModel(modelId?)` | Factory returning text chat model | provider-dependent |
+| `geminiFlash` | `gemini-3.1-flash-preview` instance | Available |
+| `gemini25Flash` | `gemini-2.5-flash` instance | Available |
+| `checkOllamaConnection()` | Test if Ollama is available | Returns boolean |
+
+### Provider-Specific Models
+
+**Gemini (Google AI)**:
+- Uses `@ai-sdk/google` provider
+- Supports vision for image analysis (`gemini25FlashImage`)
+- Requires API key configuration
+
+**Ollama (Local)**:
+- Uses `ollama-ai-provider-v2` package
+- Default model: `qwen3.5:9b-q8_0`
+- Local LLM inference via Ollama server
+
+### Vision Model Separation
+
+The chat agent uses text-only models for general interactions, but the `analyzeImage` tool always uses Gemini 25 Flash Image model since most local Ollama models don't support vision. This ensures image analysis functionality remains available regardless of the primary provider.
 
 ## Agent Functions (10 total)
 
@@ -76,7 +110,7 @@ Tools wired into the `imageAgent` ToolLoopAgent.
 ### Imported tools (from `lib/ai/tools/`)
 
 | Module | Tools |
-|--------|-------|
+|--------|------|
 | `style-tools.ts` | `getAllStyles`, `createStyle` |
 | `subject-tools.ts` | `getAllSubjects`, `createSubject` |
 | `batch-tools.ts` | `createBatch`, `executeBatch` |
@@ -114,6 +148,17 @@ const { promptText } = await response.json()
 // Streams responses with tool calls
 ```
 
+### Switch to Ollama
+
+```bash
+# Set environment variable
+AI_MODEL_PROVIDER=ollama
+OLLAMA_BASE_URL=http://localhost:11434
+OLLAMA_DEFAULT_MODEL=qwen3.5:9b-q8_0
+```
+
+Or use the UI settings modal (click the Settings button in the chat interface).
+
 ## File Structure
 
 ```
@@ -133,8 +178,13 @@ lib/ai/
 │   ├── prompt-tools.ts
 │   ├── style-tools.ts
 │   └── subject-tools.ts
-├── model.ts                 # AI model factory
+├── model.ts                 # AI model factory (provider-agnostic)
 └── image-generation.ts      # Image generation utilities
 
-lib/agent.ts                 # ToolLoopAgent definition (imageAgent)
-```
+lib/providers/types.ts       # Type definitions for providers
+
+components/providers/
+├── theme-provider.tsx       # Theme management
+├── settings-provider.tsx    # Prompt style settings
+├── ai-model-settings-provider.tsx  # AI provider configuration
+└── ai-model-settings.tsx    # UI component for settings
