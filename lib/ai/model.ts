@@ -1,97 +1,162 @@
-import { google } from '@ai-sdk/google';
-import { wrapLanguageModel, type LanguageModel } from 'ai';
-import { devToolsMiddleware } from '@ai-sdk/devtools';
-import { ollama } from 'ollama-ai-provider-v2';
+import { google } from "@ai-sdk/google";
+import { devToolsMiddleware } from "@ai-sdk/devtools";
+import { createOllama } from "ollama-ai-provider-v2";
+import type { LanguageModelV3 } from "@ai-sdk/provider";
+import { wrapLanguageModel } from "ai";
+import type { AIProvider, AIRequestConfig, AIRequestConfigInput, AIModelSelection } from "./config";
 
-const DEFAULT_GEMINI_MODEL = 'gemini-3.1-flash-preview';
+export const DEFAULT_GEMINI_CHAT_MODEL = "gemini-3.1-flash-preview";
+export const DEFAULT_GEMINI_ANALYSIS_MODEL = "gemini-2.5-flash-image-preview";
 
-/**
- * AI Model Configuration from environment variables.
- * 
- * Environment Variables:
- * - AI_MODEL_PROVIDER: "ollama" | "gemini" (default: "gemini")
- * - OLLAMA_BASE_URL: URL to Ollama server (default: http://localhost:11434)
- * - OLLAMA_DEFAULT_MODEL: Default model for Ollama (default: qwen3.5:9b-q8_0)
- */
-const OLLAMA_BASE_URL = process.env.OLLAMA_BASE_URL || 'http://localhost:11434';
-const OLLAMA_DEFAULT_MODEL = process.env.OLLAMA_DEFAULT_MODEL || 'qwen3.5:9b-q8_0';
+const ENV_AI_MODEL_PROVIDER = process.env.AI_MODEL_PROVIDER ?? "gemini";
+const ENV_OLLAMA_BASE_URL = process.env.OLLAMA_BASE_URL ?? "http://localhost:11434";
+const ENV_OLLAMA_DEFAULT_MODEL = process.env.OLLAMA_DEFAULT_MODEL ?? "qwen3.5:9b-q8_0";
 
-/**
- * Get the text model to use for chat operations.
- * @param modelId - Optional override for specific model ID (Gemini only)
- * @returns A configured language model instance
- */
-export function getChatModel(modelId?: string): LanguageModel {
-  const provider = process.env.AI_MODEL_PROVIDER ?? 'gemini';
-  
-  if (provider === 'ollama') {
-    return ollama(OLLAMA_DEFAULT_MODEL);
-  }
-
-  const baseModel = google(modelId ?? DEFAULT_GEMINI_MODEL);
-
-  // Only enable DevTools in development
-  if (process.env.NODE_ENV === 'production') {
-    return baseModel;
+function wrapIfDev(model: LanguageModelV3): LanguageModelV3 {
+  if (process.env.NODE_ENV === "production") {
+    return model;
   }
 
   return wrapLanguageModel({
-    model: baseModel,
+    model,
     middleware: devToolsMiddleware(),
   });
 }
 
-/**
- * Get the vision model for image analysis.
- * Always uses Gemini as Ollama models typically don't support vision.
- */
-export function getVisionModel(modelId: string = 'gemini-2.5-flash-image-preview'): LanguageModel {
-  const baseModel = google(modelId);
-
-  // Only enable DevTools in development
-  if (process.env.NODE_ENV === 'production') {
-    return baseModel;
-  }
-
-  return wrapLanguageModel({
-    model: baseModel,
-    middleware: devToolsMiddleware(),
-  });
+function isProvider(value: string | undefined): value is AIProvider {
+  return value === "gemini" || value === "ollama";
 }
 
-// Export specific model instances for backward compatibility
-export const geminiFlash = getChatModel('gemini-3.1-flash-preview');
-export const gemini25Flash = getChatModel('gemini-2.5-flash');
-export const gemini25FlashImage = getVisionModel('gemini-2.5-flash-image-preview');
+function sanitizeModelId(value: string | undefined, fallback: string): string {
+  const trimmed = value?.trim();
+  if (!trimmed) {
+    return fallback;
+  }
+  return trimmed.slice(0, 256);
+}
 
-// Export configuration info for runtime inspection
+function sanitizeUrl(value: string | undefined, fallback: string): string {
+  const candidate = value?.trim() || fallback;
+
+  try {
+    const parsed = new URL(candidate);
+    if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
+      return fallback;
+    }
+    parsed.pathname = parsed.pathname.replace(/\/$/, "");
+    return parsed.toString().replace(/\/$/, "");
+  } catch {
+    return fallback;
+  }
+}
+
+function ensureOllamaApiBaseUrl(value: string): string {
+  const parsed = new URL(value);
+  const normalizedPath = parsed.pathname.replace(/\/$/, "");
+  parsed.pathname = normalizedPath.endsWith("/api") ? normalizedPath : `${normalizedPath}/api`;
+  return parsed.toString().replace(/\/$/, "");
+}
+
+function envDefaultProvider(): AIProvider {
+  return isProvider(ENV_AI_MODEL_PROVIDER) ? ENV_AI_MODEL_PROVIDER : "gemini";
+}
+
+export function resolveAIRequestConfig(input?: AIRequestConfigInput | null): AIRequestConfig {
+  const defaultProvider = envDefaultProvider();
+  const defaultOllamaBaseUrl = sanitizeUrl(undefined, ENV_OLLAMA_BASE_URL);
+  const sanitizedOllamaBaseUrl = sanitizeUrl(input?.ollamaBaseUrl, defaultOllamaBaseUrl);
+
+  const chatProvider = isProvider(input?.chat?.provider) ? input.chat.provider : defaultProvider;
+  const analysisProvider = isProvider(input?.analysis?.provider) ? input.analysis.provider : defaultProvider;
+
+  return {
+    ollamaBaseUrl: sanitizedOllamaBaseUrl,
+    chat: {
+      provider: chatProvider,
+      model: sanitizeModelId(
+        input?.chat?.model,
+        chatProvider === "ollama" ? ENV_OLLAMA_DEFAULT_MODEL : DEFAULT_GEMINI_CHAT_MODEL,
+      ),
+    },
+    analysis: {
+      provider: analysisProvider,
+      model: sanitizeModelId(
+        input?.analysis?.model,
+        analysisProvider === "ollama" ? ENV_OLLAMA_DEFAULT_MODEL : DEFAULT_GEMINI_ANALYSIS_MODEL,
+      ),
+    },
+  };
+}
+
+function resolveLanguageModel(selection: AIModelSelection, config: AIRequestConfig): LanguageModelV3 {
+  if (selection.provider === "ollama") {
+    const ollama = createOllama({
+      baseURL: ensureOllamaApiBaseUrl(config.ollamaBaseUrl ?? ENV_OLLAMA_BASE_URL),
+    });
+
+    return wrapIfDev(ollama(selection.model));
+  }
+
+  return wrapIfDev(google(selection.model));
+}
+
+export function getChatModelForConfig(config: AIRequestConfig): LanguageModelV3 {
+  return resolveLanguageModel(config.chat, config);
+}
+
+export function getAnalysisModelForConfig(config: AIRequestConfig): LanguageModelV3 {
+  return resolveLanguageModel(config.analysis, config);
+}
+
+export function getChatModel(modelId?: string): LanguageModelV3 {
+  const config = resolveAIRequestConfig({
+    chat: {
+      provider: envDefaultProvider(),
+      model: modelId,
+    },
+  });
+
+  return getChatModelForConfig(config);
+}
+
+/**
+ * Backwards-compatible helper for routes/components that always need a Gemini vision model.
+ */
+export function getVisionModel(modelId: string = DEFAULT_GEMINI_ANALYSIS_MODEL): LanguageModelV3 {
+  const visionModel = sanitizeModelId(modelId, DEFAULT_GEMINI_ANALYSIS_MODEL);
+  return wrapIfDev(google(visionModel));
+}
+
+// Exported instances retained for existing non-chat agent modules.
+export const geminiFlash = getChatModel(DEFAULT_GEMINI_CHAT_MODEL);
+export const gemini25Flash = getChatModel("gemini-2.5-flash");
+export const gemini25FlashImage = getVisionModel(DEFAULT_GEMINI_ANALYSIS_MODEL);
+
 export interface AIModelConfig {
-  provider: 'ollama' | 'gemini';
+  provider: AIProvider;
   ollamaBaseUrl?: string;
   ollamaDefaultModel?: string;
 }
 
 export const aiModelConfig: AIModelConfig = {
-  provider: (process.env.AI_MODEL_PROVIDER ?? 'gemini') as 'ollama' | 'gemini',
-  ollamaBaseUrl: OLLAMA_BASE_URL,
-  ollamaDefaultModel: OLLAMA_DEFAULT_MODEL,
+  provider: envDefaultProvider(),
+  ollamaBaseUrl: ENV_OLLAMA_BASE_URL,
+  ollamaDefaultModel: ENV_OLLAMA_DEFAULT_MODEL,
 };
 
-/**
- * Check if Ollama is configured and available.
- */
-export async function checkOllamaConnection(): Promise<boolean> {
-  const provider = (process.env.AI_MODEL_PROVIDER ?? 'gemini') as 'ollama' | 'gemini';
-  
-  if (provider !== 'ollama') {
+export async function checkOllamaConnection(baseUrl?: string): Promise<boolean> {
+  const provider = envDefaultProvider();
+  if (provider !== "ollama") {
     return false;
   }
 
+  const resolvedBaseUrl = sanitizeUrl(baseUrl, ENV_OLLAMA_BASE_URL);
+
   try {
-    const response = await fetch(`${OLLAMA_BASE_URL}/api/tags`);
+    const response = await fetch(`${resolvedBaseUrl}/api/tags`);
     return response.ok;
   } catch (error) {
-    console.error('Ollama connection check failed:', error);
+    console.error("Ollama connection check failed:", error);
     return false;
   }
 }

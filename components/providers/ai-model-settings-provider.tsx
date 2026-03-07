@@ -2,52 +2,194 @@
 
 import * as React from "react";
 import { createContext, useContext, useEffect, useState } from "react";
+import type { AIProvider, AIRequestConfig } from "@/lib/ai/config";
 
-export type AIProvider = 'ollama' | 'gemini';
+export interface AIModelSelectionSettings {
+  provider: AIProvider;
+  model: string;
+}
 
 export interface AIModelSettings {
-  provider: AIProvider;
+  version: 2;
   ollamaBaseUrl: string;
-  ollamaDefaultModel: string;
+  chat: AIModelSelectionSettings;
+  analysis: AIModelSelectionSettings;
+}
+
+interface LegacyAIModelSettings {
+  provider?: AIProvider;
+  ollamaBaseUrl?: string;
+  ollamaDefaultModel?: string;
 }
 
 interface AIModelSettingsContextType {
   settings: AIModelSettings;
-  setSettings: (settings: Partial<AIModelSettings>) => void;
+  setSettings: (settings: AIModelSettingsUpdate) => void;
   testConnection: () => Promise<boolean>;
+  toRequestConfig: () => AIRequestConfig;
 }
 
-const defaultSettings: AIModelSettings = {
-  provider: 'gemini',
-  ollamaBaseUrl: 'http://localhost:11434',
-  ollamaDefaultModel: 'qwen3.5:9b-q8_0',
+export interface AIModelSettingsUpdate {
+  ollamaBaseUrl?: string;
+  chat?: Partial<AIModelSelectionSettings>;
+  analysis?: Partial<AIModelSelectionSettings>;
+}
+
+const STORAGE_KEY = "ai-model-settings";
+
+export const defaultAIModelSettings: AIModelSettings = {
+  version: 2,
+  ollamaBaseUrl: "http://localhost:11434",
+  chat: {
+    provider: "gemini",
+    model: "gemini-3.1-flash-preview",
+  },
+  analysis: {
+    provider: "gemini",
+    model: "gemini-2.5-flash-image-preview",
+  },
 };
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
+}
+
+function normalizeModel(value: unknown, fallback: string): string {
+  if (typeof value !== "string") {
+    return fallback;
+  }
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : fallback;
+}
+
+function normalizeProvider(value: unknown, fallback: AIProvider): AIProvider {
+  return value === "ollama" || value === "gemini" ? value : fallback;
+}
+
+function normalizeUrl(value: unknown, fallback: string): string {
+  if (typeof value !== "string") {
+    return fallback;
+  }
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return fallback;
+  }
+
+  try {
+    const parsed = new URL(trimmed);
+    if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
+      return fallback;
+    }
+    return parsed.toString().replace(/\/$/, "");
+  } catch {
+    return fallback;
+  }
+}
+
+export function migrateAIModelSettings(raw: unknown): AIModelSettings {
+  if (!isRecord(raw)) {
+    return defaultAIModelSettings;
+  }
+
+  if (raw.version === 2) {
+    const chatRaw = isRecord(raw.chat) ? raw.chat : {};
+    const analysisRaw = isRecord(raw.analysis) ? raw.analysis : {};
+
+    const chatProvider = normalizeProvider(chatRaw.provider, defaultAIModelSettings.chat.provider);
+    const analysisProvider = normalizeProvider(analysisRaw.provider, defaultAIModelSettings.analysis.provider);
+
+    return {
+      version: 2,
+      ollamaBaseUrl: normalizeUrl(raw.ollamaBaseUrl, defaultAIModelSettings.ollamaBaseUrl),
+      chat: {
+        provider: chatProvider,
+        model: normalizeModel(
+          chatRaw.model,
+          chatProvider === "ollama" ? "qwen3.5:9b-q8_0" : defaultAIModelSettings.chat.model,
+        ),
+      },
+      analysis: {
+        provider: analysisProvider,
+        model: normalizeModel(
+          analysisRaw.model,
+          analysisProvider === "ollama" ? "qwen3.5:9b-q8_0" : defaultAIModelSettings.analysis.model,
+        ),
+      },
+    };
+  }
+
+  // Legacy v1 migration
+  const legacy = raw as LegacyAIModelSettings;
+  const legacyProvider = normalizeProvider(legacy.provider, defaultAIModelSettings.chat.provider);
+  const legacyModel = normalizeModel(legacy.ollamaDefaultModel, "qwen3.5:9b-q8_0");
+
+  return {
+    version: 2,
+    ollamaBaseUrl: normalizeUrl(legacy.ollamaBaseUrl, defaultAIModelSettings.ollamaBaseUrl),
+    chat: {
+      provider: legacyProvider,
+      model: legacyProvider === "ollama" ? legacyModel : defaultAIModelSettings.chat.model,
+    },
+    // Preserve previous intended behavior where image analysis stayed on Gemini.
+    analysis: {
+      provider: "gemini",
+      model: defaultAIModelSettings.analysis.model,
+    },
+  };
+}
+
+export function toAIRequestConfig(settings: AIModelSettings): AIRequestConfig {
+  return {
+    ollamaBaseUrl: settings.ollamaBaseUrl,
+    chat: {
+      provider: settings.chat.provider,
+      model: settings.chat.model,
+    },
+    analysis: {
+      provider: settings.analysis.provider,
+      model: settings.analysis.model,
+    },
+  };
+}
 
 const AIModelSettingsContext = createContext<AIModelSettingsContextType | undefined>(undefined);
 
 export function AIModelSettingsProvider({ children }: { children: React.ReactNode }) {
   const [settings, setSettingsState] = useState<AIModelSettings>(() => {
     try {
-      const saved = localStorage.getItem("ai-model-settings");
+      const saved = localStorage.getItem(STORAGE_KEY);
       if (saved) {
-        return JSON.parse(saved);
+        return migrateAIModelSettings(JSON.parse(saved));
       }
     } catch (e) {
       console.error("Failed to load AI model settings:", e);
     }
-    return defaultSettings;
+    return defaultAIModelSettings;
   });
 
   useEffect(() => {
-    localStorage.setItem("ai-model-settings", JSON.stringify(settings));
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(settings));
   }, [settings]);
 
-  const setSettings = (newSettings: Partial<AIModelSettings>) => {
-    setSettingsState(prev => ({ ...prev, ...newSettings }));
+  const setSettings = (newSettings: AIModelSettingsUpdate) => {
+    setSettingsState((prev) => ({
+      ...prev,
+      ...newSettings,
+      chat: {
+        ...prev.chat,
+        ...(newSettings.chat ?? {}),
+      },
+      analysis: {
+        ...prev.analysis,
+        ...(newSettings.analysis ?? {}),
+      },
+      version: 2,
+    }));
   };
 
   const testConnection = async (): Promise<boolean> => {
-    if (settings.provider !== 'ollama') {
+    const isUsingOllama = settings.chat.provider === "ollama" || settings.analysis.provider === "ollama";
+    if (!isUsingOllama) {
       return true;
     }
 
@@ -60,8 +202,10 @@ export function AIModelSettingsProvider({ children }: { children: React.ReactNod
     }
   };
 
+  const toRequestConfigForCurrentState = () => toAIRequestConfig(settings);
+
   return (
-    <AIModelSettingsContext.Provider value={{ settings, setSettings, testConnection }}>
+    <AIModelSettingsContext.Provider value={{ settings, setSettings, testConnection, toRequestConfig: toRequestConfigForCurrentState }}>
       {children}
     </AIModelSettingsContext.Provider>
   );

@@ -10,9 +10,11 @@ import { Textarea } from "@/components/ui/textarea";
 import { Loader2, Plus, X } from "lucide-react";
 import { AIAssistButton } from "@/components/agents/ai-assist-button";
 import { toast } from "sonner";
+import { useAIModelSettings } from "@/components/providers/ai-model-settings-provider";
 
 export default function NewStylePage() {
   const router = useRouter();
+  const { toRequestConfig } = useAIModelSettings();
   const [loading, setLoading] = useState(false);
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
@@ -71,7 +73,7 @@ export default function NewStylePage() {
     const response = await fetch('/api/agents/create-style', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ description: aiDescription }),
+      body: JSON.stringify({ description: aiDescription, aiConfig: toRequestConfig() }),
     });
 
     if (!response.ok) {

@@ -9,6 +9,7 @@ import { Loader2, Plus, X, Wand2 } from "lucide-react";
 import { AIAssistButton } from "@/components/agents/ai-assist-button";
 import { DEFAULT_RESOLUTION, getResolutionPresetsForProvider, type ProviderType } from "@/lib/config/resolution-presets";
 import { useSettings } from "@/components/providers/settings-provider";
+import { useAIModelSettings } from "@/components/providers/ai-model-settings-provider";
 import { toast } from "sonner";
 import { ConstructModeSelector, type StyleEntity, type SubjectEntity, type GuidanceEntity } from "@/components/batch/construct-mode-selector";
 import { BatchDefaultsForm } from "@/components/batch/batch-defaults-form";
@@ -30,6 +31,7 @@ interface BatchPrompt {
 export default function NewBatchPage() {
   const router = useRouter();
   const { promptStyle } = useSettings();
+  const { toRequestConfig } = useAIModelSettings();
   const [loading, setLoading] = useState(false);
   const [dataLoading, setDataLoading] = useState(true);
 
@@ -121,7 +123,8 @@ export default function NewBatchPage() {
             styleId: omitStyle ? undefined : styleId,
             subjectId: subId,
             guidanceIds: selectedGuidanceIds,
-            promptStyle
+            promptStyle,
+            aiConfig: toRequestConfig(),
           })
         });
         const data = await response.json();
@@ -172,7 +175,8 @@ export default function NewBatchPage() {
       body: JSON.stringify({
         basePrompt: preview.promptText,
         suggestion,
-        promptStyle
+        promptStyle,
+        aiConfig: toRequestConfig(),
       })
     });
 

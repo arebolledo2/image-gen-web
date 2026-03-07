@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { Settings2, Check } from "lucide-react";
+import { Settings2, Check, Cpu } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -12,9 +12,11 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useSettings, PromptStyle } from "@/components/providers/settings-provider";
+import { AIModelSettingsModal } from "@/components/providers/ai-model-settings";
 
 export function SettingsToggle() {
   const { promptStyle, setPromptStyle } = useSettings();
+  const [isAISettingsOpen, setIsAISettingsOpen] = React.useState(false);
 
   const styles: { value: PromptStyle; label: string; description: string }[] = [
     { 
@@ -55,7 +57,13 @@ export function SettingsToggle() {
             </p>
           </DropdownMenuItem>
         ))}
+        <DropdownMenuSeparator />
+        <DropdownMenuItem onSelect={() => setIsAISettingsOpen(true)}>
+          <Cpu className="mr-2 h-4 w-4" />
+          <span>AI Model Settings</span>
+        </DropdownMenuItem>
       </DropdownMenuContent>
+      <AIModelSettingsModal open={isAISettingsOpen} onOpenChange={setIsAISettingsOpen} />
     </DropdownMenu>
   );
 }

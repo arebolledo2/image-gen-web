@@ -15,6 +15,7 @@ import { Plus, Loader2, Box, X, Tag, Star, Trash2 } from "lucide-react";
 import { AIAssistButton } from "@/components/agents/ai-assist-button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { toast } from "sonner";
+import { useAIModelSettings } from "@/components/providers/ai-model-settings-provider";
 
 interface Category {
   id: string;
@@ -37,6 +38,7 @@ interface Subject {
 }
 
 export default function SubjectsPage() {
+  const { toRequestConfig } = useAIModelSettings();
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
@@ -191,7 +193,7 @@ export default function SubjectsPage() {
       const response = await fetch('/api/agents/create-subject', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ concept }),
+        body: JSON.stringify({ concept, aiConfig: toRequestConfig() }),
       });
 
       if (response.ok) {

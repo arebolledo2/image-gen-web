@@ -1,6 +1,6 @@
-import { generateText, Output } from 'ai';
-import { geminiFlash } from '../model';
+import { generateText, Output, type LanguageModel } from 'ai';
 import { z } from 'zod';
+import { getChatModel } from '../model';
 
 // Schema for prompt creation
 const promptSchema = z.object({
@@ -77,7 +77,8 @@ export interface ComposePromptParams {
  * @returns Promise resolving to prompt template with name and tags
  * @throws Error if AI generation fails
  */
-export async function createPromptAgent(params: CreatePromptAgentParams): Promise<PromptSuggestion> {
+export async function createPromptAgent(params: CreatePromptAgentParams, model?: LanguageModel): Promise<PromptSuggestion> {
+  const resolvedModel = model ?? getChatModel();
   const { assetType, styleName, styleKeywords, description, isTransparent = true } = params;
 
   const backgroundInstruction = isTransparent
@@ -107,7 +108,7 @@ ${styleKeywords?.length ? `Style Keywords: ${styleKeywords.join(', ')}` : ''}
 ${description ? `Description: ${description}` : ''}`;
 
   const { output } = await generateText({
-    model: geminiFlash,
+    model: resolvedModel,
     system: systemPrompt,
     output: Output.object({
       schema: promptSchema,
@@ -130,8 +131,10 @@ ${description ? `Description: ${description}` : ''}`;
 export async function suggestPromptVariations(
   basePrompt: string,
   count: number = 3,
-  isTransparent: boolean = true
+  isTransparent: boolean = true,
+  model?: LanguageModel
 ): Promise<string[]> {
+  const resolvedModel = model ?? getChatModel();
   const backgroundInstruction = isTransparent
     ? 'Keep "solid bright magenta background #FF00FF single tone with no gradients" for transparency'
     : 'Ensure the background is consistent with the base prompt but DO NOT use a magenta background.';
@@ -144,7 +147,7 @@ Given a base prompt, create ${count} variations that:
 4. Are suitable for generating diverse sprite variations`;
 
   const { output } = await generateText({
-    model: geminiFlash,
+    model: resolvedModel,
     system: systemPrompt,
     output: Output.object({
       schema: z.object({
@@ -160,7 +163,8 @@ Given a base prompt, create ${count} variations that:
 /**
  * AI Agent to compose a final image generation prompt from building blocks.
  */
-export async function composeConstructedPromptAgent(params: ComposePromptParams): Promise<string> {
+export async function composeConstructedPromptAgent(params: ComposePromptParams, model?: LanguageModel): Promise<string> {
+  const resolvedModel = model ?? getChatModel();
   const { subject, style, guidance, promptStyle = 'terse' } = params;
 
   const backgroundInstruction = subject.isTransparent !== false
@@ -229,7 +233,7 @@ ${guidance.map(g => `- ${g.name}: ${g.description}`).join('\n')}`;
   }
 
   const { text } = await generateText({
-    model: geminiFlash,
+    model: resolvedModel,
     system: systemPrompt,
     prompt: userPrompt,
   });
@@ -245,8 +249,10 @@ export async function adjustPromptAgent(
   basePrompt: string,
   suggestion: string,
   promptStyle: 'terse' | 'verbose' | 'audio' = 'terse',
-  referencePrompts?: string[]
+  referencePrompts?: string[],
+  model?: LanguageModel
 ): Promise<string> {
+  const resolvedModel = model ?? getChatModel();
   const isAudio = promptStyle === 'audio';
 
   const styleInstruction = isAudio
@@ -293,7 +299,7 @@ CRITICAL RULES:
 5. ONLY output the final prompt text. Do not include any conversational filler, explanations, or "Here is the modified prompt:".`;
 
   const { text } = await generateText({
-    model: geminiFlash,
+    model: resolvedModel,
     system: systemPrompt,
     prompt: `Adjust this prompt:\n\n${basePrompt}\n\nBased on this suggestion: ${suggestion}`,
   });

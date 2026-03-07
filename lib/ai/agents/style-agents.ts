@@ -1,6 +1,6 @@
-import { generateText, Output } from 'ai';
-import { geminiFlash } from '../model';
+import { generateText, Output, type LanguageModel } from 'ai';
 import { z } from 'zod';
+import { getChatModel } from '../model';
 
 // Schema for style creation
 export const styleSchema = z.object({
@@ -67,7 +67,9 @@ export interface EditStyleParams {
  * @returns Promise resolving to validated style definition with palette and rendering cues
  * @throws Error if AI generation fails or returns invalid data
  */
-export async function createStyleAgent(description: string): Promise<StyleSuggestion> {
+export async function createStyleAgent(description: string, model?: LanguageModel): Promise<StyleSuggestion> {
+  const resolvedModel = model ?? getChatModel();
+
   const systemPrompt = `You are a professional art director and style designer for game sprites and assets.
 Your goal is to create deep, rich, and consistent style definitions that guide AI image generation to produce cohesive results.
 
@@ -108,7 +110,7 @@ Examples of high-quality style definitions:
 Provide a complete definition that captures the essence of the requested style.`;
 
   const { output } = await generateText({
-    model: geminiFlash,
+    model: resolvedModel,
     system: systemPrompt,
     output: Output.object({
       schema: styleSchema,
@@ -129,7 +131,8 @@ Provide a complete definition that captures the essence of the requested style.`
  * @returns Promise resolving to the modified style definition
  * @throws Error if AI generation fails or returns invalid data
  */
-export async function editStyleAgent(params: EditStyleParams): Promise<StyleSuggestion> {
+export async function editStyleAgent(params: EditStyleParams, model?: LanguageModel): Promise<StyleSuggestion> {
+  const resolvedModel = model ?? getChatModel();
   const { currentStyle, userRequest } = params;
 
   const systemPrompt = `You are a professional art director and style designer for game sprites and assets.
@@ -153,7 +156,7 @@ The current style has:
 Modify this style according to the user's request and return a complete, updated style definition.`;
 
   const { output } = await generateText({
-    model: geminiFlash,
+    model: resolvedModel,
     system: systemPrompt,
     output: Output.object({
       schema: styleSchema,

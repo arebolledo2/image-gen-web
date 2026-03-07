@@ -1,26 +1,30 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { z } from "zod";
 import { createAudioPromptAgent } from '@/lib/ai/agents';
+import { getChatModelForConfig, resolveAIRequestConfig } from "@/lib/ai/model";
+import { parseBodyWithAIConfig } from "@/lib/ai/request-config";
+import { buildAgentErrorResponse } from "../utils";
+
+const createAudioPromptRequestShape = {
+  concept: z.string().trim().min(1, "Concept is required"),
+};
 
 // POST /api/agents/create-audio-prompt - AI agent to create a detailed audio prompt from a concept
 export async function POST(request: NextRequest) {
-  try {
-    const { concept } = await request.json();
+  let aiConfig = resolveAIRequestConfig();
 
-    if (!concept) {
-      return NextResponse.json(
-        { error: 'Concept is required' },
-        { status: 400 }
-      );
+  try {
+    const parsed = parseBodyWithAIConfig(await request.json(), createAudioPromptRequestShape);
+    if (!parsed.success) {
+      return NextResponse.json({ error: parsed.error }, { status: 400 });
     }
 
-    const result = await createAudioPromptAgent(concept);
+    aiConfig = parsed.data.aiConfig;
+    const result = await createAudioPromptAgent(parsed.data.concept, getChatModelForConfig(aiConfig));
 
     return NextResponse.json({ prompt: result.prompt });
   } catch (error) {
     console.error('Error in create-audio-prompt agent:', error);
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Failed to create audio prompt' },
-      { status: 500 }
-    );
+    return buildAgentErrorResponse(error, aiConfig.chat, "Failed to create audio prompt");
   }
 }

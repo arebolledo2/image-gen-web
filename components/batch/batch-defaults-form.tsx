@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Loader2, Sparkles } from "lucide-react";
 import { type ProviderType } from "@/lib/config/resolution-presets";
 import { toast } from "sonner";
+import { useAIModelSettings } from "@/components/providers/ai-model-settings-provider";
 
 interface ResolutionPreset {
   id: string;
@@ -45,6 +46,7 @@ export function BatchDefaultsForm({
   setDefaultCount,
   promptTexts,
 }: BatchDefaultsFormProps) {
+  const { toRequestConfig } = useAIModelSettings();
   const [metadataLoading, setMetadataLoading] = useState(false);
 
   const handleGenerateMetadata = async () => {
@@ -56,7 +58,7 @@ export function BatchDefaultsForm({
       const response = await fetch('/api/agents/create-batch-metadata', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ promptText: combinedPrompt }),
+        body: JSON.stringify({ promptText: combinedPrompt, aiConfig: toRequestConfig() }),
       });
 
       if (!response.ok) throw new Error('Failed to generate metadata');

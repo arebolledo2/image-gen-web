@@ -1,6 +1,6 @@
-import { generateText, Output } from 'ai';
-import { geminiFlash } from '../model';
+import { generateText, Output, type LanguageModel } from 'ai';
 import { z } from 'zod';
+import { getChatModel } from '../model';
 
 /**
  * Schema for subject creation
@@ -21,7 +21,9 @@ export type SubjectSuggestion = z.infer<typeof subjectSchema>;
  * @param concept - The basic concept provided by the user (e.g., "mechanical spider")
  * @returns Promise resolving to validated subject suggestion
  */
-export async function createSubjectAgent(concept: string): Promise<SubjectSuggestion> {
+export async function createSubjectAgent(concept: string, model?: LanguageModel): Promise<SubjectSuggestion> {
+  const resolvedModel = model ?? getChatModel();
+
   const systemPrompt = `You are a creative lead and concept artist for a game studio.
 Your goal is to take a simple concept and expand it into a detailed, evocative subject for image generation.
 
@@ -45,7 +47,7 @@ Name: "Fire Elemental: Infernal Combustion Titan"
 Description: "A towering humanoid figure composed of roiling flames and molten lava, with eyes that burn like miniature suns. Embers and ash constantly swirl around its form, while its footsteps leave scorched earth in their wake."`;
 
   const { output } = await generateText({
-    model: geminiFlash,
+    model: resolvedModel,
     system: systemPrompt,
     output: Output.object({
       schema: subjectSchema,

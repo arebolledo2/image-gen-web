@@ -12,6 +12,7 @@ import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Loader2, Plus, X, Sparkles } from "lucide-react";
 import { toast } from "sonner";
+import { useAIModelSettings } from "@/components/providers/ai-model-settings-provider";
 
 interface AudioPrompt {
   promptText: string;
@@ -24,6 +25,7 @@ interface AudioPrompt {
 
 export default function NewAudioBatchPage() {
   const router = useRouter();
+  const { toRequestConfig } = useAIModelSettings();
   const [loading, setLoading] = useState(false);
 
   const [name, setName] = useState("");
@@ -65,7 +67,7 @@ export default function NewAudioBatchPage() {
       const response = await fetch('/api/agents/create-audio-prompt', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ concept }),
+        body: JSON.stringify({ concept, aiConfig: toRequestConfig() }),
       });
 
       if (response.ok) {

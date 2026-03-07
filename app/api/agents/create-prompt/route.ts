@@ -1,20 +1,32 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { z } from "zod";
 import { createPromptAgent } from '@/lib/ai/agents';
 import { db } from '@/lib/db';
 import { styles } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
+import { getChatModelForConfig, resolveAIRequestConfig } from "@/lib/ai/model";
+import { parseBodyWithAIConfig } from "@/lib/ai/request-config";
+import { buildAgentErrorResponse } from "../utils";
+
+const createPromptRequestShape = {
+  assetType: z.string().trim().min(1, "Asset type is required"),
+  styleId: z.string().optional(),
+  description: z.string().optional(),
+  isTransparent: z.boolean().optional(),
+};
 
 // POST /api/agents/create-prompt - AI agent to create a prompt template
 export async function POST(request: NextRequest) {
-  try {
-    const { assetType, styleId, description, isTransparent } = await request.json();
+  let aiConfig = resolveAIRequestConfig();
 
-    if (!assetType) {
-      return NextResponse.json(
-        { error: 'Asset type is required' },
-        { status: 400 }
-      );
+  try {
+    const parsed = parseBodyWithAIConfig(await request.json(), createPromptRequestShape);
+    if (!parsed.success) {
+      return NextResponse.json({ error: parsed.error }, { status: 400 });
     }
+
+    const { assetType, styleId, description, isTransparent } = parsed.data;
+    aiConfig = parsed.data.aiConfig;
 
     // Get style details if provided
     let styleName: string | undefined;
@@ -42,14 +54,11 @@ export async function POST(request: NextRequest) {
       styleKeywords,
       description,
       isTransparent: isTransparent !== undefined ? isTransparent : true,
-    });
+    }, getChatModelForConfig(aiConfig));
 
     return NextResponse.json({ prompt });
   } catch (error) {
     console.error('Error in create-prompt agent:', error);
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Failed to create prompt' },
-      { status: 500 }
-    );
+    return buildAgentErrorResponse(error, aiConfig.chat, "Failed to create prompt");
   }
 }

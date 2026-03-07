@@ -1,21 +1,33 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { z } from "zod";
 import { adjustPromptAgent } from '@/lib/ai/agents';
 import { db } from '@/lib/db';
 import { batches, batchPrompts, images, generations } from '@/lib/db/schema';
 import { eq, inArray } from 'drizzle-orm';
+import { getChatModelForConfig, resolveAIRequestConfig } from "@/lib/ai/model";
+import { parseBodyWithAIConfig } from "@/lib/ai/request-config";
+import { buildAgentErrorResponse } from "../utils";
+
+const adjustBatchPromptsRequestShape = {
+  batchId: z.string().trim().min(1, "batchId and suggestion are required"),
+  suggestion: z.string().trim().min(1, "batchId and suggestion are required"),
+  promptStyle: z.enum(['terse', 'verbose', 'audio']).optional(),
+  referenceImageIds: z.array(z.string()).optional(),
+};
 
 // POST /api/agents/adjust-batch-prompts
 export async function POST(request: NextRequest) {
-  try {
-    const body = await request.json();
-    const { batchId, suggestion, promptStyle, referenceImageIds } = body;
+  let aiConfig = resolveAIRequestConfig();
 
-    if (!batchId || !suggestion) {
-      return NextResponse.json(
-        { error: 'batchId and suggestion are required' },
-        { status: 400 }
-      );
+  try {
+    const parsed = parseBodyWithAIConfig(await request.json(), adjustBatchPromptsRequestShape);
+    if (!parsed.success) {
+      return NextResponse.json({ error: parsed.error }, { status: 400 });
     }
+
+    const { batchId, suggestion, promptStyle, referenceImageIds } = parsed.data;
+    aiConfig = parsed.data.aiConfig;
+    const chatModel = getChatModelForConfig(aiConfig);
 
     // Fetch batch and validate draft status
     const [batch] = await db
@@ -63,8 +75,9 @@ export async function POST(request: NextRequest) {
         const adjustedText = await adjustPromptAgent(
           prompt.promptText,
           suggestion,
-          promptStyle,
-          referencePrompts.length > 0 ? referencePrompts : undefined
+          promptStyle ?? 'terse',
+          referencePrompts.length > 0 ? referencePrompts : undefined,
+          chatModel,
         );
         return { id: prompt.id, promptText: adjustedText };
       })
@@ -83,9 +96,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ prompts: adjustedPrompts });
   } catch (error) {
     console.error('Error adjusting batch prompts:', error);
-    return NextResponse.json(
-      { error: 'Failed to adjust batch prompts' },
-      { status: 500 }
-    );
+    return buildAgentErrorResponse(error, aiConfig.chat, "Failed to adjust batch prompts");
   }
 }

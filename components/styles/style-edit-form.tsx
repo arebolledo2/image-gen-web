@@ -16,6 +16,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { useAIModelSettings } from "@/components/providers/ai-model-settings-provider";
 
 interface StyleEditFormProps {
   editName: string;
@@ -54,6 +55,7 @@ export function StyleEditForm({
   editFinish,
   setEditFinish,
 }: StyleEditFormProps) {
+  const { toRequestConfig } = useAIModelSettings();
   const [aiDialogOpen, setAiDialogOpen] = useState(false);
   const [aiRequest, setAiRequest] = useState("");
   const [aiLoading, setAiLoading] = useState(false);
@@ -82,6 +84,7 @@ export function StyleEditForm({
             },
           },
           userRequest: aiRequest,
+          aiConfig: toRequestConfig(),
         }),
       });
 

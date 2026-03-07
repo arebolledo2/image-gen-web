@@ -4,6 +4,7 @@ import { useState, useCallback, useMemo, useEffect, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { Loader2 } from "lucide-react";
 import { useSettings } from "@/components/providers/settings-provider";
+import { useAIModelSettings } from "@/components/providers/ai-model-settings-provider";
 import { ImageGalleryModal, type GalleryImage } from "@/components/image-gallery-modal";
 import { BatchHeader } from "@/components/batch/batch-header";
 import { BatchDetails } from "@/components/batch/batch-details";
@@ -21,6 +22,7 @@ export default function BatchDetailPage() {
   const params = useParams();
   const router = useRouter();
   const { promptStyle } = useSettings();
+  const { toRequestConfig } = useAIModelSettings();
 
   // Custom hooks
   const { batch, loading, refetchBatch } = useBatchData(params.id);
@@ -234,14 +236,15 @@ export default function BatchDetailPage() {
         batchId: params.id,
         suggestion,
         promptStyle,
-        referenceImageIds
+        referenceImageIds,
+        aiConfig: toRequestConfig(),
       })
     });
 
     if (!response.ok) throw new Error('Failed to adjust all prompts');
     await refetchBatch();
     toast.success('All prompts adjusted successfully');
-  }, [params.id, promptStyle, refetchBatch]);
+  }, [params.id, promptStyle, refetchBatch, toRequestConfig]);
 
   const handleAdjustPrompt = useCallback(async (
     promptId: string,
@@ -256,14 +259,15 @@ export default function BatchDetailPage() {
         basePrompt: currentText,
         suggestion,
         promptStyle,
-        referenceImageIds
+        referenceImageIds,
+        aiConfig: toRequestConfig(),
       })
     });
 
     if (!response.ok) throw new Error('Failed to adjust prompt');
     const data = await response.json();
     return data.promptText;
-  }, [promptStyle]);
+  }, [promptStyle, toRequestConfig]);
 
   // Memoized values
   const totalImageCount = useMemo(() => {

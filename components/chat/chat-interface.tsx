@@ -14,7 +14,9 @@ import { ChatImagePreviewPane } from "./chat-image-preview-pane";
 import { ImageGalleryModal, type GalleryImage } from "@/components/image-gallery-modal";
 import { useChatHistory } from "@/lib/hooks/use-chat-history";
 import { useChatSessions } from "@/lib/hooks/use-chat-sessions";
+import { useAIModelSettings } from "@/components/providers/ai-model-settings-provider";
 import type { GetImagesPreviewData } from "./chat-tool-utils";
+import { buildChatRequestOptions } from "./chat-request-options";
 import {
     getMessageDigest,
     getPersistenceDecision,
@@ -32,6 +34,7 @@ interface PreviewPaneState {
 }
 
 export function ChatInterface() {
+    const { toRequestConfig } = useAIModelSettings();
     const {
         sessions,
         activeSessionId,
@@ -136,18 +139,19 @@ export function ChatInterface() {
             filename: file.filename,
             type: "file",
         }));
+        const requestOptions = buildChatRequestOptions(toRequestConfig());
 
         if (hasText && hasFiles) {
-            sendMessage({ text: content.text, files });
+            sendMessage({ text: content.text, files }, requestOptions);
             return;
         }
 
         if (hasText) {
-            sendMessage({ text: content.text });
+            sendMessage({ text: content.text }, requestOptions);
             return;
         }
 
-        sendMessage({ files });
+        sendMessage({ files }, requestOptions);
     };
 
     const handleNewSession = () => {

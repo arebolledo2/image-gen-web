@@ -1,153 +1,123 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { getChatModel, checkOllamaConnection } from '../model';
-import { google } from '@ai-sdk/google';
-import * as ollamaProvider from 'ollama-ai-provider-v2';
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
-// Mock the AI SDK and related providers
-vi.mock('@ai-sdk/google', () => ({
-  google: vi.fn((model) => ({ model })),
+const googleMock = vi.fn((model: string) => ({ provider: "gemini", model }));
+const ollamaModelMock = vi.fn((model: string) => ({ provider: "ollama", model }));
+const createOllamaMock = vi.fn(() => ollamaModelMock);
+const wrapLanguageModelMock = vi.fn(({ model }) => model);
+
+vi.mock("@ai-sdk/google", () => ({
+  google: googleMock,
 }));
 
-vi.mock('ollama-ai-provider-v2', () => ({
-  ollama: vi.fn((model) => ({ model })),
+vi.mock("ollama-ai-provider-v2", () => ({
+  createOllama: createOllamaMock,
 }));
 
-vi.mock('@ai-sdk/devtools', () => ({
+vi.mock("ai", () => ({
+  wrapLanguageModel: wrapLanguageModelMock,
+}));
+
+vi.mock("@ai-sdk/devtools", () => ({
   devToolsMiddleware: vi.fn(() => ({})),
 }));
 
-describe('AI Model Factory Functions - Ollama Integration', () => {
+async function loadModelModule() {
+  vi.resetModules();
+  return import("../model");
+}
+
+describe("resolveAIRequestConfig", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    process.env.AI_MODEL_PROVIDER = "gemini";
+    process.env.OLLAMA_BASE_URL = "http://localhost:11434";
+    process.env.OLLAMA_DEFAULT_MODEL = "qwen3.5:9b-q8_0";
   });
 
-  describe('Provider switching via environment variables', () => {
-    it('should use Ollama when AI_MODEL_PROVIDER is set to ollama', () => {
-      process.env.AI_MODEL_PROVIDER = 'ollama';
-      
-      getChatModel();
-      
-      expect(ollamaProvider.ollama).toHaveBeenCalledWith('qwen3.5:9b-q8_0');
-    });
+  it("defaults to environment-backed chat + gemini analysis when config is omitted", async () => {
+    const modelModule = await loadModelModule();
 
-    it('should use Gemini when AI_MODEL_PROVIDER is set to gemini', () => {
-      process.env.AI_MODEL_PROVIDER = 'gemini';
-      
-      getChatModel();
-      
-      expect(google).toHaveBeenCalled();
-    });
+    const config = modelModule.resolveAIRequestConfig();
 
-    // Note: OLLAMA_DEFAULT_MODEL is read at module load time, so changing it after import
-    // won't affect the already-configured provider. This is expected behavior - to change
-    // the model, you need to restart the server or use the UI settings.
-    // Skipping this test as it's testing implementation detail rather than feature functionality.
-
-    it('should allow custom model ID for Gemini', () => {
-      process.env.AI_MODEL_PROVIDER = 'gemini';
-      
-      const result = getChatModel('gemini-1.5-pro');
-      
-      expect(google).toHaveBeenCalledWith('gemini-1.5-pro');
-    });
+    expect(config.chat.provider).toBe("gemini");
+    expect(config.analysis.provider).toBe("gemini");
+    expect(config.chat.model).toBe("gemini-3.1-flash-preview");
+    expect(config.analysis.model).toBe("gemini-2.5-flash-image-preview");
   });
 
-  describe('checkOllamaConnection', () => {
-    beforeEach(() => {
-      process.env.AI_MODEL_PROVIDER = 'ollama';
-      process.env.OLLAMA_BASE_URL = 'http://localhost:11434';
+  it("merges partial config and sanitizes invalid base URL", async () => {
+    const modelModule = await loadModelModule();
+
+    const config = modelModule.resolveAIRequestConfig({
+      ollamaBaseUrl: "notaurl",
+      chat: {
+        provider: "ollama",
+        model: "llama3.2-vision",
+      },
     });
 
-    it('should return false when using Gemini provider', async () => {
-      process.env.AI_MODEL_PROVIDER = 'gemini';
-      
-      const connected = await checkOllamaConnection();
-      
-      expect(connected).toBe(false);
-    });
-
-    it('should return true when Ollama is available (mocked)', async () => {
-      global.fetch = vi.fn().mockResolvedValue({ ok: true });
-      
-      const connected = await checkOllamaConnection();
-      
-      expect(global.fetch).toHaveBeenCalledWith('http://localhost:11434/api/tags');
-      expect(connected).toBe(true);
-    });
-
-    it('should return false when Ollama connection fails', async () => {
-      global.fetch = vi.fn().mockResolvedValue({ ok: false });
-      
-      const connected = await checkOllamaConnection();
-      
-      expect(connected).toBe(false);
-    });
-
-    it('should handle network errors gracefully', async () => {
-      global.fetch = vi.fn().mockRejectedValue(new Error('Network error'));
-      
-      const connected = await checkOllamaConnection();
-      
-      expect(connected).toBe(false);
-    });
+    expect(config.ollamaBaseUrl).toBe("http://localhost:11434");
+    expect(config.chat.provider).toBe("ollama");
+    expect(config.chat.model).toBe("llama3.2-vision");
+    expect(config.analysis.provider).toBe("gemini");
   });
 });
 
-describe('Model Factory Basic Functionality', () => {
-  it('should create a model object when called', async () => {
-    const result = getChatModel('test-model');
-    
-    // Verify the function returns something that looks like a model
-    expect(result).toBeDefined();
-    expect(typeof result).toBe('object');
+describe("request-scoped model selection", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    process.env.AI_MODEL_PROVIDER = "gemini";
+    process.env.OLLAMA_BASE_URL = "http://localhost:11434";
+    process.env.OLLAMA_DEFAULT_MODEL = "qwen3.5:9b-q8_0";
   });
 
-  it('should call Google with correct model ID', async () => {
-    process.env.AI_MODEL_PROVIDER = 'gemini';
-    
-    const result = getChatModel('gemini-2.0-flash');
-    
-    // The google function should have been called
-    expect(google).toHaveBeenCalled();
+  it("uses Gemini for chat model when chat provider is gemini", async () => {
+    const modelModule = await loadModelModule();
+    const config = modelModule.resolveAIRequestConfig({
+      chat: { provider: "gemini", model: "gemini-3.1-flash-preview" },
+      analysis: { provider: "gemini", model: "gemini-2.5-flash-image-preview" },
+    });
+
+    modelModule.getChatModelForConfig(config);
+
+    expect(googleMock).toHaveBeenCalledWith("gemini-3.1-flash-preview");
   });
 
-  it('should call Ollama with correct model ID', async () => {
-    process.env.AI_MODEL_PROVIDER = 'ollama';
-    
-    const result = getChatModel('qwen2.5');
-    
-    // The ollama function should have been called
-    expect(ollamaProvider.ollama).toHaveBeenCalled();
-  });
-});
+  it("uses Ollama for chat model and wires base URL through createOllama", async () => {
+    const modelModule = await loadModelModule();
+    const config = modelModule.resolveAIRequestConfig({
+      ollamaBaseUrl: "http://localhost:11434",
+      chat: { provider: "ollama", model: "llama3.2" },
+      analysis: { provider: "gemini", model: "gemini-2.5-flash-image-preview" },
+    });
 
-// Integration test showing provider switching works
-describe('Provider Switching Integration', () => {
-  it('should be able to switch from Gemini to Ollama', async () => {
-    // Start with Gemini
-    process.env.AI_MODEL_PROVIDER = 'gemini';
-    const geminiModel = getChatModel();
-    
-    expect(google).toHaveBeenCalled();
+    modelModule.getChatModelForConfig(config);
 
-    // Switch to Ollama
-    process.env.AI_MODEL_PROVIDER = 'ollama';
-    const ollamaModel = getChatModel();
-    
-    expect(ollamaProvider.ollama).toHaveBeenCalled();
+    expect(createOllamaMock).toHaveBeenCalledWith({ baseURL: "http://localhost:11434/api" });
+    expect(ollamaModelMock).toHaveBeenCalledWith("llama3.2");
   });
 
-  it('should be able to switch back from Ollama to Gemini', async () => {
-    // Start with Ollama
-    process.env.AI_MODEL_PROVIDER = 'ollama';
-    const ollamaModel = getChatModel();
-    
-    expect(ollamaProvider.ollama).toHaveBeenCalled();
+  it("uses Gemini for analysis model when analysis provider is gemini", async () => {
+    const modelModule = await loadModelModule();
+    const config = modelModule.resolveAIRequestConfig({
+      analysis: { provider: "gemini", model: "gemini-2.5-flash-image-preview" },
+    });
 
-    // Switch back to Gemini
-    process.env.AI_MODEL_PROVIDER = 'gemini';
-    const geminiModel = getChatModel();
-    
-    expect(google).toHaveBeenCalled();
+    modelModule.getAnalysisModelForConfig(config);
+
+    expect(googleMock).toHaveBeenCalledWith("gemini-2.5-flash-image-preview");
+  });
+
+  it("uses Ollama for analysis model when analysis provider is ollama", async () => {
+    const modelModule = await loadModelModule();
+    const config = modelModule.resolveAIRequestConfig({
+      ollamaBaseUrl: "http://localhost:11434/",
+      analysis: { provider: "ollama", model: "llava:latest" },
+    });
+
+    modelModule.getAnalysisModelForConfig(config);
+
+    expect(createOllamaMock).toHaveBeenCalledWith({ baseURL: "http://localhost:11434/api" });
+    expect(ollamaModelMock).toHaveBeenCalledWith("llava:latest");
   });
 });

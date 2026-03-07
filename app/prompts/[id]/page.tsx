@@ -8,6 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Loader2, ArrowLeft, Edit, Trash2 } from "lucide-react";
 import { AIAssistButton } from "@/components/agents/ai-assist-button";
+import { useAIModelSettings } from "@/components/providers/ai-model-settings-provider";
 
 interface Prompt {
   id: string;
@@ -29,6 +30,7 @@ interface Prompt {
 
 export default function PromptDetailPage({ params }: { params: { id: string } }) {
   const router = useRouter();
+  const { toRequestConfig } = useAIModelSettings();
   const [prompt, setPrompt] = useState<Prompt | null>(null);
   const [loading, setLoading] = useState(true);
   const [deleting, setDeleting] = useState(false);
@@ -90,6 +92,7 @@ export default function PromptDetailPage({ params }: { params: { id: string } })
           basePrompt: prompt!.template,
           context,
           isTransparent: prompt?.subject?.isTransparent ?? true,
+          aiConfig: toRequestConfig(),
         }),
       });
 

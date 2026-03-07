@@ -1,21 +1,32 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { z } from "zod";
 import { db } from '@/lib/db';
 import { styles, subjects, prompts, promptGuidance } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
 import { composeConstructedPromptAgent } from '@/lib/ai/agents';
+import { getChatModelForConfig, resolveAIRequestConfig } from "@/lib/ai/model";
+import { parseBodyWithAIConfig } from "@/lib/ai/request-config";
+import { buildAgentErrorResponse } from "../utils";
+
+const composePromptRequestShape = {
+  styleId: z.string().optional(),
+  subjectId: z.string().trim().min(1, "subjectId is required"),
+  guidanceIds: z.array(z.string()).optional(),
+  promptStyle: z.enum(['terse', 'verbose']).optional(),
+};
 
 // POST /api/agents/compose-prompt
 export async function POST(request: NextRequest) {
-  try {
-    const body = await request.json();
-    const { styleId, subjectId, guidanceIds, promptStyle } = body;
+  let aiConfig = resolveAIRequestConfig();
 
-    if (!subjectId) {
-      return NextResponse.json(
-        { error: 'subjectId is required' },
-        { status: 400 }
-      );
+  try {
+    const parsed = parseBodyWithAIConfig(await request.json(), composePromptRequestShape);
+    if (!parsed.success) {
+      return NextResponse.json({ error: parsed.error }, { status: 400 });
     }
+
+    const { styleId, subjectId, guidanceIds, promptStyle } = parsed.data;
+    aiConfig = parsed.data.aiConfig;
 
     const [subject] = await db.select().from(subjects).where(eq(subjects.id, subjectId));
 
@@ -55,7 +66,7 @@ export async function POST(request: NextRequest) {
         description: g.description
       })),
       promptStyle
-    });
+    }, getChatModelForConfig(aiConfig));
 
     // Create a prompt record in the database to enable category filtering
     // This links the composed prompt to the subject (and its category)
@@ -82,9 +93,6 @@ export async function POST(request: NextRequest) {
     });
   } catch (error) {
     console.error('Error composing prompt:', error);
-    return NextResponse.json(
-      { error: 'Failed to compose prompt' },
-      { status: 500 }
-    );
+    return buildAgentErrorResponse(error, aiConfig.chat, "Failed to compose prompt");
   }
 }

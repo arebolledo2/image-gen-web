@@ -9,9 +9,12 @@ import { cn } from "@/lib/utils";
 import { ChatMessages } from "./chat-messages";
 import { ChatInput } from "./chat-input";
 import { useChatSidebar } from "./chat-sidebar-provider";
+import { useAIModelSettings } from "@/components/providers/ai-model-settings-provider";
+import { buildChatRequestOptions } from "./chat-request-options";
 
 export function ChatSidebar() {
     const { isOpen, isVisible, close } = useChatSidebar();
+    const { toRequestConfig } = useAIModelSettings();
 
     const { messages, sendMessage, status, setMessages, addToolApprovalResponse } = useChat({
         id: "sidebar-chat",
@@ -34,13 +37,14 @@ export function ChatSidebar() {
             filename: file.filename,
             type: "file",
         }));
+        const requestOptions = buildChatRequestOptions(toRequestConfig());
 
         if (content.text.trim() && files.length > 0) {
-            sendMessage({ text: content.text, files });
+            sendMessage({ text: content.text, files }, requestOptions);
         } else if (content.text.trim()) {
-            sendMessage({ text: content.text });
+            sendMessage({ text: content.text }, requestOptions);
         } else {
-            sendMessage({ files });
+            sendMessage({ files }, requestOptions);
         }
     };
 

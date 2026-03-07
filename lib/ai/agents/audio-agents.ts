@@ -1,6 +1,6 @@
-import { generateText, Output } from 'ai';
-import { geminiFlash } from '../model';
+import { generateText, Output, type LanguageModel } from 'ai';
 import { z } from 'zod';
+import { getChatModel } from '../model';
 
 /**
  * Schema for audio prompt creation
@@ -24,7 +24,9 @@ export type AudioPromptSuggestion = z.infer<typeof audioPromptSchema>;
  * @returns Promise resolving to validated audio prompt
  * @throws Error if AI generation fails
  */
-export async function createAudioPromptAgent(concept: string): Promise<AudioPromptSuggestion> {
+export async function createAudioPromptAgent(concept: string, model?: LanguageModel): Promise<AudioPromptSuggestion> {
+  const resolvedModel = model ?? getChatModel();
+
   const systemPrompt = `You are an expert sound designer for video games with extensive experience creating efficient, production-ready sound effects.
 
 Your goal is to transform a simple concept into a clear, focused prompt for AI sound generation. Games require many varied sounds, so keep prompts simple and effective.
@@ -59,7 +61,7 @@ Good examples:
 Keep it simple, focused, and game-ready. You're building a sound library, not a film score.`;
 
   const { output } = await generateText({
-    model: geminiFlash,
+    model: resolvedModel,
     system: systemPrompt,
     output: Output.object({
       schema: audioPromptSchema,

@@ -3,6 +3,7 @@ import { db } from '@/lib/db';
 import { prompts, promptGuidance, styles, subjects } from '@/lib/db/schema';
 import { desc, eq } from 'drizzle-orm';
 import { composeConstructedPromptAgent } from '@/lib/ai/agents';
+import { getChatModelForConfig, resolveAIRequestConfig } from '@/lib/ai/model';
 
 // GET /api/prompts - List all prompts
 export async function GET() {
@@ -32,6 +33,8 @@ export async function GET() {
 
 // POST /api/prompts - Create a new prompt
 export async function POST(request: NextRequest) {
+  const aiConfig = resolveAIRequestConfig();
+
   try {
     const body = await request.json();
     const { name, styleId, subjectId, guidanceIds, promptStyle } = body;
@@ -76,7 +79,7 @@ export async function POST(request: NextRequest) {
             description: g.description
         })),
         promptStyle
-    });
+    }, getChatModelForConfig(aiConfig));
 
     // Create prompt
     const [prompt] = await db.insert(prompts).values({

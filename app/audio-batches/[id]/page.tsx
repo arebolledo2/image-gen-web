@@ -12,10 +12,12 @@ import { Loader2, Play, Music, ArrowLeft, Trash2, Edit2, Check, X, Copy } from "
 import { AIAssistButton } from "@/components/agents/ai-assist-button";
 import { AudioBatchSettingsDialog } from "@/components/batch/audio-batch-settings-dialog";
 import { useAudioBatchData } from "@/hooks/use-audio-batch-data";
+import { useAIModelSettings } from "@/components/providers/ai-model-settings-provider";
 
 export default function AudioBatchDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const resolvedParams = use(params);
   const router = useRouter();
+  const { toRequestConfig } = useAIModelSettings();
   const { batch, loading, refetchBatch } = useAudioBatchData(resolvedParams.id);
   const [executing, setExecuting] = useState(false);
   const [creatingVersion, setCreatingVersion] = useState(false);
@@ -127,7 +129,8 @@ export default function AudioBatchDetailPage({ params }: { params: Promise<{ id:
       body: JSON.stringify({
         basePrompt: currentText,
         suggestion,
-        promptStyle: "audio" // Specific style for audio
+        promptStyle: "audio", // Specific style for audio
+        aiConfig: toRequestConfig(),
       })
     });
 
@@ -135,7 +138,7 @@ export default function AudioBatchDetailPage({ params }: { params: Promise<{ id:
     const data = await response.json();
     setEditPromptText(data.promptText);
     return data.promptText;
-  }, []);
+  }, [toRequestConfig]);
 
   const getStatusColor = (status: string) => {
     switch (status) {

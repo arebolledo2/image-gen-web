@@ -1,4 +1,5 @@
 // Provider type definitions for image generation (separate from AI chat model providers)
+export type { AIProvider } from "@/lib/ai/config";
 
 export interface ImageProvider {
   name: 'gemini' | 'gemini3' | 'comfyui';
@@ -26,8 +27,6 @@ export interface GenerationResult {
   }>;
   metadata: Record<string, unknown>;
 }
-
-export type AIProvider = 'ollama' | 'gemini';
 
 export interface OllamaConfig {
   baseUrl: string;

@@ -1,21 +1,32 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { z } from "zod";
 import { adjustPromptAgent } from '@/lib/ai/agents';
 import { db } from '@/lib/db';
 import { images, generations, batchPrompts } from '@/lib/db/schema';
 import { eq, inArray } from 'drizzle-orm';
+import { getChatModelForConfig, resolveAIRequestConfig } from "@/lib/ai/model";
+import { parseBodyWithAIConfig } from "@/lib/ai/request-config";
+import { buildAgentErrorResponse } from "../utils";
+
+const adjustPromptRequestShape = {
+  basePrompt: z.string().trim().min(1, "basePrompt and suggestion are required"),
+  suggestion: z.string().trim().min(1, "basePrompt and suggestion are required"),
+  promptStyle: z.enum(['terse', 'verbose', 'audio']).optional(),
+  referenceImageIds: z.array(z.string()).optional(),
+};
 
 // POST /api/agents/adjust-prompt
 export async function POST(request: NextRequest) {
-  try {
-    const body = await request.json();
-    const { basePrompt, suggestion, promptStyle, referenceImageIds } = body;
+  let aiConfig = resolveAIRequestConfig();
 
-    if (!basePrompt || !suggestion) {
-      return NextResponse.json(
-        { error: 'basePrompt and suggestion are required' },
-        { status: 400 }
-      );
+  try {
+    const parsed = parseBodyWithAIConfig(await request.json(), adjustPromptRequestShape);
+    if (!parsed.success) {
+      return NextResponse.json({ error: parsed.error }, { status: 400 });
     }
+
+    const { basePrompt, suggestion, promptStyle, referenceImageIds } = parsed.data;
+    aiConfig = parsed.data.aiConfig;
 
     // If reference images are provided, fetch their prompts
     let referencePrompts: string[] = [];
@@ -35,16 +46,14 @@ export async function POST(request: NextRequest) {
     const adjustedPrompt = await adjustPromptAgent(
       basePrompt,
       suggestion,
-      promptStyle,
-      referencePrompts.length > 0 ? referencePrompts : undefined
+      promptStyle ?? 'terse',
+      referencePrompts.length > 0 ? referencePrompts : undefined,
+      getChatModelForConfig(aiConfig),
     );
 
     return NextResponse.json({ promptText: adjustedPrompt });
   } catch (error) {
     console.error('Error adjusting prompt:', error);
-    return NextResponse.json(
-      { error: 'Failed to adjust prompt' },
-      { status: 500 }
-    );
+    return buildAgentErrorResponse(error, aiConfig.chat, "Failed to adjust prompt");
   }
 }
