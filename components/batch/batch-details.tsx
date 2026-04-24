@@ -6,11 +6,12 @@
  */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import type { ProviderType } from "@/lib/config/resolution-presets";
 import { memo } from "react";
 
 interface BatchDetailsProps {
   batch: {
-    provider: 'gemini' | 'gemini3' | 'comfyui';
+    provider: ProviderType;
     createdAt: string;
     completedAt: string | null;
     batchPrompts: any[];
@@ -21,6 +22,8 @@ interface BatchDetailsProps {
 
 const getProviderLabel = (provider: string) => {
   switch (provider) {
+    case 'openai':
+      return '🖼️ OpenAI GPT Image 2';
     case 'gemini':
       return '⚡ Google Gemini 2.5';
     case 'gemini3':

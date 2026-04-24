@@ -2,8 +2,10 @@
 export type { AIProvider } from "@/lib/ai/config";
 import type { ImageGenerationParameters } from "@/lib/types/common";
 
+export type ImageProviderName = 'openai' | 'gemini' | 'gemini3' | 'comfyui';
+
 export interface ImageProvider {
-  name: 'gemini' | 'gemini3' | 'comfyui';
+  name: ImageProviderName;
   testConnection(): Promise<boolean>;
   generateImage(options: GenerationOptions): Promise<GenerationResult>;
 }

@@ -1,6 +1,6 @@
-import type { AIRequestConfig } from "@/lib/ai/config";
+import type { AIRequestConfigInput } from "@/lib/ai/config";
 
-export function buildChatRequestOptions(aiConfig: AIRequestConfig) {
+export function buildChatRequestOptions(aiConfig: AIRequestConfigInput) {
   return {
     body: {
       aiConfig,

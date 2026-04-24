@@ -24,6 +24,18 @@ describe("migrateAIModelSettings", () => {
     expect(migrated.analysis.provider).toBe("gemini");
   });
 
+  it("migrates legacy hardcoded Ollama default to server default", () => {
+    const migrated = migrateAIModelSettings({
+      version: 2,
+      ollamaBaseUrl: "http://localhost:11434",
+      chat: { provider: "ollama", model: "qwen3.5:9b-q8_0" },
+      analysis: { provider: "ollama", model: "qwen3.5:9b-q8_0" },
+    });
+
+    expect(migrated.chat.model).toBe("");
+    expect(migrated.analysis.model).toBe("");
+  });
+
   it("keeps v2 data and normalizes invalid values", () => {
     const migrated = migrateAIModelSettings({
       version: 2,
@@ -41,17 +53,17 @@ describe("migrateAIModelSettings", () => {
 });
 
 describe("toAIRequestConfig", () => {
-  it("serializes chat + analysis settings for /api/chat body", () => {
+  it("omits empty model settings so the server can apply env defaults", () => {
     const payload = toAIRequestConfig({
       version: 2,
       ollamaBaseUrl: "http://localhost:11434",
-      chat: { provider: "ollama", model: "qwen3.5:9b-q8_0" },
+      chat: { provider: "ollama", model: "" },
       analysis: { provider: "gemini", model: "gemini-2.5-flash-image-preview" },
     });
 
     expect(payload).toEqual({
       ollamaBaseUrl: "http://localhost:11434",
-      chat: { provider: "ollama", model: "qwen3.5:9b-q8_0" },
+      chat: { provider: "ollama" },
       analysis: { provider: "gemini", model: "gemini-2.5-flash-image-preview" },
     });
   });

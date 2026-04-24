@@ -78,8 +78,8 @@ function buildParameters(batch: BatchWithPrompts, batchPrompt: BatchPrompt): Ima
         };
       }
 
-      // For Gemini 3: include resolution ID (provider handles mapping internally)
-      if (batch.provider === 'gemini3') {
+      // For Gemini 3 and OpenAI: include resolution ID (provider handles mapping internally)
+      if (batch.provider === 'gemini3' || batch.provider === 'openai') {
         parameters.resolution = resolutionId;
       }
     }

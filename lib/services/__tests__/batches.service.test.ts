@@ -98,7 +98,7 @@ describe('BatchesService', () => {
       ).rejects.toThrow('At least one prompt is required');
     });
 
-    it('should use default provider "gemini" if not specified', async () => {
+    it('should use default provider "openai" if not specified', async () => {
       const mockBatch = createTestBatch();
       const mockTx = createMockTransaction();
 
@@ -123,7 +123,7 @@ describe('BatchesService', () => {
 
       // Check that default provider was set
       const batchValues = mockTx.values.mock.calls[0][0];
-      expect(batchValues.provider).toBe('gemini');
+      expect(batchValues.provider).toBe('openai');
       expect(batchValues.status).toBe('draft');
     });
 

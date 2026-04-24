@@ -4,7 +4,7 @@
 
 Image-gen-web uses a pluggable provider pattern for both image and audio generation. Factory functions return the correct provider instance based on a type string, and each provider implements a standard interface.
 
-- **Image providers**: Gemini (original), Gemini 3, ComfyUI
+- **Image providers**: OpenAI GPT Image 2 (default), Gemini (original), Gemini 3, ComfyUI
 - **Audio providers**: AudioCraft, ElevenLabs
 
 All provider code lives in `lib/providers/`.
@@ -34,17 +34,24 @@ interface GenerationOptions {
 
 | Name | Provider |
 |------|----------|
+| `'openai'` | `OpenAIProvider` |
 | `'gemini'` | `GeminiProvider` |
 | `'gemini3'` | `Gemini3Provider` |
 | `'comfyui'` | `ComfyUIProvider` |
 
 ## Image Providers
 
+**OpenAIProvider** (`lib/providers/openai/openai-provider.ts`)
+- Default provider for new batches. Uses GPT Image 2 via the OpenAI Image API.
+- Requires `OPENAI_API_KEY`.
+- Model defaults to `gpt-image-2`; set `OPENAI_IMAGE_MODEL` to pin a snapshot such as `gpt-image-2-2026-04-21`.
+- Batch resolutions are limited to OpenAI-supported sizes: `1024x1024`, `1024x1536`, `1536x1024`.
+
 **GeminiProvider** (`lib/providers/gemini/gemini-provider.ts`)
 - Uses the original Gemini image generation API. Provider type: `'gemini'`.
 
 **Gemini3Provider** (`lib/providers/gemini3/gemini3-provider.ts`)
-- Uses the newer Gemini 3 image generation API. Provider type: `'gemini3'`. Recommended for new batches.
+- Uses the newer Gemini 3 image generation API. Provider type: `'gemini3'`.
 
 **ComfyUIProvider** (`lib/providers/comfyui/`)
 - Local ComfyUI integration requiring ComfyUI running on `localhost:8188`.
@@ -85,7 +92,7 @@ type AudioProviderType = 'audiocraft' | 'elevenlabs'
 
 ## Provider Selection
 
-- **Image**: stored per-batch in `batches.provider` column (enum: `gemini`, `gemini3`, `comfyui`).
+- **Image**: stored per-batch in `batches.provider` column (enum: `openai`, `gemini`, `gemini3`, `comfyui`).
 - **Audio**: stored per-batch in `audioBatches.provider` column (enum: `audiocraft`, `elevenlabs`).
 - Provider is selected at batch creation time and cannot be changed after.
 
@@ -95,6 +102,9 @@ type AudioProviderType = 'audiocraft' | 'elevenlabs'
 lib/providers/
 ├── types.ts                    # ImageProvider interface
 ├── factory.ts                  # Image provider factory
+├── openai/
+│   ├── openai-provider.ts      # OpenAI GPT Image 2 provider
+│   └── openai-image-client.ts  # OpenAI Image API helpers
 ├── gemini/
 │   └── gemini-provider.ts      # Gemini (original) provider
 ├── gemini3/

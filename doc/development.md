@@ -33,6 +33,7 @@ Required in `.env.local`:
 
 ```bash
 DATABASE_URL="postgresql://user:pass@localhost:5432/image_gen_web"
+OPENAI_API_KEY="your_openai_api_key"       # Required for default GPT Image 2 generation
 GEMINI_API_KEY="your_gemini_api_key"
 ```
 
@@ -42,6 +43,7 @@ Optional:
 INNGEST_EVENT_KEY="your_inngest_key"
 INNGEST_SIGNING_KEY="your_signing_key"
 OUTPUT_DIR="../image-gen/outputs"          # Image output directory (default)
+OPENAI_IMAGE_MODEL="gpt-image-2"           # Optional; use snapshot ID to pin behavior
 ```
 
 ## NPM Scripts
@@ -117,3 +119,4 @@ npm start        # Start production server
 | Inngest not processing jobs | Check Inngest dashboard at `localhost:8288` |
 | Audio generation failing | Ensure audio-gen server is running (`cd ../audio-gen && launch.bat`) |
 | ComfyUI images failing | Ensure ComfyUI is running on `localhost:8188` |
+| OpenAI images failing | Ensure `OPENAI_API_KEY` is set and the account has GPT Image 2 access |

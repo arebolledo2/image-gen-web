@@ -11,7 +11,7 @@ import { relations } from 'drizzle-orm';
 // Enums
 export const batchStatusEnum = pgEnum('batch_status', ['draft', 'queued', 'running', 'completed', 'failed']);
 export const generationStatusEnum = pgEnum('generation_status', ['pending', 'running', 'success', 'failed']);
-export const providerEnum = pgEnum('provider', ['gemini', 'gemini3', 'comfyui']);
+export const providerEnum = pgEnum('provider', ['openai', 'gemini', 'gemini3', 'comfyui']);
 export const audioProviderEnum = pgEnum('audio_provider', ['audiocraft', 'elevenlabs']);
 export const animationTypeEnum = pgEnum('animation_type', ['bounce', 'squash_stretch']);
 export const animationGeneratorEnum = pgEnum('animation_generator', ['manual', 'ai']);
@@ -100,7 +100,7 @@ export const batches = pgTable('batches', {
   parentBatchId: uuid('parent_batch_id'),
   description: text('description'),
   status: batchStatusEnum('status').default('draft').notNull(),
-  provider: providerEnum('provider').default('gemini').notNull(),
+  provider: providerEnum('provider').default('openai').notNull(),
   defaults: json('defaults').$type<{
     aspectRatio?: string;
     imageSize?: string;
@@ -179,6 +179,7 @@ export const squishAnimations = pgTable('squish_animations', {
     frameHeight?: number;
     duration?: number; // milliseconds per cycle
     gridSize?: number; // 2, 3, or 4 for AI-generated animations
+    [key: string]: any;
   }>(),
   createdAt: timestamp('created_at').defaultNow().notNull(),
 });

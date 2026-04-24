@@ -9,13 +9,14 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Plus, Loader2, ImageIcon, Trash2, Star } from "lucide-react";
 import { toast } from "sonner";
+import type { ProviderType } from "@/lib/config/resolution-presets";
 
 interface Batch {
   id: string;
   name: string;
   description: string | null;
   status: string;
-  provider: 'gemini' | 'gemini3' | 'comfyui';
+  provider: ProviderType;
   createdAt: string;
   batchPrompts: unknown[];
   generations: {
@@ -280,7 +281,13 @@ export default function BatchesPage() {
                       </Link>
                     </CardTitle>
                     <Badge variant="outline" className="shrink-0">
-                      {batch.provider === 'gemini' ? '⚡ Gemini' : '🎨 ComfyUI'}
+                      {batch.provider === 'openai'
+                        ? '🖼️ OpenAI'
+                        : batch.provider === 'gemini'
+                          ? '⚡ Gemini'
+                          : batch.provider === 'gemini3'
+                            ? '✨ Gemini 3'
+                            : '🎨 ComfyUI'}
                     </Badge>
                   </div>
                   {batch.description && (

@@ -61,6 +61,20 @@ describe("resolveAIRequestConfig", () => {
     expect(config.chat.model).toBe("llama3.2-vision");
     expect(config.analysis.provider).toBe("gemini");
   });
+
+  it("uses OLLAMA_DEFAULT_MODEL when Ollama is selected without an explicit model", async () => {
+    process.env.AI_MODEL_PROVIDER = "ollama";
+    process.env.OLLAMA_DEFAULT_MODEL = "qwen3.6:27b";
+    const modelModule = await loadModelModule();
+
+    const config = modelModule.resolveAIRequestConfig({
+      chat: { provider: "ollama" },
+      analysis: { provider: "ollama" },
+    });
+
+    expect(config.chat.model).toBe("qwen3.6:27b");
+    expect(config.analysis.model).toBe("qwen3.6:27b");
+  });
 });
 
 describe("request-scoped model selection", () => {

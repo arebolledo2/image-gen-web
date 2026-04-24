@@ -32,6 +32,25 @@ interface BatchDefaultsFormProps {
   promptTexts: string[];
 }
 
+async function getErrorMessage(response: Response): Promise<string> {
+  const fallback = 'Failed to generate metadata';
+
+  try {
+    const data = await response.json();
+    const details = [
+      typeof data.error === 'string' ? data.error : undefined,
+      typeof data.remediation === 'string' ? data.remediation : undefined,
+      typeof data.provider === 'string' && typeof data.model === 'string'
+        ? `Provider: ${data.provider}, model: ${data.model}`
+        : undefined,
+    ].filter(Boolean);
+
+    return details.length > 0 ? details.join(' ') : fallback;
+  } catch {
+    return response.statusText ? `${fallback}: ${response.statusText}` : fallback;
+  }
+}
+
 export function BatchDefaultsForm({
   name,
   setName,
@@ -61,13 +80,15 @@ export function BatchDefaultsForm({
         body: JSON.stringify({ promptText: combinedPrompt, aiConfig: toRequestConfig() }),
       });
 
-      if (!response.ok) throw new Error('Failed to generate metadata');
+      if (!response.ok) {
+        throw new Error(await getErrorMessage(response));
+      }
       const data = await response.json();
       setName(data.name);
       setDescription(data.description);
     } catch (error) {
       console.error('Error generating metadata:', error);
-      toast.error('Failed to generate metadata');
+      toast.error(error instanceof Error ? error.message : 'Failed to generate metadata');
     } finally {
       setMetadataLoading(false);
     }
@@ -120,6 +141,7 @@ export function BatchDefaultsForm({
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
+              <SelectItem value="openai">🖼️ OpenAI GPT Image 2 (Default)</SelectItem>
               <SelectItem value="gemini">⚡ Google Gemini 2.5 (Fast, 1K only)</SelectItem>
               <SelectItem value="gemini3">✨ Google Gemini 3 Pro (1K-4K)</SelectItem>
               <SelectItem value="comfyui">🎨 ComfyUI (Advanced)</SelectItem>

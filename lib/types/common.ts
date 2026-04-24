@@ -143,6 +143,7 @@ export interface SquishAnimationMetadata {
     frameHeight?: number;
     duration?: number;
     gridSize?: number;
+    [key: string]: unknown;
 }
 
 /**

@@ -85,7 +85,7 @@ export function AIModelSettings({ onClose }: AIModelSettingsProps) {
             setSettings({
               chat: {
                 provider,
-                model: provider === "ollama" ? settings.chat.model || "qwen3.5:9b-q8_0" : "gemini-3.1-flash-preview",
+                model: provider === "ollama" ? settings.chat.model : "gemini-3.1-flash-preview",
               },
             });
           }}
@@ -96,7 +96,7 @@ export function AIModelSettings({ onClose }: AIModelSettingsProps) {
           <Input
             value={settings.chat.model}
             onChange={(e) => setSettings({ chat: { model: e.target.value } })}
-            placeholder={settings.chat.provider === "ollama" ? "qwen3.5:9b-q8_0" : "gemini-3.1-flash-preview"}
+            placeholder={settings.chat.provider === "ollama" ? "Server default" : "gemini-3.1-flash-preview"}
           />
         </div>
 
@@ -107,7 +107,7 @@ export function AIModelSettings({ onClose }: AIModelSettingsProps) {
             setSettings({
               analysis: {
                 provider,
-                model: provider === "ollama" ? settings.analysis.model || "qwen3.5:9b-q8_0" : "gemini-2.5-flash-image-preview",
+                model: provider === "ollama" ? settings.analysis.model : "gemini-2.5-flash-image-preview",
               },
             });
           }}

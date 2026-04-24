@@ -45,7 +45,7 @@ export default function NewBatchPage() {
 
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
-  const [provider, setProvider] = useState<ProviderType>('gemini');
+  const [provider, setProvider] = useState<ProviderType>('openai');
   const [defaultCount, setDefaultCount] = useState(1);
   const [resolution, setResolution] = useState<string>(DEFAULT_RESOLUTION);
 

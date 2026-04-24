@@ -9,6 +9,7 @@ import { eq, desc, inArray, asc, like, or, and, exists } from 'drizzle-orm';
 import { BaseService } from './base.service';
 import type { BatchPromptOverrides, BatchDefaults } from '@/lib/types/common';
 import { batchExecutionService } from './batch-execution.service';
+import type { ImageProviderName } from '@/lib/providers/types';
 
 /**
  * Batches group multiple prompts for bulk image generation.
@@ -265,7 +266,7 @@ export class BatchesService extends BaseService<typeof batches, Batch, NewBatch>
   async createBatch(data: {
     name: string;
     description?: string;
-    provider?: 'gemini' | 'gemini3' | 'comfyui';
+    provider?: ImageProviderName;
     defaults?: {
       aspectRatio?: string;
       imageSize?: string;
@@ -295,7 +296,7 @@ export class BatchesService extends BaseService<typeof batches, Batch, NewBatch>
         .values({
           name: data.name,
           description: data.description,
-          provider: data.provider || 'gemini',
+          provider: data.provider || 'openai',
           status: 'draft',
           defaults: data.defaults || {},
           version: 1,
@@ -344,7 +345,7 @@ export class BatchesService extends BaseService<typeof batches, Batch, NewBatch>
     data: {
       name?: string;
       description?: string;
-      provider?: 'gemini' | 'gemini3' | 'comfyui';
+      provider?: ImageProviderName;
       defaults?: Partial<BatchDefaults>;
       prompts?: Array<{
         promptId?: string;
@@ -424,7 +425,7 @@ export class BatchesService extends BaseService<typeof batches, Batch, NewBatch>
     data: {
       name?: string;
       description?: string;
-      provider?: 'gemini' | 'gemini3' | 'comfyui';
+      provider?: ImageProviderName;
       defaults?: Partial<BatchDefaults>;
     }
   ): Promise<Batch | undefined> {

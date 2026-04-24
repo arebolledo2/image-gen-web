@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { createContext, useContext, useEffect, useState } from "react";
-import type { AIProvider, AIRequestConfig } from "@/lib/ai/config";
+import type { AIProvider, AIRequestConfigInput } from "@/lib/ai/config";
 
 export interface AIModelSelectionSettings {
   provider: AIProvider;
@@ -26,7 +26,7 @@ interface AIModelSettingsContextType {
   settings: AIModelSettings;
   setSettings: (settings: AIModelSettingsUpdate) => void;
   testConnection: () => Promise<boolean>;
-  toRequestConfig: () => AIRequestConfig;
+  toRequestConfig: () => AIRequestConfigInput;
 }
 
 export interface AIModelSettingsUpdate {
@@ -36,6 +36,7 @@ export interface AIModelSettingsUpdate {
 }
 
 const STORAGE_KEY = "ai-model-settings";
+const LEGACY_OLLAMA_DEFAULT_MODEL = "qwen3.5:9b-q8_0";
 
 export const defaultAIModelSettings: AIModelSettings = {
   version: 2,
@@ -60,6 +61,11 @@ function normalizeModel(value: unknown, fallback: string): string {
   }
   const trimmed = value.trim();
   return trimmed.length > 0 ? trimmed : fallback;
+}
+
+function normalizeOllamaModel(value: unknown): string {
+  const model = normalizeModel(value, "");
+  return model === LEGACY_OLLAMA_DEFAULT_MODEL ? "" : model;
 }
 
 function normalizeProvider(value: unknown, fallback: AIProvider): AIProvider {
@@ -103,17 +109,11 @@ export function migrateAIModelSettings(raw: unknown): AIModelSettings {
       ollamaBaseUrl: normalizeUrl(raw.ollamaBaseUrl, defaultAIModelSettings.ollamaBaseUrl),
       chat: {
         provider: chatProvider,
-        model: normalizeModel(
-          chatRaw.model,
-          chatProvider === "ollama" ? "qwen3.5:9b-q8_0" : defaultAIModelSettings.chat.model,
-        ),
+        model: chatProvider === "ollama" ? normalizeOllamaModel(chatRaw.model) : normalizeModel(chatRaw.model, defaultAIModelSettings.chat.model),
       },
       analysis: {
         provider: analysisProvider,
-        model: normalizeModel(
-          analysisRaw.model,
-          analysisProvider === "ollama" ? "qwen3.5:9b-q8_0" : defaultAIModelSettings.analysis.model,
-        ),
+        model: analysisProvider === "ollama" ? normalizeOllamaModel(analysisRaw.model) : normalizeModel(analysisRaw.model, defaultAIModelSettings.analysis.model),
       },
     };
   }
@@ -121,7 +121,7 @@ export function migrateAIModelSettings(raw: unknown): AIModelSettings {
   // Legacy v1 migration
   const legacy = raw as LegacyAIModelSettings;
   const legacyProvider = normalizeProvider(legacy.provider, defaultAIModelSettings.chat.provider);
-  const legacyModel = normalizeModel(legacy.ollamaDefaultModel, "qwen3.5:9b-q8_0");
+  const legacyModel = normalizeOllamaModel(legacy.ollamaDefaultModel);
 
   return {
     version: 2,
@@ -138,16 +138,19 @@ export function migrateAIModelSettings(raw: unknown): AIModelSettings {
   };
 }
 
-export function toAIRequestConfig(settings: AIModelSettings): AIRequestConfig {
+export function toAIRequestConfig(settings: AIModelSettings): AIRequestConfigInput {
+  const chatModel = settings.chat.model.trim();
+  const analysisModel = settings.analysis.model.trim();
+
   return {
     ollamaBaseUrl: settings.ollamaBaseUrl,
     chat: {
       provider: settings.chat.provider,
-      model: settings.chat.model,
+      ...(chatModel ? { model: chatModel } : {}),
     },
     analysis: {
       provider: settings.analysis.provider,
-      model: settings.analysis.model,
+      ...(analysisModel ? { model: analysisModel } : {}),
     },
   };
 }
