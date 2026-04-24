@@ -24,12 +24,10 @@ const STORAGE_KEY = "chat-sidebar-open";
 
 export function ChatSidebarProvider({ children }: { children: React.ReactNode }) {
     const pathname = usePathname();
-    const [isOpen, setIsOpen] = useState(false);
-
-    useEffect(() => {
-        const stored = localStorage.getItem(STORAGE_KEY);
-        if (stored === "true") setIsOpen(true);
-    }, []);
+    const [isOpen, setIsOpen] = useState(() => {
+        if (typeof window === "undefined") return false;
+        return localStorage.getItem(STORAGE_KEY) === "true";
+    });
 
     useEffect(() => {
         localStorage.setItem(STORAGE_KEY, String(isOpen));

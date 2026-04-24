@@ -55,7 +55,7 @@ export class ComfyUIProvider implements ImageProvider {
       }
 
       // Save images to local storage
-      const outputDir = join(process.cwd(), process.env.OUTPUT_DIR || '../image-gen/outputs', batchId);
+      const outputDir = join(/* turbopackIgnore: true */ process.cwd(), process.env.OUTPUT_DIR || '../image-gen/outputs', batchId);
       await mkdir(outputDir, { recursive: true });
 
       const savedImages = [];

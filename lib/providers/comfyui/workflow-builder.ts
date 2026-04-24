@@ -59,8 +59,8 @@ export async function buildWorkflow(
     throw new Error(`Unknown workflow type: ${workflowType}`);
   }
 
-  const templatePath = join(process.cwd(), workflowConfig.template);
-  const paramMapPath = join(process.cwd(), workflowConfig.paramMap);
+  const templatePath = join(/* turbopackIgnore: true */ process.cwd(), workflowConfig.template);
+  const paramMapPath = join(/* turbopackIgnore: true */ process.cwd(), workflowConfig.paramMap);
 
   const workflow = await loadWorkflowTemplate(templatePath);
   const paramMap = await loadParameterMap(paramMapPath);

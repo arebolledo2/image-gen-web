@@ -67,7 +67,7 @@ export async function saveImage(
 export async function readImage(filePath: string): Promise<Buffer> {
   const absolutePath = path.isAbsolute(filePath)
     ? filePath
-    : path.join(process.cwd(), filePath);
+    : path.join(/* turbopackIgnore: true */ process.cwd(), filePath);
 
   return await fs.readFile(absolutePath);
 }
@@ -80,7 +80,7 @@ export async function readImage(filePath: string): Promise<Buffer> {
 export async function deleteImage(filePath: string): Promise<void> {
   const absolutePath = path.isAbsolute(filePath)
     ? filePath
-    : path.join(process.cwd(), filePath);
+    : path.join(/* turbopackIgnore: true */ process.cwd(), filePath);
 
   await fs.unlink(absolutePath);
 }
@@ -94,7 +94,7 @@ export async function deleteImage(filePath: string): Promise<void> {
 export async function getImageStats(filePath: string) {
   const absolutePath = path.isAbsolute(filePath)
     ? filePath
-    : path.join(process.cwd(), filePath);
+    : path.join(/* turbopackIgnore: true */ process.cwd(), filePath);
 
   const stats = await fs.stat(absolutePath);
   return {

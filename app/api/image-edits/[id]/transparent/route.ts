@@ -37,7 +37,7 @@ export async function POST(
 
     const absolutePath = path.isAbsolute(filePathToLoad)
       ? filePathToLoad
-      : path.join(process.cwd(), filePathToLoad);
+      : path.join(/* turbopackIgnore: true */ process.cwd(), filePathToLoad);
 
     const image = await (Jimp as any).read(absolutePath);
 
@@ -222,7 +222,7 @@ export async function POST(
 
     const absoluteTransparentPath = path.isAbsolute(transparentEditPath)
       ? transparentEditPath
-      : path.join(process.cwd(), transparentEditPath);
+      : path.join(/* turbopackIgnore: true */ process.cwd(), transparentEditPath);
 
     // Ensure directory exists
     await fs.mkdir(path.dirname(absoluteTransparentPath), { recursive: true });

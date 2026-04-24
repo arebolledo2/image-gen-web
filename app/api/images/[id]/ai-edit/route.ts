@@ -77,7 +77,7 @@ export async function POST(
     // Convert to absolute path
     const absolutePath = path.isAbsolute(sourceFilePath)
       ? sourceFilePath
-      : path.join(process.cwd(), sourceFilePath);
+      : path.join(/* turbopackIgnore: true */ process.cwd(), sourceFilePath);
 
     // Read the source image and convert to base64
     const imageBuffer = await fs.readFile(absolutePath);

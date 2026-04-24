@@ -98,7 +98,7 @@ export async function POST(
     // Load source image
     const absolutePath = path.isAbsolute(sourceFilePath)
       ? sourceFilePath
-      : path.join(process.cwd(), sourceFilePath);
+      : path.join(/* turbopackIgnore: true */ process.cwd(), sourceFilePath);
 
     const image = await (Jimp as any).read(absolutePath);
 
@@ -117,7 +117,7 @@ export async function POST(
 
     const absoluteFlippedPath = path.isAbsolute(flippedFilePath)
       ? flippedFilePath
-      : path.join(process.cwd(), flippedFilePath);
+      : path.join(/* turbopackIgnore: true */ process.cwd(), flippedFilePath);
 
     // Ensure directory exists
     await fs.mkdir(path.dirname(absoluteFlippedPath), { recursive: true });

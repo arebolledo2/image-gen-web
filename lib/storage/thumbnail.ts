@@ -12,7 +12,7 @@ import fs from 'fs/promises';
 export async function getThumbnail(sourcePath: string, width: number = 512): Promise<string> {
     const absoluteSourcePath = path.isAbsolute(sourcePath)
         ? sourcePath
-        : path.join(process.cwd(), sourcePath);
+        : path.join(/* turbopackIgnore: true */ process.cwd(), sourcePath);
 
     // Convert to relative path for consistent thumbnail directory structure
     // This ensures thumbnails work regardless of whether source path is absolute or relative
@@ -26,7 +26,7 @@ export async function getThumbnail(sourcePath: string, width: number = 512): Pro
     const thumbnailDir = path.join(dir, 'thumbnails');
     const thumbnailPath = path.join(thumbnailDir, `${width}_${fileName}`);
 
-    const absoluteThumbnailPath = path.join(process.cwd(), thumbnailPath);
+    const absoluteThumbnailPath = path.join(/* turbopackIgnore: true */ process.cwd(), thumbnailPath);
 
     // Check if thumbnail already exists
     try {

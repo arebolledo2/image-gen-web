@@ -1,5 +1,6 @@
 // Provider type definitions for image generation (separate from AI chat model providers)
 export type { AIProvider } from "@/lib/ai/config";
+import type { ImageGenerationParameters } from "@/lib/types/common";
 
 export interface ImageProvider {
   name: 'gemini' | 'gemini3' | 'comfyui';
@@ -13,7 +14,7 @@ export interface GenerationOptions {
   batchPromptId: string;
   runNumber: number;
   generationId: string;
-  parameters?: Record<string, unknown>;
+  parameters?: ImageGenerationParameters;
 }
 
 export interface GenerationResult {

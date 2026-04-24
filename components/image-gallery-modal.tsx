@@ -431,7 +431,13 @@ export function ImageGalleryModal({
                       variant="ghost"
                       size="icon"
                       className="h-12 w-12 rounded-full bg-black/20 text-white hover:bg-black/40"
-                      onClick={() => window.open(`/editor/${currentImage.id}`, '_blank')}
+                      onClick={() => {
+                        if (onOpenEditor) {
+                          onOpenEditor(currentImage.id);
+                          return;
+                        }
+                        window.open(`/editor/${currentImage.id}`, '_blank');
+                      }}
                       title="Open in Editor"
                     >
                       <Edit className="h-8 w-8" />

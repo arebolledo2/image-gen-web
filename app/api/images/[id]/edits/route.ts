@@ -67,7 +67,7 @@ export async function DELETE(
     // Delete edit file
     const absolutePath = path.isAbsolute(edit.editedFilePath)
       ? edit.editedFilePath
-      : path.join(process.cwd(), edit.editedFilePath);
+      : path.join(/* turbopackIgnore: true */ process.cwd(), edit.editedFilePath);
 
     try {
       await fs.unlink(absolutePath);
@@ -80,7 +80,7 @@ export async function DELETE(
     if (edit.transparentEditPath) {
       const absoluteTransparentPath = path.isAbsolute(edit.transparentEditPath)
         ? edit.transparentEditPath
-        : path.join(process.cwd(), edit.transparentEditPath);
+        : path.join(/* turbopackIgnore: true */ process.cwd(), edit.transparentEditPath);
 
       try {
         await fs.unlink(absoluteTransparentPath);

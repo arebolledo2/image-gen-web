@@ -29,7 +29,7 @@ export async function GET(
 
     const absolutePath = path.isAbsolute(filePath)
       ? filePath
-      : path.join(process.cwd(), filePath);
+      : path.join(/* turbopackIgnore: true */ process.cwd(), filePath);
 
     const fileBuffer = await fs.readFile(absolutePath);
 

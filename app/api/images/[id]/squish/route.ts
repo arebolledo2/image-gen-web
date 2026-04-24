@@ -40,9 +40,9 @@ export async function POST(
 
     // Use transparent version if available, otherwise use original
     const filePathToLoad = imageRecord.transparentFilePath || imageRecord.filePath;
-    const absolutePath = path.isAbsolute(filePathToLoad)
-      ? filePathToLoad
-      : path.join(process.cwd(), filePathToLoad);
+      const absolutePath = path.isAbsolute(filePathToLoad)
+        ? filePathToLoad
+        : path.join(/* turbopackIgnore: true */ process.cwd(), filePathToLoad);
 
     const originalImage = await (Jimp as any).read(absolutePath);
     const width = originalImage.bitmap.width;
@@ -214,9 +214,9 @@ export async function DELETE(
     }
 
     // Delete file
-    const absolutePath = path.isAbsolute(animation.spritesheetPath)
-      ? animation.spritesheetPath
-      : path.join(process.cwd(), animation.spritesheetPath);
+      const absolutePath = path.isAbsolute(animation.spritesheetPath)
+        ? animation.spritesheetPath
+        : path.join(/* turbopackIgnore: true */ process.cwd(), animation.spritesheetPath);
 
     try {
       await fs.unlink(absolutePath);

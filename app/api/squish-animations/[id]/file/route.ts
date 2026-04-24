@@ -22,7 +22,7 @@ export async function GET(
 
     const absolutePath = path.isAbsolute(animation.spritesheetPath)
       ? animation.spritesheetPath
-      : path.join(process.cwd(), animation.spritesheetPath);
+      : path.join(/* turbopackIgnore: true */ process.cwd(), animation.spritesheetPath);
 
     const fileBuffer = await fs.readFile(absolutePath);
 

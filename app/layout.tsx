@@ -7,7 +7,6 @@ import { AIModelSettingsProvider } from "@/components/providers/ai-model-setting
 import { SettingsProvider } from "@/components/providers/settings-provider";
 import { ChatSidebarProvider } from "@/components/chat/chat-sidebar-provider";
 import { ChatSidebar } from "@/components/chat/chat-sidebar";
-import { ChatSidebarToggle } from "@/components/chat/chat-sidebar-toggle";
 import { Toaster } from "@/components/ui/sonner";
 
 const inter = Inter({ subsets: ["latin"] });

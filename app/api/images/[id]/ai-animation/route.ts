@@ -44,7 +44,7 @@ export async function POST(
     const filePathToLoad = imageRecord.transparentFilePath || imageRecord.filePath;
     const absolutePath = path.isAbsolute(filePathToLoad)
       ? filePathToLoad
-      : path.join(process.cwd(), filePathToLoad);
+      : path.join(/* turbopackIgnore: true */ process.cwd(), filePathToLoad);
 
     // Read the source image and convert to base64
     const imageBuffer = await fs.readFile(absolutePath);
