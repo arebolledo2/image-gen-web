@@ -11,7 +11,7 @@ import { relations } from 'drizzle-orm';
 // Enums
 export const batchStatusEnum = pgEnum('batch_status', ['draft', 'queued', 'running', 'completed', 'failed']);
 export const generationStatusEnum = pgEnum('generation_status', ['pending', 'running', 'success', 'failed']);
-export const providerEnum = pgEnum('provider', ['openai', 'gemini', 'gemini3', 'comfyui']);
+export const providerEnum = pgEnum('provider', ['openai', 'openrouter', 'gemini', 'gemini3', 'comfyui']);
 export const audioProviderEnum = pgEnum('audio_provider', ['audiocraft', 'elevenlabs']);
 export const animationTypeEnum = pgEnum('animation_type', ['bounce', 'squash_stretch']);
 export const animationGeneratorEnum = pgEnum('animation_generator', ['manual', 'ai']);

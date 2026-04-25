@@ -283,11 +283,13 @@ export default function BatchesPage() {
                     <Badge variant="outline" className="shrink-0">
                       {batch.provider === 'openai'
                         ? '🖼️ OpenAI'
-                        : batch.provider === 'gemini'
-                          ? '⚡ Gemini'
-                          : batch.provider === 'gemini3'
-                            ? '✨ Gemini 3'
-                            : '🎨 ComfyUI'}
+                        : batch.provider === 'openrouter'
+                          ? '🌐 OpenRouter'
+                          : batch.provider === 'gemini'
+                            ? '⚡ Gemini'
+                            : batch.provider === 'gemini3'
+                              ? '✨ Gemini 3'
+                              : '🎨 ComfyUI'}
                     </Badge>
                   </div>
                   {batch.description && (

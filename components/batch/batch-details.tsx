@@ -24,6 +24,8 @@ const getProviderLabel = (provider: string) => {
   switch (provider) {
     case 'openai':
       return '🖼️ OpenAI GPT Image 2';
+    case 'openrouter':
+      return '🌐 OpenRouter GPT-5.4 Image 2';
     case 'gemini':
       return '⚡ Google Gemini 2.5';
     case 'gemini3':

@@ -142,6 +142,7 @@ export function BatchDefaultsForm({
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="openai">🖼️ OpenAI GPT Image 2 (Default)</SelectItem>
+              <SelectItem value="openrouter">🌐 OpenRouter GPT-5.4 Image 2</SelectItem>
               <SelectItem value="gemini">⚡ Google Gemini 2.5 (Fast, 1K only)</SelectItem>
               <SelectItem value="gemini3">✨ Google Gemini 3 Pro (1K-4K)</SelectItem>
               <SelectItem value="comfyui">🎨 ComfyUI (Advanced)</SelectItem>

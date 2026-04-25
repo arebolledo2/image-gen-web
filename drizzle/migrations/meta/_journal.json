@@ -43,6 +43,13 @@
       "when": 1777046401000,
       "tag": "0005_default_batches_to_openai",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1777118400000,
+      "tag": "0006_add_openrouter_image_provider",
+      "breakpoints": true
     }
   ]
 }

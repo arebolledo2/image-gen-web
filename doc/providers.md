@@ -4,7 +4,7 @@
 
 Image-gen-web uses a pluggable provider pattern for both image and audio generation. Factory functions return the correct provider instance based on a type string, and each provider implements a standard interface.
 
-- **Image providers**: OpenAI GPT Image 2 (default), Gemini (original), Gemini 3, ComfyUI
+- **Image providers**: OpenAI GPT Image 2 (default), OpenRouter GPT-5.4 Image 2, Gemini (original), Gemini 3, ComfyUI
 - **Audio providers**: AudioCraft, ElevenLabs
 
 All provider code lives in `lib/providers/`.
@@ -35,6 +35,7 @@ interface GenerationOptions {
 | Name | Provider |
 |------|----------|
 | `'openai'` | `OpenAIProvider` |
+| `'openrouter'` | `OpenRouterProvider` |
 | `'gemini'` | `GeminiProvider` |
 | `'gemini3'` | `Gemini3Provider` |
 | `'comfyui'` | `ComfyUIProvider` |
@@ -46,6 +47,12 @@ interface GenerationOptions {
 - Requires `OPENAI_API_KEY`.
 - Model defaults to `gpt-image-2`; set `OPENAI_IMAGE_MODEL` to pin a snapshot such as `gpt-image-2-2026-04-21`.
 - Batch resolutions are limited to OpenAI-supported sizes: `1024x1024`, `1024x1536`, `1536x1024`.
+
+**OpenRouterProvider** (`lib/providers/openrouter/openrouter-provider.ts`)
+- Uses OpenRouter Chat Completions image generation with model `openai/gpt-5.4-image-2` by default.
+- Requires `OPENROUTER_API_KEY`; set `OPENROUTER_IMAGE_MODEL` to override the model.
+- Sends `modalities: ["image", "text"]` plus `image_config` derived from the selected batch resolution.
+- Parses base64 data URL images from `choices[*].message.images[*].image_url.url` and stores them through local image storage.
 
 **GeminiProvider** (`lib/providers/gemini/gemini-provider.ts`)
 - Uses the original Gemini image generation API. Provider type: `'gemini'`.
@@ -92,7 +99,7 @@ type AudioProviderType = 'audiocraft' | 'elevenlabs'
 
 ## Provider Selection
 
-- **Image**: stored per-batch in `batches.provider` column (enum: `openai`, `gemini`, `gemini3`, `comfyui`).
+- **Image**: stored per-batch in `batches.provider` column (enum: `openai`, `openrouter`, `gemini`, `gemini3`, `comfyui`).
 - **Audio**: stored per-batch in `audioBatches.provider` column (enum: `audiocraft`, `elevenlabs`).
 - Provider is selected at batch creation time and cannot be changed after.
 
@@ -105,6 +112,9 @@ lib/providers/
 ├── openai/
 │   ├── openai-provider.ts      # OpenAI GPT Image 2 provider
 │   └── openai-image-client.ts  # OpenAI Image API helpers
+├── openrouter/
+│   ├── openrouter-provider.ts      # OpenRouter GPT-5.4 Image 2 provider
+│   └── openrouter-image-client.ts  # OpenRouter Chat Completions image helpers
 ├── gemini/
 │   └── gemini-provider.ts      # Gemini (original) provider
 ├── gemini3/
