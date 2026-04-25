@@ -50,6 +50,20 @@ describe("migrateAIModelSettings", () => {
     expect(migrated.analysis.provider).toBe("ollama");
     expect(migrated.analysis.model).toBe("llava:latest");
   });
+
+  it("keeps OpenAI v2 provider data", () => {
+    const migrated = migrateAIModelSettings({
+      version: 2,
+      ollamaBaseUrl: "http://localhost:11434",
+      chat: { provider: "openai", model: "gpt-5.4-mini" },
+      analysis: { provider: "openai", model: "gpt-5.4-mini" },
+    });
+
+    expect(migrated.chat.provider).toBe("openai");
+    expect(migrated.chat.model).toBe("gpt-5.4-mini");
+    expect(migrated.analysis.provider).toBe("openai");
+    expect(migrated.analysis.model).toBe("gpt-5.4-mini");
+  });
 });
 
 describe("toAIRequestConfig", () => {

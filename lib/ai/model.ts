@@ -1,4 +1,5 @@
 import { google } from "@ai-sdk/google";
+import { openai } from "@ai-sdk/openai";
 import { devToolsMiddleware } from "@ai-sdk/devtools";
 import { createOllama } from "ollama-ai-provider-v2";
 import type { LanguageModelV3 } from "@ai-sdk/provider";
@@ -7,10 +8,13 @@ import type { AIProvider, AIRequestConfig, AIRequestConfigInput, AIModelSelectio
 
 export const DEFAULT_GEMINI_CHAT_MODEL = "gemini-3.1-flash-preview";
 export const DEFAULT_GEMINI_ANALYSIS_MODEL = "gemini-2.5-flash-image-preview";
+export const DEFAULT_OPENAI_CHAT_MODEL = "gpt-5.4-mini";
+export const DEFAULT_OPENAI_ANALYSIS_MODEL = "gpt-5.4-mini";
 
 const ENV_AI_MODEL_PROVIDER = process.env.AI_MODEL_PROVIDER ?? "gemini";
 const ENV_OLLAMA_BASE_URL = process.env.OLLAMA_BASE_URL ?? "http://localhost:11434";
 const ENV_OLLAMA_DEFAULT_MODEL = process.env.OLLAMA_DEFAULT_MODEL ?? "qwen3.5:9b-q8_0";
+const ENV_OPENAI_DEFAULT_MODEL = process.env.OPENAI_DEFAULT_MODEL ?? DEFAULT_OPENAI_CHAT_MODEL;
 
 function wrapIfDev(model: LanguageModelV3): LanguageModelV3 {
   if (process.env.NODE_ENV === "production") {
@@ -24,7 +28,7 @@ function wrapIfDev(model: LanguageModelV3): LanguageModelV3 {
 }
 
 function isProvider(value: string | undefined): value is AIProvider {
-  return value === "gemini" || value === "ollama";
+  return value === "gemini" || value === "ollama" || value === "openai";
 }
 
 function sanitizeModelId(value: string | undefined, fallback: string): string {
@@ -61,6 +65,18 @@ function envDefaultProvider(): AIProvider {
   return isProvider(ENV_AI_MODEL_PROVIDER) ? ENV_AI_MODEL_PROVIDER : "gemini";
 }
 
+function defaultModelForProvider(provider: AIProvider, kind: "chat" | "analysis"): string {
+  if (provider === "ollama") {
+    return ENV_OLLAMA_DEFAULT_MODEL;
+  }
+
+  if (provider === "openai") {
+    return kind === "chat" ? ENV_OPENAI_DEFAULT_MODEL : ENV_OPENAI_DEFAULT_MODEL;
+  }
+
+  return kind === "chat" ? DEFAULT_GEMINI_CHAT_MODEL : DEFAULT_GEMINI_ANALYSIS_MODEL;
+}
+
 export function resolveAIRequestConfig(input?: AIRequestConfigInput | null): AIRequestConfig {
   const defaultProvider = envDefaultProvider();
   const defaultOllamaBaseUrl = sanitizeUrl(undefined, ENV_OLLAMA_BASE_URL);
@@ -75,14 +91,14 @@ export function resolveAIRequestConfig(input?: AIRequestConfigInput | null): AIR
       provider: chatProvider,
       model: sanitizeModelId(
         input?.chat?.model,
-        chatProvider === "ollama" ? ENV_OLLAMA_DEFAULT_MODEL : DEFAULT_GEMINI_CHAT_MODEL,
+        defaultModelForProvider(chatProvider, "chat"),
       ),
     },
     analysis: {
       provider: analysisProvider,
       model: sanitizeModelId(
         input?.analysis?.model,
-        analysisProvider === "ollama" ? ENV_OLLAMA_DEFAULT_MODEL : DEFAULT_GEMINI_ANALYSIS_MODEL,
+        defaultModelForProvider(analysisProvider, "analysis"),
       ),
     },
   };
@@ -95,6 +111,10 @@ function resolveLanguageModel(selection: AIModelSelection, config: AIRequestConf
     });
 
     return wrapIfDev(ollama(selection.model));
+  }
+
+  if (selection.provider === "openai") {
+    return wrapIfDev(openai(selection.model));
   }
 
   return wrapIfDev(google(selection.model));

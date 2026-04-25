@@ -37,17 +37,20 @@ export interface AIModelSettingsUpdate {
 
 const STORAGE_KEY = "ai-model-settings";
 const LEGACY_OLLAMA_DEFAULT_MODEL = "qwen3.5:9b-q8_0";
+const DEFAULT_GEMINI_CHAT_MODEL = "gemini-3.1-flash-preview";
+const DEFAULT_GEMINI_ANALYSIS_MODEL = "gemini-2.5-flash-image-preview";
+const DEFAULT_OPENAI_MODEL = "gpt-5.4-mini";
 
 export const defaultAIModelSettings: AIModelSettings = {
   version: 2,
   ollamaBaseUrl: "http://localhost:11434",
   chat: {
     provider: "gemini",
-    model: "gemini-3.1-flash-preview",
+    model: DEFAULT_GEMINI_CHAT_MODEL,
   },
   analysis: {
     provider: "gemini",
-    model: "gemini-2.5-flash-image-preview",
+    model: DEFAULT_GEMINI_ANALYSIS_MODEL,
   },
 };
 
@@ -69,7 +72,27 @@ function normalizeOllamaModel(value: unknown): string {
 }
 
 function normalizeProvider(value: unknown, fallback: AIProvider): AIProvider {
-  return value === "ollama" || value === "gemini" ? value : fallback;
+  return value === "ollama" || value === "gemini" || value === "openai" ? value : fallback;
+}
+
+function defaultModelForProvider(provider: AIProvider, kind: "chat" | "analysis"): string {
+  if (provider === "ollama") {
+    return "";
+  }
+
+  if (provider === "openai") {
+    return DEFAULT_OPENAI_MODEL;
+  }
+
+  return kind === "chat" ? DEFAULT_GEMINI_CHAT_MODEL : DEFAULT_GEMINI_ANALYSIS_MODEL;
+}
+
+function normalizeProviderModel(provider: AIProvider, value: unknown, kind: "chat" | "analysis"): string {
+  if (provider === "ollama") {
+    return normalizeOllamaModel(value);
+  }
+
+  return normalizeModel(value, defaultModelForProvider(provider, kind));
 }
 
 function normalizeUrl(value: unknown, fallback: string): string {
@@ -109,11 +132,11 @@ export function migrateAIModelSettings(raw: unknown): AIModelSettings {
       ollamaBaseUrl: normalizeUrl(raw.ollamaBaseUrl, defaultAIModelSettings.ollamaBaseUrl),
       chat: {
         provider: chatProvider,
-        model: chatProvider === "ollama" ? normalizeOllamaModel(chatRaw.model) : normalizeModel(chatRaw.model, defaultAIModelSettings.chat.model),
+        model: normalizeProviderModel(chatProvider, chatRaw.model, "chat"),
       },
       analysis: {
         provider: analysisProvider,
-        model: analysisProvider === "ollama" ? normalizeOllamaModel(analysisRaw.model) : normalizeModel(analysisRaw.model, defaultAIModelSettings.analysis.model),
+        model: normalizeProviderModel(analysisProvider, analysisRaw.model, "analysis"),
       },
     };
   }
@@ -128,7 +151,7 @@ export function migrateAIModelSettings(raw: unknown): AIModelSettings {
     ollamaBaseUrl: normalizeUrl(legacy.ollamaBaseUrl, defaultAIModelSettings.ollamaBaseUrl),
     chat: {
       provider: legacyProvider,
-      model: legacyProvider === "ollama" ? legacyModel : defaultAIModelSettings.chat.model,
+      model: legacyProvider === "ollama" ? legacyModel : defaultModelForProvider(legacyProvider, "chat"),
     },
     // Preserve previous intended behavior where image analysis stayed on Gemini.
     analysis: {

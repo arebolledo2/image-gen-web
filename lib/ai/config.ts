@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-export const AI_PROVIDERS = ["gemini", "ollama"] as const;
+export const AI_PROVIDERS = ["gemini", "ollama", "openai"] as const;
 
 export type AIProvider = (typeof AI_PROVIDERS)[number];
 

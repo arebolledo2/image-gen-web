@@ -10,6 +10,34 @@ import { Input } from "@/components/ui/input";
 import { Activity, Settings, X } from "lucide-react";
 import type { AIProvider } from "@/lib/ai/config";
 
+const DEFAULT_GEMINI_CHAT_MODEL = "gemini-3.1-flash-preview";
+const DEFAULT_GEMINI_ANALYSIS_MODEL = "gemini-2.5-flash-image-preview";
+const DEFAULT_OPENAI_MODEL = "gpt-5.4-mini";
+
+function defaultModelForProvider(provider: AIProvider, kind: "chat" | "analysis", currentModel: string): string {
+  if (provider === "ollama") {
+    return currentModel;
+  }
+
+  if (provider === "openai") {
+    return DEFAULT_OPENAI_MODEL;
+  }
+
+  return kind === "chat" ? DEFAULT_GEMINI_CHAT_MODEL : DEFAULT_GEMINI_ANALYSIS_MODEL;
+}
+
+function placeholderForProvider(provider: AIProvider, kind: "chat" | "analysis"): string {
+  if (provider === "ollama") {
+    return kind === "chat" ? "Server default" : "llava:latest (vision-capable)";
+  }
+
+  if (provider === "openai") {
+    return DEFAULT_OPENAI_MODEL;
+  }
+
+  return kind === "chat" ? DEFAULT_GEMINI_CHAT_MODEL : DEFAULT_GEMINI_ANALYSIS_MODEL;
+}
+
 interface ProviderSelectProps {
   label: string;
   value: AIProvider;
@@ -27,6 +55,7 @@ function ProviderSelect({ label, value, onChange }: ProviderSelectProps) {
         <SelectContent>
           <SelectItem value="gemini">Gemini (Google AI)</SelectItem>
           <SelectItem value="ollama">Ollama (Local)</SelectItem>
+          <SelectItem value="openai">OpenAI</SelectItem>
         </SelectContent>
       </Select>
     </div>
@@ -85,7 +114,7 @@ export function AIModelSettings({ onClose }: AIModelSettingsProps) {
             setSettings({
               chat: {
                 provider,
-                model: provider === "ollama" ? settings.chat.model : "gemini-3.1-flash-preview",
+                model: defaultModelForProvider(provider, "chat", settings.chat.model),
               },
             });
           }}
@@ -96,7 +125,7 @@ export function AIModelSettings({ onClose }: AIModelSettingsProps) {
           <Input
             value={settings.chat.model}
             onChange={(e) => setSettings({ chat: { model: e.target.value } })}
-            placeholder={settings.chat.provider === "ollama" ? "Server default" : "gemini-3.1-flash-preview"}
+            placeholder={placeholderForProvider(settings.chat.provider, "chat")}
           />
         </div>
 
@@ -107,7 +136,7 @@ export function AIModelSettings({ onClose }: AIModelSettingsProps) {
             setSettings({
               analysis: {
                 provider,
-                model: provider === "ollama" ? settings.analysis.model : "gemini-2.5-flash-image-preview",
+                model: defaultModelForProvider(provider, "analysis", settings.analysis.model),
               },
             });
           }}
@@ -118,7 +147,7 @@ export function AIModelSettings({ onClose }: AIModelSettingsProps) {
           <Input
             value={settings.analysis.model}
             onChange={(e) => setSettings({ analysis: { model: e.target.value } })}
-            placeholder={settings.analysis.provider === "ollama" ? "llava:latest (vision-capable)" : "gemini-2.5-flash-image-preview"}
+            placeholder={placeholderForProvider(settings.analysis.provider, "analysis")}
           />
         </div>
 
@@ -162,7 +191,7 @@ export function AIModelSettings({ onClose }: AIModelSettingsProps) {
         {!usingOllama && (
           <div className="rounded-md border border-slate-200 bg-slate-50 p-3 text-sm text-slate-700 dark:border-slate-800 dark:bg-slate-900/30 dark:text-slate-400">
             <Activity className="mr-2 inline h-4 w-4" />
-            Both providers are set to Gemini.
+            Cloud providers are configured.
           </div>
         )}
       </CardContent>

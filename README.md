@@ -22,7 +22,7 @@ Image Gen Web provides a sophisticated interface for managing the entire lifecyc
 
 - **Framework**: [Next.js 16](https://nextjs.org/) (App Router)
 - **Database**: [PostgreSQL](https://www.postgresql.org/) with [Drizzle ORM](https://orm.drizzle.team/)
-- **AI Integration**: OpenAI GPT Image 2, [Vercel AI SDK](https://sdk.vercel.ai/), and [Google Gemini](https://ai.google.dev/)
+- **AI Integration**: OpenAI GPT Image 2, [Vercel AI SDK](https://sdk.vercel.ai/), [OpenAI](https://platform.openai.com/), and [Google Gemini](https://ai.google.dev/)
 - **Job Queue**: [Inngest](https://www.inngest.com/)
 - **Styling**: [Tailwind CSS](https://tailwindcss.com/) & [shadcn/ui](https://ui.shadcn.com/)
 - **Testing**: [Vitest](https://vitest.dev/)
@@ -43,7 +43,7 @@ The application follows a modern serverless-ready architecture:
 - Node.js 20+
 - PostgreSQL database
 - OpenAI API key for default GPT Image 2 generation
-- Gemini API key for Gemini providers and AI agent text workflows
+- Gemini or OpenAI API key for AI agent text workflows, depending on selected LLM provider
 
 ### Quick Start
 

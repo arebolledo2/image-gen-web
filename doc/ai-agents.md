@@ -2,7 +2,7 @@
 
 ## Overview
 
-The image-gen-web platform uses **Vercel AI SDK 6** with configurable AI models for agentic workflows. The system now supports both **Google Gemini** (cloud) and **Ollama** (local) providers.
+The image-gen-web platform uses **Vercel AI SDK 6** with configurable AI models for agentic workflows. The system supports **Google Gemini** (cloud), **OpenAI** (cloud), and **Ollama** (local) providers.
 
 - Agent functions: modular files under `lib/ai/agents/`
 - Agent tools: `lib/ai/tools/`
@@ -13,11 +13,15 @@ The image-gen-web platform uses **Vercel AI SDK 6** with configurable AI models 
 
 ### Environment Variables
 
-The system supports two AI model providers, configured via environment variables or runtime settings.
+The system supports three AI model providers, configured via environment variables or runtime settings.
 
 ```env
 # Provider selection (default: "gemini")
-AI_MODEL_PROVIDER=ollama  # or "gemini"
+AI_MODEL_PROVIDER=openai  # or "gemini" / "ollama"
+
+# OpenAI configuration (when provider is openai)
+OPENAI_API_KEY=your_openai_api_key
+OPENAI_DEFAULT_MODEL=gpt-5.4-mini
 
 # Ollama configuration (when provider is ollama)
 OLLAMA_BASE_URL=http://localhost:11434
@@ -47,9 +51,15 @@ The `lib/ai/model.ts` file implements a factory pattern for model selection:
 - Default model: `qwen3.5:9b-q8_0`
 - Local LLM inference via Ollama server
 
+**OpenAI**:
+- Uses `@ai-sdk/openai` provider
+- Default model: `gpt-5.4-mini`
+- Supports chat, tool calling, and image input for analysis
+- Requires `OPENAI_API_KEY`
+
 ### Vision Model Separation
 
-The chat agent uses text-only models for general interactions, but the `analyzeImage` tool always uses Gemini 25 Flash Image model since most local Ollama models don't support vision. This ensures image analysis functionality remains available regardless of the primary provider.
+The chat agent and `analyzeImage` tool can use separate model selections. Gemini and OpenAI defaults support image analysis; Ollama analysis requires selecting a vision-capable local model.
 
 ## Agent Functions (10 total)
 
@@ -155,6 +165,17 @@ const { promptText } = await response.json()
 AI_MODEL_PROVIDER=ollama
 OLLAMA_BASE_URL=http://localhost:11434
 OLLAMA_DEFAULT_MODEL=qwen3.5:9b-q8_0
+```
+
+Or use the UI settings modal (click the Settings button in the chat interface).
+
+### Switch to OpenAI
+
+```bash
+# Set environment variable
+AI_MODEL_PROVIDER=openai
+OPENAI_API_KEY=your_openai_api_key
+OPENAI_DEFAULT_MODEL=gpt-5.4-mini
 ```
 
 Or use the UI settings modal (click the Settings button in the chat interface).
