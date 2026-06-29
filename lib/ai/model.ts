@@ -2,8 +2,7 @@ import { google } from "@ai-sdk/google";
 import { openai } from "@ai-sdk/openai";
 import { devToolsMiddleware } from "@ai-sdk/devtools";
 import { createOllama } from "ollama-ai-provider-v2";
-import type { LanguageModelV3 } from "@ai-sdk/provider";
-import { wrapLanguageModel } from "ai";
+import { wrapLanguageModel, type LanguageModel } from "ai";
 import type { AIProvider, AIRequestConfig, AIRequestConfigInput, AIModelSelection } from "./config";
 
 export const DEFAULT_GEMINI_CHAT_MODEL = "gemini-3.1-flash-preview";
@@ -16,13 +15,13 @@ const ENV_OLLAMA_BASE_URL = process.env.OLLAMA_BASE_URL ?? "http://localhost:114
 const ENV_OLLAMA_DEFAULT_MODEL = process.env.OLLAMA_DEFAULT_MODEL ?? "qwen3.5:9b-q8_0";
 const ENV_OPENAI_DEFAULT_MODEL = process.env.OPENAI_DEFAULT_MODEL ?? DEFAULT_OPENAI_CHAT_MODEL;
 
-function wrapIfDev(model: LanguageModelV3): LanguageModelV3 {
+function wrapIfDev(model: LanguageModel): LanguageModel {
   if (process.env.NODE_ENV === "production") {
     return model;
   }
 
   return wrapLanguageModel({
-    model,
+    model: model as Exclude<LanguageModel, string>,
     middleware: devToolsMiddleware(),
   });
 }
@@ -104,7 +103,7 @@ export function resolveAIRequestConfig(input?: AIRequestConfigInput | null): AIR
   };
 }
 
-function resolveLanguageModel(selection: AIModelSelection, config: AIRequestConfig): LanguageModelV3 {
+function resolveLanguageModel(selection: AIModelSelection, config: AIRequestConfig): LanguageModel {
   if (selection.provider === "ollama") {
     const ollama = createOllama({
       baseURL: ensureOllamaApiBaseUrl(config.ollamaBaseUrl ?? ENV_OLLAMA_BASE_URL),
@@ -120,15 +119,15 @@ function resolveLanguageModel(selection: AIModelSelection, config: AIRequestConf
   return wrapIfDev(google(selection.model));
 }
 
-export function getChatModelForConfig(config: AIRequestConfig): LanguageModelV3 {
+export function getChatModelForConfig(config: AIRequestConfig): LanguageModel {
   return resolveLanguageModel(config.chat, config);
 }
 
-export function getAnalysisModelForConfig(config: AIRequestConfig): LanguageModelV3 {
+export function getAnalysisModelForConfig(config: AIRequestConfig): LanguageModel {
   return resolveLanguageModel(config.analysis, config);
 }
 
-export function getChatModel(modelId?: string): LanguageModelV3 {
+export function getChatModel(modelId?: string): LanguageModel {
   const config = resolveAIRequestConfig({
     chat: {
       provider: envDefaultProvider(),
@@ -142,7 +141,7 @@ export function getChatModel(modelId?: string): LanguageModelV3 {
 /**
  * Backwards-compatible helper for routes/components that always need a Gemini vision model.
  */
-export function getVisionModel(modelId: string = DEFAULT_GEMINI_ANALYSIS_MODEL): LanguageModelV3 {
+export function getVisionModel(modelId: string = DEFAULT_GEMINI_ANALYSIS_MODEL): LanguageModel {
   const visionModel = sanitizeModelId(modelId, DEFAULT_GEMINI_ANALYSIS_MODEL);
   return wrapIfDev(google(visionModel));
 }
