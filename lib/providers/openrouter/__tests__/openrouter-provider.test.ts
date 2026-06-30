@@ -121,9 +121,9 @@ describe('OpenRouterProvider', () => {
         }),
       })
     );
-    expect(JSON.parse(mockFetch.mock.calls[0][1].body)).toMatchObject({
+    const body = JSON.parse(mockFetch.mock.calls[0][1].body);
+    expect(body).toMatchObject({
       model: 'openai/gpt-5.4-image-2',
-      messages: [{ role: 'user', content: 'test prompt' }],
       modalities: ['image', 'text'],
       stream: false,
       image_config: {
@@ -131,6 +131,9 @@ describe('OpenRouterProvider', () => {
         image_size: '4K',
       },
     });
+    expect(body.messages[0]).toMatchObject({ role: 'user' });
+    expect(body.messages[0].content).toContain('Generate exactly one image');
+    expect(body.messages[0].content).toContain('test prompt');
     expect(saveImage).toHaveBeenCalledWith(
       { uint8Array: new Uint8Array(Buffer.from('fake-image')), mediaType: 'image/png' },
       'batch-123',
@@ -157,6 +160,54 @@ describe('OpenRouterProvider', () => {
       generationId: 'gen-123',
       parameters: { resolution: '1024x1024' },
     })).rejects.toThrow('no images returned');
+  });
+
+  it('accepts SDK-style imageUrl response casing', async () => {
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        choices: [{
+          message: {
+            imageUrl: undefined,
+            images: [{
+              type: 'image_url',
+              imageUrl: {
+                url: `data:image/png;base64,${Buffer.from('fake-image').toString('base64')}`,
+              },
+            }],
+          },
+        }],
+      }),
+    });
+
+    const result = await provider.generateImage({
+      prompt: 'test prompt',
+      batchId: 'batch-123',
+      batchPromptId: 'bp-123',
+      runNumber: 1,
+      generationId: 'gen-123',
+      parameters: { resolution: '1024x1024' },
+    });
+
+    expect(result.images).toHaveLength(1);
+  });
+
+  it('includes assistant content when OpenRouter returns text without images', async () => {
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        choices: [{ message: { content: 'I cannot generate that image.' } }],
+      }),
+    });
+
+    await expect(provider.generateImage({
+      prompt: 'test prompt',
+      batchId: 'batch-123',
+      batchPromptId: 'bp-123',
+      runNumber: 1,
+      generationId: 'gen-123',
+      parameters: { resolution: '1024x1024' },
+    })).rejects.toThrow('Assistant response: I cannot generate that image.');
   });
 
   it('marks generation failed when OpenRouter returns an error', async () => {

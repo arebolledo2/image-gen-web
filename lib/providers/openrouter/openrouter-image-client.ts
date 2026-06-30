@@ -28,6 +28,9 @@ interface OpenRouterImageEntry {
   image_url?: {
     url?: string;
   };
+  imageUrl?: {
+    url?: string;
+  };
 }
 
 interface OpenRouterChoice {
@@ -83,6 +86,14 @@ export async function generateOpenRouterImage(options: {
   prompt: string;
   imageConfig: OpenRouterImageConfig;
 }): Promise<OpenRouterImageResult> {
+  const imagePrompt = [
+    'Generate exactly one image from the following prompt.',
+    'Return the generated image in the assistant message images field.',
+    'Do not respond with text only.',
+    '',
+    options.prompt,
+  ].join('\n');
+
   const response = await fetch(`${OPENROUTER_API_BASE_URL}/chat/completions`, {
     method: 'POST',
     headers: {
@@ -91,7 +102,7 @@ export async function generateOpenRouterImage(options: {
     },
     body: JSON.stringify({
       model: OPENROUTER_IMAGE_MODEL,
-      messages: [{ role: 'user', content: options.prompt }],
+      messages: [{ role: 'user', content: imagePrompt }],
       modalities: ['image', 'text'],
       stream: false,
       image_config: {
@@ -126,11 +137,13 @@ async function parseOpenRouterImageResponse(response: Response): Promise<OpenRou
 
   const choice = result.choices?.[0];
   const dataUrls = choice?.message?.images
-    ?.map((image) => image.image_url?.url)
+    ?.map((image) => image.image_url?.url || image.imageUrl?.url)
     .filter((url): url is string => Boolean(url)) || [];
 
   if (dataUrls.length === 0) {
-    throw new Error('OpenRouter image generation failed: no images returned. Verify the model supports image output, modalities include image, and OPENROUTER_API_KEY has access.');
+    const content = choice?.message?.content?.trim();
+    const contentSuffix = content ? ` Assistant response: ${content}` : '';
+    throw new Error(`OpenRouter image generation failed: no images returned. Verify the model supports image output, modalities include image, and OPENROUTER_API_KEY has access.${contentSuffix}`);
   }
 
   return {
