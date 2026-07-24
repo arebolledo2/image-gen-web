@@ -174,8 +174,12 @@ export function BatchDefaultsForm({
             type="number"
             min="1"
             max="10"
+            autoComplete="off"
             value={defaultCount}
-            onChange={(e) => setDefaultCount(parseInt(e.target.value))}
+            onChange={(e) => {
+              const val = parseInt(e.target.value, 10);
+              setDefaultCount(Number.isNaN(val) ? 1 : val);
+            }}
             className="w-32"
           />
         </div>

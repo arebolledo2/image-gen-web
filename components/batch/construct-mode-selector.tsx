@@ -1,11 +1,12 @@
 "use client";
 
+import { useState } from "react";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
-import { Palette, Box, Compass, EyeOff, Star } from "lucide-react";
+import { Palette, Box, Compass, EyeOff, Star, ChevronDown } from "lucide-react";
 
 export interface StyleEntity {
   id: string;
@@ -150,17 +151,30 @@ function SelectedItemsDetail<T extends { id: string; name: string; description?:
   items: T[];
   selectedIds: string[];
 }) {
+  const [expanded, setExpanded] = useState(false);
   const selectedItems = items.filter(item => selectedIds.includes(item.id) && item.description);
   if (selectedItems.length === 0) return null;
 
   return (
-    <div className="mt-2 p-3 rounded-md border bg-muted/30 space-y-2 text-sm animate-in fade-in-0 slide-in-from-top-1 duration-150">
-      {selectedItems.map(item => (
-        <div key={item.id} className="flex gap-2">
-          <span className="font-medium text-foreground shrink-0">{item.name}</span>
-          <span className="text-muted-foreground">{item.description}</span>
+    <div className="mt-2">
+      <button
+        type="button"
+        onClick={() => setExpanded(prev => !prev)}
+        className="flex items-center gap-1 text-xs text-primary hover:underline"
+      >
+        {selectedItems.length} selected — {expanded ? "hide" : "view"} descriptions
+        <ChevronDown className={`h-3 w-3 transition-transform ${expanded ? "rotate-180" : ""}`} />
+      </button>
+      {expanded && (
+        <div className="mt-2 p-3 rounded-md border bg-muted/30 space-y-2 text-sm max-h-[200px] overflow-y-auto animate-in fade-in-0 slide-in-from-top-1 duration-150">
+          {selectedItems.map(item => (
+            <div key={item.id} className="flex gap-2">
+              <span className="font-medium text-foreground shrink-0">{item.name}</span>
+              <span className="text-muted-foreground">{item.description}</span>
+            </div>
+          ))}
         </div>
-      ))}
+      )}
     </div>
   );
 }
