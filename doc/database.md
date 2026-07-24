@@ -18,7 +18,7 @@ The image-gen-web project uses **PostgreSQL** managed via **Drizzle ORM**.
 |---|---|
 | `batchStatusEnum` | `draft`, `queued`, `running`, `completed`, `failed` |
 | `generationStatusEnum` | `pending`, `running`, `success`, `failed` |
-| `providerEnum` | `openai`, `gemini`, `gemini3`, `comfyui` |
+| `providerEnum` | `openai`, `openrouter`, `gemini`, `gemini3`, `comfyui`, `comfyui-krea` |
 | `audioProviderEnum` | `audiocraft`, `elevenlabs` |
 | `animationTypeEnum` | `bounce`, `squash_stretch` |
 | `animationGeneratorEnum` | `manual`, `ai` |

@@ -11,9 +11,11 @@ const { join } = path;
 export class ComfyUIProvider implements ImageProvider {
   name = 'comfyui' as const;
   private client: ComfyUIClient;
+  private workflowType: string;
 
-  constructor() {
+  constructor(workflowType: string = 'txt2img') {
     this.client = new ComfyUIClient();
+    this.workflowType = workflowType;
   }
 
   async testConnection(): Promise<boolean> {
@@ -39,7 +41,7 @@ export class ComfyUIProvider implements ImageProvider {
         ...parameters,
       };
 
-      const workflow = await buildWorkflow('txt2img', workflowParams);
+      const workflow = await buildWorkflow(this.workflowType, workflowParams);
 
       // Submit to ComfyUI
       const { prompt_id } = await this.client.submitPrompt(workflow);
@@ -84,7 +86,7 @@ export class ComfyUIProvider implements ImageProvider {
           status: 'success',
           metadata: {
             provider: 'comfyui',
-            workflowType: 'txt2img',
+            workflowType: this.workflowType,
             promptId: prompt_id,
             seed,
             parameters: workflowParams,

@@ -13,7 +13,7 @@ interface Batch {
   version: number;
   description: string | null;
   status: string;
-  provider: 'gemini' | 'comfyui';
+  provider: 'openai' | 'openrouter' | 'gemini' | 'gemini3' | 'comfyui' | 'comfyui-krea';
   createdAt: string;
   completedAt: string | null;
   defaults: any;

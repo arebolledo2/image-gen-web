@@ -31,7 +31,9 @@ const getProviderLabel = (provider: string) => {
     case 'gemini3':
       return '✨ Google Gemini 3 Pro';
     case 'comfyui':
-      return '🎨 ComfyUI';
+      return '🎨 ComfyUI - zImage';
+    case 'comfyui-krea':
+      return '🎨 ComfyUI - Krea';
     default:
       return provider;
   }

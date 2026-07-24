@@ -65,7 +65,7 @@ function buildParameters(batch: BatchWithPrompts, batchPrompt: BatchPrompt): Ima
     const preset = getResolutionPreset(resolutionId);
     if (preset) {
       // For ComfyUI: include width and height
-      if (batch.provider === 'comfyui') {
+      if (batch.provider === 'comfyui' || batch.provider === 'comfyui-krea') {
         parameters.width = preset.width;
         parameters.height = preset.height;
       }

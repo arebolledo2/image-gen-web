@@ -1,0 +1,74 @@
+{
+  "prompt": {
+    "nodeId": 6,
+    "inputName": "wildcard_text",
+    "type": "string",
+    "description": "The generation prompt"
+  },
+  "prompt_populated": {
+    "nodeId": 6,
+    "inputName": "populated_text",
+    "type": "string",
+    "description": "The generation prompt (populated copy)"
+  },
+  "negative_prompt": {
+    "nodeId": 5,
+    "inputName": "text",
+    "type": "string",
+    "description": "Negative prompt"
+  },
+  "width": {
+    "nodeId": 4,
+    "inputName": "width",
+    "type": "integer",
+    "description": "Image width"
+  },
+  "height": {
+    "nodeId": 4,
+    "inputName": "height",
+    "type": "integer",
+    "description": "Image height"
+  },
+  "batch_size": {
+    "nodeId": 4,
+    "inputName": "batch_size",
+    "type": "integer",
+    "description": "Number of images to generate"
+  },
+  "seed": {
+    "nodeId": [8, 9],
+    "inputName": "seed",
+    "type": "integer",
+    "description": "Random seed (-1 for random), applied to both sampler stages"
+  },
+  "cfg": {
+    "nodeId": [8, 9],
+    "inputName": "cfg",
+    "type": "float",
+    "description": "CFG scale, applied to both sampler stages"
+  },
+  "model": {
+    "nodeId": 1,
+    "inputName": "unet_name",
+    "type": "string",
+    "description": "Model checkpoint name"
+  },
+  "vae": {
+    "nodeId": 3,
+    "inputName": "vae_name",
+    "type": "string",
+    "description": "VAE model name"
+  },
+  "clip": {
+    "nodeId": 2,
+    "inputName": "clip_name",
+    "type": "string",
+    "description": "CLIP model name"
+  },
+  "output_prefix": {
+    "nodeId": 11,
+    "inputName": "filename_prefix",
+    "type": "string",
+    "description": "Output filename prefix"
+  }
+}

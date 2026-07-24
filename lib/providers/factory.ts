@@ -16,7 +16,9 @@ export function getProvider(providerName: ImageProviderName): ImageProvider {
     case 'gemini3':
       return new Gemini3Provider();
     case 'comfyui':
-      return new ComfyUIProvider();
+      return new ComfyUIProvider('txt2img');
+    case 'comfyui-krea':
+      return new ComfyUIProvider('txt2img_krea');
     default:
       throw new Error(`Unknown provider: ${providerName}`);
   }

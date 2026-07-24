@@ -289,7 +289,9 @@ export default function BatchesPage() {
                             ? '⚡ Gemini'
                             : batch.provider === 'gemini3'
                               ? '✨ Gemini 3'
-                              : '🎨 ComfyUI'}
+                              : batch.provider === 'comfyui-krea'
+                                ? '🎨 ComfyUI - Krea'
+                                : '🎨 ComfyUI - zImage'}
                     </Badge>
                   </div>
                   {batch.description && (

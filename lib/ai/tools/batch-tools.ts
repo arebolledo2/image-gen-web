@@ -19,7 +19,7 @@ const BatchDefaultsSchema = z.object({
 const CreateBatchSchema = z.object({
     name: z.string().describe("Name for the batch"),
     description: z.string().optional().describe("Optional description of the batch"),
-    provider: z.enum(['openai', 'openrouter', 'gemini', 'gemini3', 'comfyui']).optional().default('openai').describe("Image generation provider"),
+    provider: z.enum(['openai', 'openrouter', 'gemini', 'gemini3', 'comfyui', 'comfyui-krea']).optional().default('openai').describe("Image generation provider"),
     prompts: z.array(BatchPromptSchema).min(1).describe("Array of prompts to generate images for"),
     defaults: BatchDefaultsSchema.optional().describe("Default generation parameters")
 });

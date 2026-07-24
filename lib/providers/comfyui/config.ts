@@ -27,6 +27,10 @@ export function getComfyUIConfig(): ComfyUIConfig {
         template: 'comfyui-templates/templates/txt2img-zimage.template.json',
         paramMap: 'comfyui-templates/parameter-maps/txt2img-zimage.api-params.json',
       },
+      txt2img_krea: {
+        template: 'comfyui-templates/templates/txt2img-krea.template.json',
+        paramMap: 'comfyui-templates/parameter-maps/txt2img-krea.api-params.json',
+      },
     },
 
     defaults: {
@@ -37,6 +41,13 @@ export function getComfyUIConfig(): ComfyUIConfig {
         cfg: 1.0,
         sampler: 'euler',
         scheduler: 'ddim_uniform',
+        batch_size: 1,
+      },
+      txt2img_krea: {
+        width: 1040,
+        height: 1040,
+        cfg: 1.0,
+        seed: -1,
         batch_size: 1,
       },
     },

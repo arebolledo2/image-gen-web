@@ -4,7 +4,7 @@
 
 Image-gen-web uses a pluggable provider pattern for both image and audio generation. Factory functions return the correct provider instance based on a type string, and each provider implements a standard interface.
 
-- **Image providers**: OpenAI GPT Image 2 (default), OpenRouter GPT-5.4 Image 2, Gemini (original), Gemini 3, ComfyUI
+- **Image providers**: OpenAI GPT Image 2 (default), OpenRouter GPT-5.4 Image 2, Gemini (original), Gemini 3, ComfyUI (zImage), ComfyUI (Krea)
 - **Audio providers**: AudioCraft, ElevenLabs
 
 All provider code lives in `lib/providers/`.
@@ -38,7 +38,8 @@ interface GenerationOptions {
 | `'openrouter'` | `OpenRouterProvider` |
 | `'gemini'` | `GeminiProvider` |
 | `'gemini3'` | `Gemini3Provider` |
-| `'comfyui'` | `ComfyUIProvider` |
+| `'comfyui'` | `ComfyUIProvider('txt2img')` (zImage workflow) |
+| `'comfyui-krea'` | `ComfyUIProvider('txt2img_krea')` (Krea workflow) |
 
 ## Image Providers
 
@@ -62,8 +63,9 @@ interface GenerationOptions {
 
 **ComfyUIProvider** (`lib/providers/comfyui/`)
 - Local ComfyUI integration requiring ComfyUI running on `localhost:8188`.
-- Provider type: `'comfyui'`.
-- Files: `comfyui-provider.ts`, `comfyui-client.ts` (HTTP client), `workflow-builder.ts` (workflow construction), `config.ts` (connection settings).
+- Provider types: `'comfyui'` (zImage workflow, `txt2img`) and `'comfyui-krea'` (Krea workflow, `txt2img_krea`) — both share the same `ComfyUIProvider` class, parameterized by workflow type via the constructor.
+- Files: `comfyui-provider.ts`, `comfyui-client.ts` (HTTP client), `workflow-builder.ts` (workflow construction), `config.ts` (connection settings, `workflows`/`defaults` keyed by workflow type).
+- Workflow templates live in `comfyui-templates/templates/` (`txt2img-zimage.template.json`, `txt2img-krea.template.json`) with matching parameter maps in `comfyui-templates/parameter-maps/`. The Krea workflow uses a two-stage `ClownsharKSampler_Beta` (RES4LYF) sampler chain instead of a single `KSampler`; its `seed` and `cfg` parameters fan out to both sampler nodes via a `nodeId` array in the parameter map (supported by `applyParametersToWorkflow`).
 
 ## Audio Provider Interface (`lib/providers/audio/types.ts`)
 
@@ -99,7 +101,7 @@ type AudioProviderType = 'audiocraft' | 'elevenlabs'
 
 ## Provider Selection
 
-- **Image**: stored per-batch in `batches.provider` column (enum: `openai`, `openrouter`, `gemini`, `gemini3`, `comfyui`).
+- **Image**: stored per-batch in `batches.provider` column (enum: `openai`, `openrouter`, `gemini`, `gemini3`, `comfyui`, `comfyui-krea`).
 - **Audio**: stored per-batch in `audioBatches.provider` column (enum: `audiocraft`, `elevenlabs`).
 - Provider is selected at batch creation time and cannot be changed after.
 

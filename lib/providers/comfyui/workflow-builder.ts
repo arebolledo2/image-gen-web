@@ -32,7 +32,7 @@ export function applyParametersToWorkflow(
     }
 
     const mapping = paramMap[paramName];
-    const nodeId = String(mapping.nodeId);
+    const nodeIds = Array.isArray(mapping.nodeId) ? mapping.nodeId : [mapping.nodeId];
     const field = mapping.inputName || mapping.field;
     const paramType = mapping.type || 'string';
 
@@ -42,8 +42,11 @@ export function applyParametersToWorkflow(
     else if (paramType === 'boolean') typedValue = Boolean(value);
     else typedValue = String(value);
 
-    if (workflow[nodeId]?.inputs) {
-      workflow[nodeId].inputs[field] = typedValue;
+    for (const id of nodeIds) {
+      const nodeId = String(id);
+      if (workflow[nodeId]?.inputs) {
+        workflow[nodeId].inputs[field] = typedValue;
+      }
     }
   }
 }

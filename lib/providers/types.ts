@@ -2,7 +2,7 @@
 export type { AIProvider } from "@/lib/ai/config";
 import type { ImageGenerationParameters } from "@/lib/types/common";
 
-export type ImageProviderName = 'openai' | 'openrouter' | 'gemini' | 'gemini3' | 'comfyui';
+export type ImageProviderName = 'openai' | 'openrouter' | 'gemini' | 'gemini3' | 'comfyui' | 'comfyui-krea';
 
 export interface ImageProvider {
   name: ImageProviderName;
