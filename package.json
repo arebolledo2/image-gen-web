@@ -87,6 +87,10 @@
   },
   "overrides": {
     "gaxios": "7.1.4",
-    "gcp-metadata": "8.1.2"
+    "gcp-metadata": "8.1.2",
+    "adm-zip": "0.6.1",
+    "drizzle-kit": {
+      "esbuild": ">=0.25.12"
+    }
   }
 }
