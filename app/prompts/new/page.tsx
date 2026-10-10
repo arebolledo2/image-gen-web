@@ -31,28 +31,34 @@ export default function NewPromptPage() {
   const [selectedGuidanceIds, setSelectedGuidanceIds] = useState<string[]>([]);
 
   useEffect(() => {
-    fetchData();
-  }, []);
+    let cancelled = false;
 
-  const fetchData = async () => {
-    try {
-      const [stylesRes, subjectsRes, guidanceRes] = await Promise.all([
-        fetch('/api/styles'),
-        fetch('/api/subjects'),
-        fetch('/api/guidance'),
-      ]);
-      const [stylesData, subjectsData, guidanceData] = await Promise.all([
-        stylesRes.json(),
-        subjectsRes.json(),
-        guidanceRes.json(),
-      ]);
-      setStyles(stylesData.styles || []);
-      setSubjects(subjectsData.subjects || []);
-      setGuidanceList(guidanceData.guidance || []);
-    } catch (error) {
-      console.error('Error fetching data:', error);
+    async function load() {
+      try {
+        const [stylesRes, subjectsRes, guidanceRes] = await Promise.all([
+          fetch('/api/styles'),
+          fetch('/api/subjects'),
+          fetch('/api/guidance'),
+        ]);
+        const [stylesData, subjectsData, guidanceData] = await Promise.all([
+          stylesRes.json(),
+          subjectsRes.json(),
+          guidanceRes.json(),
+        ]);
+        if (cancelled) return;
+        setStyles(stylesData.styles || []);
+        setSubjects(subjectsData.subjects || []);
+        setGuidanceList(guidanceData.guidance || []);
+      } catch (error) {
+        console.error('Error fetching data:', error);
+      }
     }
-  };
+
+    load();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const toggleGuidance = (id: string) => {
     setSelectedGuidanceIds(prev =>

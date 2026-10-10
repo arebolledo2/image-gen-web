@@ -45,23 +45,23 @@ export default function BatchesPage() {
   const [favoritesOnly, setFavoritesOnly] = useState(false);
 
   useEffect(() => {
-    fetchCategories();
-  }, []);
+    let cancelled = false;
 
-  useEffect(() => {
-    fetchBatches(1, false);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filterCategoryId, favoritesOnly]);
-
-  const fetchCategories = async () => {
-    try {
-      const response = await fetch('/api/subject-categories');
-      const data = await response.json();
-      setCategories(data.categories || []);
-    } catch (error) {
-      console.error('Error fetching categories:', error);
+    async function load() {
+      try {
+        const response = await fetch('/api/subject-categories');
+        const data = await response.json();
+        if (!cancelled) setCategories(data.categories || []);
+      } catch (error) {
+        console.error('Error fetching categories:', error);
+      }
     }
-  };
+
+    load();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const fetchBatches = async (pageNum: number, append: boolean = false) => {
     if (append) {
@@ -99,6 +99,12 @@ export default function BatchesPage() {
       setLoadingMore(false);
     }
   };
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional: show the loading state immediately when filters change
+    fetchBatches(1, false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filterCategoryId, favoritesOnly]);
 
   const loadMore = () => {
     if (page < totalPages) {

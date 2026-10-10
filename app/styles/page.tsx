@@ -35,20 +35,25 @@ export default function StylesPage() {
   const [favoritesOnly, setFavoritesOnly] = useState(false);
 
   useEffect(() => {
-    fetchStyles();
-  }, []);
+    let cancelled = false;
 
-  const fetchStyles = async () => {
-    try {
-      const response = await fetch('/api/styles');
-      const data = await response.json();
-      setStyles(data.styles || []);
-    } catch (error) {
-      console.error('Error fetching styles:', error);
-    } finally {
-      setLoading(false);
+    async function load() {
+      try {
+        const response = await fetch('/api/styles');
+        const data = await response.json();
+        if (!cancelled) setStyles(data.styles || []);
+      } catch (error) {
+        console.error('Error fetching styles:', error);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
     }
-  };
+
+    load();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const handleToggleFavorite = async (e: React.MouseEvent, styleId: string) => {
     e.preventDefault();

@@ -27,25 +27,37 @@ export function useBatchData(batchId: string | string[] | undefined) {
   const [batch, setBatch] = useState<Batch | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const fetchBatch = useCallback(async () => {
-    if (!batchId) return;
+  const requestBatch = useCallback(async (): Promise<{ ok: true; batch: Batch | null } | { ok: false } | null> => {
+    if (!batchId) return null;
 
     try {
       const response = await fetch(`/api/batches/${batchId}`);
       const data = await response.json();
-      setBatch(data.batch);
+      return { ok: true, batch: data.batch };
     } catch (error) {
       console.error('Error fetching batch:', error);
-    } finally {
-      setLoading(false);
+      return { ok: false };
     }
   }, [batchId]);
 
+  const fetchBatch = useCallback(async () => {
+    const result = await requestBatch();
+    if (!result) return;
+    if (result.ok) setBatch(result.batch);
+    setLoading(false);
+  }, [requestBatch]);
+
   useEffect(() => {
-    if (batchId) {
-      fetchBatch();
-    }
-  }, [batchId, fetchBatch]);
+    let cancelled = false;
+    requestBatch().then((result) => {
+      if (cancelled || !result) return;
+      if (result.ok) setBatch(result.batch);
+      setLoading(false);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [requestBatch]);
 
   const status = batch?.status;
   const currentBatchId = batch?.id;

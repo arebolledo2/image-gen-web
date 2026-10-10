@@ -28,20 +28,25 @@ export default function AudioBatchesPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetchAudioBatches();
-  }, []);
+    let cancelled = false;
 
-  const fetchAudioBatches = async () => {
-    try {
-      const response = await fetch('/api/audio-batches');
-      const data = await response.json();
-      setAudioBatches(data.audioBatches || []);
-    } catch (error) {
-      console.error('Error fetching audio batches:', error);
-    } finally {
-      setLoading(false);
+    async function load() {
+      try {
+        const response = await fetch('/api/audio-batches');
+        const data = await response.json();
+        if (!cancelled) setAudioBatches(data.audioBatches || []);
+      } catch (error) {
+        console.error('Error fetching audio batches:', error);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
     }
-  };
+
+    load();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const getStatusColor = (status: string) => {
     switch (status) {

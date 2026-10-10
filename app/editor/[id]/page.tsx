@@ -44,7 +44,7 @@ export default function EditorPage() {
   const [copied, setCopied] = useState(false);
   const [loading, setLoading] = useState(true);
   const [isSampling, setIsSampling] = useState(false);
-  const [internalVersion, setInternalVersion] = useState<number>(Date.now());
+  const [internalVersion, setInternalVersion] = useState<number>(() => Date.now());
 
   // Get navigation context
   const from = searchParams.get('from');

@@ -30,20 +30,25 @@ export default function PromptsPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetchPrompts();
-  }, []);
+    let cancelled = false;
 
-  const fetchPrompts = async () => {
-    try {
-      const response = await fetch('/api/prompts');
-      const data = await response.json();
-      setPrompts(data.prompts || []);
-    } catch (error) {
-      console.error('Error fetching prompts:', error);
-    } finally {
-      setLoading(false);
+    async function load() {
+      try {
+        const response = await fetch('/api/prompts');
+        const data = await response.json();
+        if (!cancelled) setPrompts(data.prompts || []);
+      } catch (error) {
+        console.error('Error fetching prompts:', error);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
     }
-  };
+
+    load();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   if (loading) {
     return (

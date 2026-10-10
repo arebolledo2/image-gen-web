@@ -123,19 +123,31 @@ export default function ComposerPage() {
   }, []);
 
   // Fetch saved layouts
-  const fetchLayouts = useCallback(async () => {
+  const loadLayouts = useCallback(async (): Promise<SavedLayout[] | null> => {
     try {
       const res = await fetch("/api/composer-layouts");
       const data = await res.json();
-      setSavedLayouts(data.layouts || []);
+      return data.layouts || [];
     } catch (error) {
       console.error("Error fetching layouts:", error);
+      return null;
     }
   }, []);
 
+  const fetchLayouts = useCallback(async () => {
+    const layouts = await loadLayouts();
+    if (layouts) setSavedLayouts(layouts);
+  }, [loadLayouts]);
+
   useEffect(() => {
-    fetchLayouts();
-  }, [fetchLayouts]);
+    let cancelled = false;
+    loadLayouts().then((layouts) => {
+      if (!cancelled && layouts) setSavedLayouts(layouts);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [loadLayouts]);
 
   const zoomPercent = Math.round(state.canvasZoom * 100);
 

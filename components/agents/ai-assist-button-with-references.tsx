@@ -51,30 +51,41 @@ export function AIAssistButtonWithReferences({
     const [loadingImages, setLoadingImages] = useState(false);
     const [selectedImageIds, setSelectedImageIds] = useState<Set<string>>(new Set());
 
+    // Show the loading state as soon as a fetch is due, and reset the
+    // selection when the dialog closes (adjusted during render, not in an effect)
+    const fetchBatchId = open && batchId ? batchId : null;
+    const [prevFetchBatchId, setPrevFetchBatchId] = useState<string | null>(null);
+    if (prevFetchBatchId !== fetchBatchId) {
+        setPrevFetchBatchId(fetchBatchId);
+        if (fetchBatchId) setLoadingImages(true);
+    }
+    const [prevOpen, setPrevOpen] = useState(open);
+    if (prevOpen !== open) {
+        setPrevOpen(open);
+        if (!open) setSelectedImageIds(new Set());
+    }
+
     // Fetch lineage images when dialog opens
     useEffect(() => {
-        if (open && batchId) {
-            setLoadingImages(true);
-            fetch(`/api/batches/${batchId}/lineage-images?limit=12`)
-                .then((res) => res.json())
-                .then((data) => {
-                    setLineageImages(data.images || []);
-                })
-                .catch((error) => {
-                    console.error("Error fetching lineage images:", error);
-                })
-                .finally(() => {
-                    setLoadingImages(false);
-                });
-        }
-    }, [open, batchId]);
+        if (!fetchBatchId) return;
 
-    // Reset state when dialog closes
-    useEffect(() => {
-        if (!open) {
-            setSelectedImageIds(new Set());
-        }
-    }, [open]);
+        let cancelled = false;
+        fetch(`/api/batches/${fetchBatchId}/lineage-images?limit=12`)
+            .then((res) => res.json())
+            .then((data) => {
+                if (!cancelled) setLineageImages(data.images || []);
+            })
+            .catch((error) => {
+                console.error("Error fetching lineage images:", error);
+            })
+            .finally(() => {
+                if (!cancelled) setLoadingImages(false);
+            });
+
+        return () => {
+            cancelled = true;
+        };
+    }, [fetchBatchId]);
 
     const toggleImageSelection = (imageId: string) => {
         setSelectedImageIds((prev) => {

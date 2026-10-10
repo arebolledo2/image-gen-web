@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
@@ -37,26 +37,32 @@ export default function PromptDetailPage({ params }: { params: { id: string } })
   const [variations, setVariations] = useState<string[]>([]);
   const [loadingVariations, setLoadingVariations] = useState(false);
 
-  const fetchPrompt = useCallback(async () => {
-    try {
-      const response = await fetch(`/api/prompts/${params.id}`);
-      if (!response.ok) {
-        throw new Error("Failed to fetch prompt");
-      }
-      const data = await response.json();
-      setPrompt(data.prompt);
-    } catch (error) {
-      console.error("Error fetching prompt:", error);
-      toast.error("Failed to load prompt");
-      router.push("/prompts");
-    } finally {
-      setLoading(false);
-    }
-  }, [params.id, router]);
-
   useEffect(() => {
-    fetchPrompt();
-  }, [fetchPrompt]);
+    let cancelled = false;
+
+    async function load() {
+      try {
+        const response = await fetch(`/api/prompts/${params.id}`);
+        if (!response.ok) {
+          throw new Error("Failed to fetch prompt");
+        }
+        const data = await response.json();
+        if (!cancelled) setPrompt(data.prompt);
+      } catch (error) {
+        if (cancelled) return;
+        console.error("Error fetching prompt:", error);
+        toast.error("Failed to load prompt");
+        router.push("/prompts");
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+
+    load();
+    return () => {
+      cancelled = true;
+    };
+  }, [params.id, router]);
 
   const handleDelete = async () => {
     if (!confirm("Are you sure you want to delete this prompt?")) {

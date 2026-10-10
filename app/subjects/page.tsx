@@ -61,37 +61,43 @@ export default function SubjectsPage() {
   const [catSubmitting, setCatSubmitting] = useState(false);
 
   useEffect(() => {
-    fetchInitialData();
-  }, []);
+    let cancelled = false;
 
-  const fetchInitialData = async () => {
-    setLoading(true);
-    try {
-      const [subjectsRes, categoriesRes] = await Promise.all([
-        fetch('/api/subjects'),
-        fetch('/api/subject-categories')
-      ]);
+    async function load() {
+      setLoading(true);
+      try {
+        const [subjectsRes, categoriesRes] = await Promise.all([
+          fetch('/api/subjects'),
+          fetch('/api/subject-categories')
+        ]);
 
-      const subjectsData = await subjectsRes.json();
-      const categoriesData = await categoriesRes.json();
+        const subjectsData = await subjectsRes.json();
+        const categoriesData = await categoriesRes.json();
+        if (cancelled) return;
 
-      const cats = categoriesData.categories || [];
-      setCategories(cats);
+        const cats = categoriesData.categories || [];
+        setCategories(cats);
 
-      // Map categories to subjects for display
-      const subjectsWithCats = (subjectsData.subjects || []).map((s: Subject) => ({
-        ...s,
-        category: cats.find((c: Category) => c.id === s.categoryId)
-      }));
+        // Map categories to subjects for display
+        const subjectsWithCats = (subjectsData.subjects || []).map((s: Subject) => ({
+          ...s,
+          category: cats.find((c: Category) => c.id === s.categoryId)
+        }));
 
-      setSubjects(subjectsWithCats);
-    } catch (error) {
-      console.error('Error fetching data:', error);
-      toast.error("Failed to load data");
-    } finally {
-      setLoading(false);
+        setSubjects(subjectsWithCats);
+      } catch (error) {
+        console.error('Error fetching data:', error);
+        toast.error("Failed to load data");
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
     }
-  };
+
+    load();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const fetchSubjects = async () => {
     try {

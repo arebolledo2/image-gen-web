@@ -27,21 +27,34 @@ export default function GuidancePage() {
   const [newDescription, setNewDescription] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
-  useEffect(() => {
-    fetchGuidance();
-  }, []);
-
-  const fetchGuidance = async () => {
+  const requestGuidance = async (): Promise<Guidance[] | null> => {
     try {
       const response = await fetch('/api/guidance');
       const data = await response.json();
-      setGuidanceList(data.guidance || []);
+      return data.guidance || [];
     } catch (error) {
       console.error('Error fetching guidance:', error);
-    } finally {
-      setLoading(false);
+      return null;
     }
   };
+
+  const fetchGuidance = async () => {
+    const guidance = await requestGuidance();
+    if (guidance) setGuidanceList(guidance);
+    setLoading(false);
+  };
+
+  useEffect(() => {
+    let cancelled = false;
+    requestGuidance().then((guidance) => {
+      if (cancelled) return;
+      if (guidance) setGuidanceList(guidance);
+      setLoading(false);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();

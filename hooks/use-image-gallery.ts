@@ -41,6 +41,7 @@ export function useImageGallery(batchId: string | string[] | undefined, hasBatch
 
   useEffect(() => {
     if (hasBatch && batchId) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional: show the loading state immediately when filters change
       fetchImages(0, true);
     }
   }, [hasBatch, batchId, fetchImages]);

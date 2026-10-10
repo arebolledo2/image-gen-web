@@ -72,6 +72,7 @@ export default function AudioGalleryPage() {
   }, [favoritesOnly, debouncedSearch, batchId]);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional: show the loading state immediately when filters change
     fetchAudioFiles();
   }, [fetchAudioFiles]);
 

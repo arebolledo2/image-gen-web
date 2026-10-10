@@ -27,25 +27,37 @@ export function useAudioBatchData(batchId: string | string[] | undefined) {
     const [batch, setBatch] = useState<AudioBatch | null>(null);
     const [loading, setLoading] = useState(true);
 
-    const fetchBatch = useCallback(async () => {
-        if (!batchId) return;
+    const requestBatch = useCallback(async (): Promise<{ ok: true; batch: AudioBatch | null } | { ok: false } | null> => {
+        if (!batchId) return null;
 
         try {
             const response = await fetch(`/api/audio-batches/${batchId}`);
             const data = await response.json();
-            setBatch(data.audioBatch);
+            return { ok: true, batch: data.audioBatch };
         } catch (error) {
-            console.error('Error fetching audio batch:', error);
-        } finally {
-            setLoading(false);
+            console.error('Error fetching audiobatch:', error);
+            return { ok: false };
         }
     }, [batchId]);
 
+    const fetchBatch = useCallback(async () => {
+        const result = await requestBatch();
+        if (!result) return;
+        if (result.ok) setBatch(result.batch);
+        setLoading(false);
+    }, [requestBatch]);
+
     useEffect(() => {
-        if (batchId) {
-            fetchBatch();
-        }
-    }, [batchId, fetchBatch]);
+        let cancelled = false;
+        requestBatch().then((result) => {
+            if (cancelled || !result) return;
+            if (result.ok) setBatch(result.batch);
+            setLoading(false);
+        });
+        return () => {
+            cancelled = true;
+        };
+    }, [requestBatch]);
 
     const status = batch?.status;
     const currentBatchId = batch?.id;

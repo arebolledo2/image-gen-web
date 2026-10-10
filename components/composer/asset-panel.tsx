@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -27,9 +27,11 @@ function ScaleControl({
   const [inputValue, setInputValue] = useState(currentScale.toString());
 
   // Sync input when scale changes externally (drag, slider)
-  useEffect(() => {
+  const [prevScale, setPrevScale] = useState(currentScale);
+  if (prevScale !== currentScale) {
+    setPrevScale(currentScale);
     setInputValue(currentScale.toString());
-  }, [currentScale]);
+  }
 
   function commitInput() {
     const parsed = parseInt(inputValue, 10);

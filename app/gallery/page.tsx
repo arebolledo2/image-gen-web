@@ -37,18 +37,23 @@ export default function GalleryPage() {
 
   // Fetch categories on mount
   useEffect(() => {
-    fetchCategories();
-  }, []);
+    let cancelled = false;
 
-  const fetchCategories = async () => {
-    try {
-      const response = await fetch('/api/subject-categories');
-      const data = await response.json();
-      setCategories(data.categories || []);
-    } catch (error) {
-      console.error('Error fetching categories:', error);
+    async function load() {
+      try {
+        const response = await fetch('/api/subject-categories');
+        const data = await response.json();
+        if (!cancelled) setCategories(data.categories || []);
+      } catch (error) {
+        console.error('Error fetching categories:', error);
+      }
     }
-  };
+
+    load();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   // Debounce search
   useEffect(() => {
@@ -145,6 +150,7 @@ export default function GalleryPage() {
   }, []);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional: show the loading state immediately when filters change
     fetchImages(0, true, favoritesOnly, debouncedSearch, filterCategoryId);
   }, [fetchImages, favoritesOnly, debouncedSearch, filterCategoryId]);
 

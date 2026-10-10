@@ -70,33 +70,39 @@ export default function NewBatchPage() {
   const [prompts, setPrompts] = useState<BatchPrompt[]>([]);
 
   useEffect(() => {
-    fetchData();
-  }, []);
+    let cancelled = false;
 
-  const fetchData = async () => {
-    try {
-      const [stylesRes, subjectsRes, categoriesRes, guidanceRes] = await Promise.all([
-        fetch('/api/styles'),
-        fetch('/api/subjects'),
-        fetch('/api/subject-categories'),
-        fetch('/api/guidance'),
-      ]);
-      const [stylesData, subjectsData, categoriesData, guidanceData] = await Promise.all([
-        stylesRes.json(),
-        subjectsRes.json(),
-        categoriesRes.json(),
-        guidanceRes.json(),
-      ]);
-      setStyles(stylesData.styles || []);
-      setSubjects(subjectsData.subjects || []);
-      setCategories(categoriesData.categories || []);
-      setGuidanceList(guidanceData.guidance || []);
-    } catch (error) {
-      console.error('Error fetching data:', error);
-    } finally {
-      setDataLoading(false);
+    async function load() {
+      try {
+        const [stylesRes, subjectsRes, categoriesRes, guidanceRes] = await Promise.all([
+          fetch('/api/styles'),
+          fetch('/api/subjects'),
+          fetch('/api/subject-categories'),
+          fetch('/api/guidance'),
+        ]);
+        const [stylesData, subjectsData, categoriesData, guidanceData] = await Promise.all([
+          stylesRes.json(),
+          subjectsRes.json(),
+          categoriesRes.json(),
+          guidanceRes.json(),
+        ]);
+        if (cancelled) return;
+        setStyles(stylesData.styles || []);
+        setSubjects(subjectsData.subjects || []);
+        setCategories(categoriesData.categories || []);
+        setGuidanceList(guidanceData.guidance || []);
+      } catch (error) {
+        console.error('Error fetching data:', error);
+      } finally {
+        if (!cancelled) setDataLoading(false);
+      }
     }
-  };
+
+    load();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const toggleGuidance = (id: string) => {
     setSelectedGuidanceIds(prev =>

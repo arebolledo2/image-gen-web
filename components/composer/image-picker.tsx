@@ -88,6 +88,7 @@ export function ImagePicker({ onAddImage }: ImagePickerProps) {
 
   // Reset and fetch on filter changes
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional: show the loading state immediately when filters change
     fetchImages(0, true);
   }, [fetchImages]);
 
