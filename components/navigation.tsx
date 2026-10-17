@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
-import { Sparkles } from "lucide-react";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { SettingsToggle } from "@/components/settings-toggle";
 
@@ -30,7 +29,8 @@ export function Navigation() {
         <div className="flex h-16 items-center justify-between">
           <div className="flex items-center gap-8">
             <Link href="/" className="flex items-center gap-2 font-bold text-lg">
-              <Sparkles className="h-6 w-6 text-primary" />
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/logo.svg" alt="" className="h-7 w-7" />
               <span>Image Gen</span>
             </Link>
 
