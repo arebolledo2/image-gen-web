@@ -8,9 +8,18 @@ import type { ImageGenerationJob } from './types';
 export const imageGenerationFunction = inngest.createFunction(
   {
     id: 'image-generation',
-    concurrency: {
-      limit: 10,
-    }
+    concurrency: [
+      // Overall cap across all providers
+      { limit: 10 },
+      // ComfyUI shares a single GPU, so parallel requests exhaust VRAM. All comfyui*
+      // jobs share one key (limit 1 => strictly serial); other providers get a unique
+      // key per generation, so this limit never throttles them.
+      {
+        scope: 'fn',
+        key: "event.data.provider.startsWith('comfyui') ? 'comfyui' : event.data.generationId",
+        limit: 1,
+      },
+    ],
   },
   { event: 'image/generate' },
   async ({ event, step }) => {
