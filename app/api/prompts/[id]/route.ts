@@ -1,51 +1,29 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/db';
-import { prompts } from '@/lib/db/schema';
-import { eq } from 'drizzle-orm';
+import { promptsService } from '@/lib/services';
+import { handleApiError, notFound } from '@/lib/api/errors';
 
-export async function GET(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+type RouteContext = { params: Promise<{ id: string }> };
+
+// GET /api/prompts/[id] - Get a prompt with its style, subject and guidance
+export async function GET(_request: NextRequest, { params }: RouteContext) {
   try {
     const { id } = await params;
-    const prompt = await db.query.prompts.findFirst({
-      where: eq(prompts.id, id),
-      with: {
-        style: true,
-      },
-    });
-
-    if (!prompt) {
-      return NextResponse.json(
-        { error: 'Prompt not found' },
-        { status: 404 }
-      );
-    }
+    const prompt = await promptsService.getPromptWithRelations(id);
+    if (!prompt) throw notFound('Prompt');
 
     return NextResponse.json({ prompt });
   } catch (error) {
-    console.error('Error fetching prompt:', error);
-    return NextResponse.json(
-      { error: 'Failed to fetch prompt' },
-      { status: 500 }
-    );
+    return handleApiError(error, 'fetch prompt');
   }
 }
 
-export async function DELETE(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+// DELETE /api/prompts/[id] - Delete a prompt and its guidance associations
+export async function DELETE(_request: NextRequest, { params }: RouteContext) {
   try {
     const { id } = await params;
-    await db.delete(prompts).where(eq(prompts.id, id));
+    await promptsService.deletePrompt(id);
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error('Error deleting prompt:', error);
-    return NextResponse.json(
-      { error: 'Failed to delete prompt' },
-      { status: 500 }
-    );
+    return handleApiError(error, 'delete prompt');
   }
 }

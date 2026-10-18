@@ -9,29 +9,14 @@ import { Badge } from "@/components/ui/badge";
 import { Loader2, ArrowLeft, Edit, Trash2 } from "lucide-react";
 import { AIAssistButton } from "@/components/agents/ai-assist-button";
 import { useAIModelSettings } from "@/components/providers/ai-model-settings-provider";
+import { api, errorMessage } from "@/lib/api-client";
+import type { ApiPrompt } from "@/lib/types/api";
 
-interface Prompt {
-  id: string;
-  name: string;
-  template: string;
-  variables: Record<string, unknown>;
-  tags: string[];
-  createdAt: string;
-  style: {
-    id: string;
-    name: string;
-  } | null;
-  subject: {
-    id: string;
-    name: string;
-    isTransparent: boolean;
-  } | null;
-}
 
 export default function PromptDetailPage({ params }: { params: { id: string } }) {
   const router = useRouter();
   const { toRequestConfig } = useAIModelSettings();
-  const [prompt, setPrompt] = useState<Prompt | null>(null);
+  const [prompt, setPrompt] = useState<ApiPrompt | null>(null);
   const [loading, setLoading] = useState(true);
   const [deleting, setDeleting] = useState(false);
   const [variations, setVariations] = useState<string[]>([]);
@@ -42,12 +27,8 @@ export default function PromptDetailPage({ params }: { params: { id: string } })
 
     async function load() {
       try {
-        const response = await fetch(`/api/prompts/${params.id}`);
-        if (!response.ok) {
-          throw new Error("Failed to fetch prompt");
-        }
-        const data = await response.json();
-        if (!cancelled) setPrompt(data.prompt);
+        const data = await api.prompts.get(params.id);
+        if (!cancelled) setPrompt(data);
       } catch (error) {
         if (cancelled) return;
         console.error("Error fetching prompt:", error);
@@ -71,14 +52,7 @@ export default function PromptDetailPage({ params }: { params: { id: string } })
 
     setDeleting(true);
     try {
-      const response = await fetch(`/api/prompts/${params.id}`, {
-        method: "DELETE",
-      });
-
-      if (!response.ok) {
-        throw new Error("Failed to delete prompt");
-      }
-
+      await api.prompts.remove(params.id);
       router.push("/prompts");
     } catch (error) {
       console.error("Error deleting prompt:", error);
@@ -91,26 +65,16 @@ export default function PromptDetailPage({ params }: { params: { id: string } })
   const handleGenerateVariations = async (context: string) => {
     setLoadingVariations(true);
     try {
-      const response = await fetch("/api/agents/suggest-variations", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          basePrompt: prompt!.template,
-          context,
-          isTransparent: prompt?.subject?.isTransparent ?? true,
-          aiConfig: toRequestConfig(),
-        }),
+      const newVariations = await api.agents.suggestVariations({
+        basePrompt: prompt!.promptText ?? "",
+        context,
+        isTransparent: prompt?.subject?.isTransparent ?? true,
+        aiConfig: toRequestConfig(),
       });
-
-      if (!response.ok) {
-        throw new Error("Failed to generate variations");
-      }
-
-      const { variations: newVariations } = await response.json();
       setVariations(newVariations);
     } catch (error) {
       console.error("Error generating variations:", error);
-      toast.error("Failed to generate variations");
+      toast.error(errorMessage(error, "Failed to generate variations"));
     } finally {
       setLoadingVariations(false);
     }
@@ -163,45 +127,22 @@ export default function PromptDetailPage({ params }: { params: { id: string } })
 
       <Card>
         <CardHeader>
-          <CardTitle>Template</CardTitle>
-          <CardDescription>The prompt template with variables</CardDescription>
+          <CardTitle>Prompt</CardTitle>
+          <CardDescription>The composed prompt text</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
             <div className="p-4 bg-muted rounded-lg font-mono text-sm whitespace-pre-wrap">
-              {prompt.template}
+              {prompt.promptText}
             </div>
             <Button
               variant="outline"
               size="sm"
-              onClick={() => copyToClipboard(prompt.template)}
+              onClick={() => copyToClipboard(prompt.promptText ?? "")}
             >
-              Copy Template
+              Copy Prompt
             </Button>
           </div>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Variables</CardTitle>
-          <CardDescription>Detected template variables</CardDescription>
-        </CardHeader>
-        <CardContent>
-          {Object.keys(prompt.variables).length === 0 ? (
-            <p className="text-muted-foreground">No variables in this template</p>
-          ) : (
-            <div className="flex flex-wrap gap-2">
-              {Object.keys(prompt.variables).map((varName) => (
-                <div
-                  key={varName}
-                  className="px-3 py-1 bg-primary/10 text-primary rounded-md text-sm font-mono"
-                >
-                  {"{" + varName + "}"}
-                </div>
-              ))}
-            </div>
-          )}
         </CardContent>
       </Card>
 
@@ -216,13 +157,19 @@ export default function PromptDetailPage({ params }: { params: { id: string } })
               <Badge variant="outline">{prompt.style.name}</Badge>
             </div>
           )}
-          {prompt.tags.length > 0 && (
+          {prompt.subject && (
             <div>
-              <div className="text-sm font-medium mb-2">Tags</div>
+              <div className="text-sm font-medium mb-2">Subject</div>
+              <Badge variant="outline">{prompt.subject.name}</Badge>
+            </div>
+          )}
+          {prompt.promptGuidance.length > 0 && (
+            <div>
+              <div className="text-sm font-medium mb-2">Guidance</div>
               <div className="flex flex-wrap gap-2">
-                {prompt.tags.map((tag) => (
-                  <Badge key={tag} variant="secondary">
-                    {tag}
+                {prompt.promptGuidance.map(({ guidance }) => guidance && (
+                  <Badge key={guidance.id} variant="secondary">
+                    {guidance.name}
                   </Badge>
                 ))}
               </div>

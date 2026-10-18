@@ -16,26 +16,13 @@ import { AIAssistButton } from "@/components/agents/ai-assist-button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { useAIModelSettings } from "@/components/providers/ai-model-settings-provider";
+import { api, errorMessage } from "@/lib/api-client";
+import type { ApiSubjectCategory, ApiSubjectSummary } from "@/lib/types/api";
 
-interface Category {
-  id: string;
-  name: string;
-  color: string | null;
-  description: string | null;
-}
+type Category = ApiSubjectCategory;
+/** A subject with its category attached for display */
+type Subject = ApiSubjectSummary & { category?: Category };
 
-interface Subject {
-  id: string;
-  name: string;
-  version: number;
-  description: string | null;
-  isTransparent: boolean;
-  isFavorite: boolean;
-  categoryId: string | null;
-  createdAt: string;
-  category?: Category;
-  previews?: { id: string }[];
-}
 
 export default function SubjectsPage() {
   const { toRequestConfig } = useAIModelSettings();
@@ -66,22 +53,18 @@ export default function SubjectsPage() {
     async function load() {
       setLoading(true);
       try {
-        const [subjectsRes, categoriesRes] = await Promise.all([
-          fetch('/api/subjects'),
-          fetch('/api/subject-categories')
+        const [subjectsData, cats] = await Promise.all([
+          api.subjects.list(),
+          api.subjectCategories.list(),
         ]);
-
-        const subjectsData = await subjectsRes.json();
-        const categoriesData = await categoriesRes.json();
         if (cancelled) return;
 
-        const cats = categoriesData.categories || [];
         setCategories(cats);
 
         // Map categories to subjects for display
-        const subjectsWithCats = (subjectsData.subjects || []).map((s: Subject) => ({
+        const subjectsWithCats = subjectsData.map((s) => ({
           ...s,
-          category: cats.find((c: Category) => c.id === s.categoryId)
+          category: cats.find((c) => c.id === s.categoryId)
         }));
 
         setSubjects(subjectsWithCats);
@@ -101,9 +84,8 @@ export default function SubjectsPage() {
 
   const fetchSubjects = async () => {
     try {
-      const response = await fetch('/api/subjects');
-      const data = await response.json();
-      const updatedSubjects = (data.subjects || []).map((s: Subject) => ({
+      const data = await api.subjects.list();
+      const updatedSubjects = data.map((s) => ({
         ...s,
         category: categories.find(c => c.id === s.categoryId)
       }));
@@ -117,28 +99,22 @@ export default function SubjectsPage() {
     e.preventDefault();
     setSubmitting(true);
     try {
-      const response = await fetch('/api/subjects', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name: newName,
-          description: newDescription,
-          isTransparent,
-          categoryId: selectedCategoryId === "none" ? null : selectedCategoryId
-        }),
+      await api.subjects.create({
+        name: newName,
+        description: newDescription,
+        isTransparent,
+        categoryId: selectedCategoryId === "none" ? null : selectedCategoryId
       });
-      if (response.ok) {
-        setNewName("");
-        setNewDescription("");
-        setIsTransparent(true);
-        setSelectedCategoryId("none");
-        setShowNewForm(false);
-        toast.success("Subject created successfully");
-        fetchSubjects();
-      }
+      setNewName("");
+      setNewDescription("");
+      setIsTransparent(true);
+      setSelectedCategoryId("none");
+      setShowNewForm(false);
+      toast.success("Subject created successfully");
+      fetchSubjects();
     } catch (error) {
       console.error('Error creating subject:', error);
-      toast.error("Failed to create subject");
+      toast.error(errorMessage(error, "Failed to create subject"));
     } finally {
       setSubmitting(false);
     }
@@ -150,26 +126,18 @@ export default function SubjectsPage() {
 
     setCatSubmitting(true);
     try {
-      const response = await fetch('/api/subject-categories', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name: newCatName,
-          color: newCatColor,
-          description: newCatDescription
-        }),
+      const category = await api.subjectCategories.create({
+        name: newCatName,
+        color: newCatColor,
+        description: newCatDescription
       });
-
-      if (response.ok) {
-        const data = await response.json();
-        setCategories([...categories, data.category]);
-        setNewCatName("");
-        setNewCatDescription("");
-        toast.success("Category created");
-      }
+      setCategories((prev) => [...prev, category]);
+      setNewCatName("");
+      setNewCatDescription("");
+      toast.success("Category created");
     } catch (error) {
       console.error('Error creating category:', error);
-      toast.error("Failed to create category");
+      toast.error(errorMessage(error, "Failed to create category"));
     } finally {
       setCatSubmitting(false);
     }
@@ -179,35 +147,22 @@ export default function SubjectsPage() {
     if (!confirm("Are you sure? Subjects in this category will become uncategorized.")) return;
 
     try {
-      const response = await fetch(`/api/subject-categories/${id}`, {
-        method: 'DELETE'
-      });
-
-      if (response.ok) {
-        setCategories(categories.filter(c => c.id !== id));
-        toast.success("Category deleted");
-        fetchSubjects();
-      }
+      await api.subjectCategories.remove(id);
+      setCategories((prev) => prev.filter(c => c.id !== id));
+      toast.success("Category deleted");
+      fetchSubjects();
     } catch (error) {
       console.error('Error deleting category:', error);
-      toast.error("Failed to delete category");
+      toast.error(errorMessage(error, "Failed to delete category"));
     }
   };
 
   const handleAiAssist = async (concept: string) => {
     try {
-      const response = await fetch('/api/agents/create-subject', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ concept, aiConfig: toRequestConfig() }),
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        if (data.subject) {
-          setNewName(data.subject.name);
-          setNewDescription(data.subject.description);
-        }
+      const subject = await api.agents.createSubject(concept, toRequestConfig());
+      if (subject) {
+        setNewName(subject.name);
+        setNewDescription(subject.description);
       }
     } catch (error) {
       console.error('Error with AI assist:', error);
@@ -218,18 +173,13 @@ export default function SubjectsPage() {
   const handleToggleFavorite = async (e: React.MouseEvent, subjectId: string) => {
     e.stopPropagation();
     try {
-      const response = await fetch(`/api/subjects/${subjectId}/favorite`, {
-        method: 'PATCH',
-      });
-      if (response.ok) {
-        const data = await response.json();
-        setSubjects(subjects.map(s =>
-          s.id === subjectId ? { ...s, isFavorite: data.subject.isFavorite } : s
-        ));
-      }
+      const updated = await api.subjects.toggleFavorite(subjectId);
+      setSubjects((prev) => prev.map(s =>
+        s.id === subjectId ? { ...s, isFavorite: updated.isFavorite } : s
+      ));
     } catch (error) {
       console.error('Error toggling favorite:', error);
-      toast.error("Failed to update favorite");
+      toast.error(errorMessage(error, "Failed to update favorite"));
     }
   };
 
@@ -242,19 +192,12 @@ export default function SubjectsPage() {
     }
 
     try {
-      const response = await fetch(`/api/subjects/${subjectId}`, {
-        method: 'DELETE',
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to delete subject');
-      }
-
+      await api.subjects.remove(subjectId);
       setSubjects((prev) => prev.filter((s) => s.id !== subjectId));
       toast.success('Subject deleted');
     } catch (error) {
       console.error('Error deleting subject:', error);
-      toast.error('Failed to delete subject');
+      toast.error(errorMessage(error, 'Failed to delete subject'));
     }
   };
 

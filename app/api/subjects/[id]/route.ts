@@ -8,7 +8,7 @@ export async function GET(
 ) {
   try {
     const { id } = await params;
-    const subject = await subjectsService.findById(id);
+    const subject = await subjectsService.getSubjectWithLineage(id);
 
     if (!subject) {
       return NextResponse.json(

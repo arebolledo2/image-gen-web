@@ -10,7 +10,6 @@ const LEGACY_DB_ROUTES = [
   "app/api/agents/create-prompt/route.ts",
   "app/api/audio-batch-prompts/[[]id[]]/route.ts",
   "app/api/batch-prompts/[[]id[]]/route.ts",
-  "app/api/prompts/[[]id[]]/route.ts",
   "app/api/prompts/route.ts",
   "app/api/subjects/[[]id[]]/version/route.ts",
 ];

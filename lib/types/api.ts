@@ -7,7 +7,7 @@
  *
  * Type-only imports: nothing from the schema (or drizzle) ends up in the client bundle.
  */
-import type { Guidance, Style } from '@/lib/db/schema';
+import type { Guidance, Prompt, Style, Subject, SubjectCategory } from '@/lib/db/schema';
 
 /** What a value looks like after `JSON.stringify` → `JSON.parse`. */
 export type Serialized<T> = T extends Date
@@ -69,3 +69,38 @@ export const isStructuredPalette = (palette: ApiStyle['palette']): palette is St
 
 export const isStructuredCues = (cues: ApiStyle['renderingCues']): cues is StyleRenderingCues =>
   !Array.isArray(cues);
+
+// -----------------------------------------------------------------------------
+// Subjects
+// -----------------------------------------------------------------------------
+
+export type ApiSubjectCategory = Serialized<SubjectCategory>;
+export type ApiSubject = Serialized<Subject>;
+
+/** GET /api/subjects (latest version of each family) */
+export type ApiSubjectSummary = ApiSubject & { versionCount: number; previews: { id: string }[] };
+
+/** GET /api/subjects/[id] */
+export type ApiSubjectDetail = ApiSubject & {
+  parentSubject: ApiSubject | null;
+  childSubjects: ApiSubject[];
+};
+
+/** GET /api/subjects/[id]/images */
+export interface ApiSubjectImage {
+  id: string;
+  fileName: string;
+  createdAt: string;
+  generation: { batch: { id: string; name: string } };
+}
+
+// -----------------------------------------------------------------------------
+// Prompts
+// -----------------------------------------------------------------------------
+
+/** GET /api/prompts and GET /api/prompts/[id] */
+export type ApiPrompt = Serialized<Prompt> & {
+  style: ApiStyle | null;
+  subject: ApiSubject | null;
+  promptGuidance: { guidance: ApiGuidance | null }[];
+};

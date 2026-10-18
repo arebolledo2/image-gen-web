@@ -13,12 +13,9 @@ import { useAIModelSettings } from "@/components/providers/ai-model-settings-pro
 import { toast } from "sonner";
 import { ConstructModeSelector, type StyleEntity, type SubjectEntity, type GuidanceEntity } from "@/components/batch/construct-mode-selector";
 import { BatchDefaultsForm } from "@/components/batch/batch-defaults-form";
+import { api, errorMessage } from "@/lib/api-client";
+import type { ApiSubjectCategory } from "@/lib/types/api";
 
-interface Category {
-  id: string;
-  name: string;
-  color: string | null;
-}
 
 interface BatchPrompt {
   promptText: string;
@@ -37,7 +34,7 @@ export default function NewBatchPage() {
 
   const [styles, setStyles] = useState<StyleEntity[]>([]);
   const [subjects, setSubjects] = useState<SubjectEntity[]>([]);
-  const [categories, setCategories] = useState<Category[]>([]);
+  const [categories, setCategories] = useState<ApiSubjectCategory[]>([]);
   const [guidanceList, setGuidanceList] = useState<GuidanceEntity[]>([]);
   const [filterCategoryId, setFilterCategoryId] = useState<string>("all");
   const [stylesFavoritesOnly, setStylesFavoritesOnly] = useState(false);
@@ -74,23 +71,17 @@ export default function NewBatchPage() {
 
     async function load() {
       try {
-        const [stylesRes, subjectsRes, categoriesRes, guidanceRes] = await Promise.all([
-          fetch('/api/styles'),
-          fetch('/api/subjects'),
-          fetch('/api/subject-categories'),
-          fetch('/api/guidance'),
-        ]);
         const [stylesData, subjectsData, categoriesData, guidanceData] = await Promise.all([
-          stylesRes.json(),
-          subjectsRes.json(),
-          categoriesRes.json(),
-          guidanceRes.json(),
+          api.styles.list(),
+          api.subjects.list(),
+          api.subjectCategories.list(),
+          api.guidance.list(),
         ]);
         if (cancelled) return;
-        setStyles(stylesData.styles || []);
-        setSubjects(subjectsData.subjects || []);
-        setCategories(categoriesData.categories || []);
-        setGuidanceList(guidanceData.guidance || []);
+        setStyles(stylesData);
+        setSubjects(subjectsData);
+        setCategories(categoriesData);
+        setGuidanceList(guidanceData);
       } catch (error) {
         console.error('Error fetching data:', error);
       } finally {
@@ -122,18 +113,13 @@ export default function NewBatchPage() {
     try {
       const promises = selectedSubjectIds.map(async (subId) => {
         const subject = subjects.find(s => s.id === subId);
-        const response = await fetch('/api/agents/compose-prompt', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            styleId: omitStyle ? undefined : styleId,
-            subjectId: subId,
-            guidanceIds: selectedGuidanceIds,
-            promptStyle,
-            aiConfig: toRequestConfig(),
-          })
+        const data = await api.agents.composePrompt({
+          styleId: omitStyle ? undefined : styleId,
+          subjectId: subId,
+          guidanceIds: selectedGuidanceIds,
+          promptStyle,
+          aiConfig: toRequestConfig(),
         });
-        const data = await response.json();
         return {
           subjectName: subject?.name || 'Unknown',
           promptText: data.promptText,
@@ -175,20 +161,13 @@ export default function NewBatchPage() {
 
   const handleAdjustPreview = async (index: number, suggestion: string) => {
     const preview = previewPrompts[index];
-    const response = await fetch('/api/agents/adjust-prompt', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        basePrompt: preview.promptText,
-        suggestion,
-        promptStyle,
-        aiConfig: toRequestConfig(),
-      })
+    const promptText = await api.agents.adjustPrompt({
+      basePrompt: preview.promptText,
+      suggestion,
+      promptStyle,
+      aiConfig: toRequestConfig(),
     });
-
-    if (!response.ok) throw new Error('Failed to adjust prompt');
-    const data = await response.json();
-    handleEditPreview(index, data.promptText);
+    handleEditPreview(index, promptText);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -196,31 +175,21 @@ export default function NewBatchPage() {
     setLoading(true);
 
     try {
-      const response = await fetch('/api/batches', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name,
-          description,
-          provider,
-          defaults: {
-            count: defaultCount,
-            resolution: resolution,
-          },
-          prompts: prompts,
-        }),
+      const batch = await api.batches.create({
+        name,
+        description,
+        provider,
+        defaults: {
+          count: defaultCount,
+          resolution: resolution,
+        },
+        prompts: prompts,
       });
-
-      if (!response.ok) {
-        throw new Error('Failed to create batch');
-      }
-
-      const data = await response.json();
       toast.success('Batch created successfully! Generations started.');
-      router.push(`/batches/${data.batch.id}`);
+      router.push(`/batches/${batch.id}`);
     } catch (error) {
       console.error('Error creating batch:', error);
-      toast.error('Failed to create batch');
+      toast.error(errorMessage(error, 'Failed to create batch'));
     } finally {
       setLoading(false);
     }

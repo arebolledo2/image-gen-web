@@ -13,44 +13,13 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { api } from "@/lib/api-client";
+import type { ApiSubjectCategory, ApiSubjectDetail, ApiSubjectImage } from "@/lib/types/api";
 
-interface Category {
-  id: string;
-  name: string;
-  color: string | null;
-}
+type Category = ApiSubjectCategory;
+/** A subject with its category attached for display */
+type Subject = ApiSubjectDetail & { category?: Category };
 
-interface Subject {
-  id: string;
-  name: string;
-  version: number;
-  description: string | null;
-  isTransparent: boolean;
-  categoryId: string | null;
-  createdAt: string;
-  category?: Category;
-  parentSubject?: {
-    id: string;
-    name: string;
-  } | null;
-  childSubjects?: {
-    id: string;
-    name: string;
-    version: number;
-  }[];
-}
-
-interface SubjectImage {
-  id: string;
-  fileName: string;
-  createdAt: string;
-  generation: {
-    batch: {
-      id: string;
-      name: string;
-    };
-  };
-}
 
 export default function SubjectDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
@@ -66,29 +35,21 @@ export default function SubjectDetailPage({ params }: { params: Promise<{ id: st
   const [editDescription, setEditDescription] = useState("");
   const [editIsTransparent, setEditIsTransparent] = useState(true);
   const [selectedCategoryId, setSelectedCategoryId] = useState<string>("none");
-  const [images, setImages] = useState<SubjectImage[]>([]);
+  const [images, setImages] = useState<ApiSubjectImage[]>([]);
   const [loadingImages, setLoadingImages] = useState(true);
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [subjectRes, categoriesRes] = await Promise.all([
-          fetch(`/api/subjects/${id}`),
-          fetch('/api/subject-categories')
+        const [sub, cats] = await Promise.all([
+          api.subjects.get(id),
+          api.subjectCategories.list(),
         ]);
-
-        if (!subjectRes.ok) throw new Error("Failed to fetch subject");
-
-        const subjectData = await subjectRes.json();
-        const categoriesData = await categoriesRes.json();
-
-        const sub = subjectData.subject;
-        const cats = categoriesData.categories || [];
 
         setCategories(cats);
         setSubject({
           ...sub,
-          category: cats.find((c: Category) => c.id === sub.categoryId)
+          category: cats.find((c) => c.id === sub.categoryId)
         });
 
         setEditName(sub.name);
@@ -106,11 +67,7 @@ export default function SubjectDetailPage({ params }: { params: Promise<{ id: st
 
     const fetchImages = async () => {
       try {
-        const response = await fetch(`/api/subjects/${id}/images`);
-        if (response.ok) {
-          const data = await response.json();
-          setImages(data.images || []);
-        }
+        setImages(await api.subjects.images(id));
       } catch (error) {
         console.error("Error fetching subject images:", error);
       } finally {
@@ -129,14 +86,7 @@ export default function SubjectDetailPage({ params }: { params: Promise<{ id: st
 
     setDeleting(true);
     try {
-      const response = await fetch(`/api/subjects/${id}`, {
-        method: "DELETE",
-      });
-
-      if (!response.ok) {
-        throw new Error("Failed to delete subject");
-      }
-
+      await api.subjects.remove(id);
       router.push("/subjects");
     } catch (error) {
       console.error("Error deleting subject:", error);
@@ -149,16 +99,8 @@ export default function SubjectDetailPage({ params }: { params: Promise<{ id: st
   const handleCreateVersion = async () => {
     setCreatingVersion(true);
     try {
-      const response = await fetch(`/api/subjects/${id}/version`, {
-        method: "POST",
-      });
-
-      if (!response.ok) {
-        throw new Error("Failed to create version");
-      }
-
-      const data = await response.json();
-      router.push(`/subjects/${data.subject.id}`);
+      const created = await api.subjects.createVersion(id);
+      router.push(`/subjects/${created.id}`);
     } catch (error) {
       console.error("Error creating version:", error);
       toast.error("Failed to create version");
@@ -170,24 +112,15 @@ export default function SubjectDetailPage({ params }: { params: Promise<{ id: st
   const handleSave = async () => {
     setSaving(true);
     try {
-      const response = await fetch(`/api/subjects/${id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: editName,
-          description: editDescription,
-          isTransparent: editIsTransparent,
-          categoryId: selectedCategoryId === "none" ? null : selectedCategoryId
-        }),
+      const updatedSub = await api.subjects.update(id, {
+        name: editName,
+        description: editDescription,
+        isTransparent: editIsTransparent,
+        categoryId: selectedCategoryId === "none" ? null : selectedCategoryId
       });
-
-      if (!response.ok) {
-        throw new Error("Failed to save changes");
-      }
-
-      const data = await response.json();
-      const updatedSub = data.subject;
-      setSubject({
+      // The PATCH response has no lineage, so keep the parent/children we already loaded
+      setSubject((prev) => prev && {
+        ...prev,
         ...updatedSub,
         category: categories.find(c => c.id === updatedSub.categoryId)
       });

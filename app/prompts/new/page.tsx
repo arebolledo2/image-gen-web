@@ -11,19 +11,17 @@ import { Badge } from "@/components/ui/badge";
 import { Loader2, Box, Palette, Compass } from "lucide-react";
 import { useSettings } from "@/components/providers/settings-provider";
 import { toast } from "sonner";
+import { api, errorMessage } from "@/lib/api-client";
+import type { ApiGuidance, ApiStyleSummary, ApiSubjectSummary } from "@/lib/types/api";
 
-interface Entity {
-  id: string;
-  name: string;
-}
 
 export default function NewPromptPage() {
   const router = useRouter();
   const { promptStyle } = useSettings();
   const [loading, setLoading] = useState(false);
-  const [styles, setStyles] = useState<Entity[]>([]);
-  const [subjects, setSubjects] = useState<Entity[]>([]);
-  const [guidanceList, setGuidanceList] = useState<Entity[]>([]);
+  const [styles, setStyles] = useState<ApiStyleSummary[]>([]);
+  const [subjects, setSubjects] = useState<ApiSubjectSummary[]>([]);
+  const [guidanceList, setGuidanceList] = useState<ApiGuidance[]>([]);
 
   const [name, setName] = useState("");
   const [styleId, setStyleId] = useState("");
@@ -35,20 +33,15 @@ export default function NewPromptPage() {
 
     async function load() {
       try {
-        const [stylesRes, subjectsRes, guidanceRes] = await Promise.all([
-          fetch('/api/styles'),
-          fetch('/api/subjects'),
-          fetch('/api/guidance'),
-        ]);
         const [stylesData, subjectsData, guidanceData] = await Promise.all([
-          stylesRes.json(),
-          subjectsRes.json(),
-          guidanceRes.json(),
+          api.styles.list(),
+          api.subjects.list(),
+          api.guidance.list(),
         ]);
         if (cancelled) return;
-        setStyles(stylesData.styles || []);
-        setSubjects(subjectsData.subjects || []);
-        setGuidanceList(guidanceData.guidance || []);
+        setStyles(stylesData);
+        setSubjects(subjectsData);
+        setGuidanceList(guidanceData);
       } catch (error) {
         console.error('Error fetching data:', error);
       }
@@ -71,28 +64,18 @@ export default function NewPromptPage() {
     setLoading(true);
 
     try {
-      const response = await fetch('/api/prompts', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name,
-          styleId,
-          subjectId,
-          guidanceIds: selectedGuidanceIds,
-          promptStyle,
-        }),
+      await api.prompts.create({
+        name,
+        styleId,
+        subjectId,
+        guidanceIds: selectedGuidanceIds,
+        promptStyle,
       });
-
-      if (!response.ok) {
-        throw new Error('Failed to create prompt');
-      }
-
-      await response.json();
       toast.success('Prompt preset created successfully!');
       router.push(`/prompts`); // Redirect to list as detail page might need update too
     } catch (error) {
       console.error('Error creating prompt:', error);
-      toast.error('Failed to create prompt');
+      toast.error(errorMessage(error, 'Failed to create prompt'));
     } finally {
       setLoading(false);
     }

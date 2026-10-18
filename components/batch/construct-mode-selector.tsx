@@ -7,44 +7,20 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Palette, Box, Compass, EyeOff, Star, ChevronDown } from "lucide-react";
+import {
+  isStructuredCues,
+  isStructuredPalette,
+  type ApiGuidance,
+  type ApiStyleSummary,
+  type ApiSubjectCategory,
+  type ApiSubjectSummary,
+} from "@/lib/types/api";
 
-export interface StyleEntity {
-  id: string;
-  name: string;
-  isFavorite?: boolean;
-  description?: string | null;
-  palette?: {
-    primary?: string[];
-    accent?: string[];
-    background?: string;
-  } | null;
-  renderingCues?: {
-    materials?: string[];
-    effects?: string[];
-    finish?: string;
-  } | null;
-}
+export type StyleEntity = ApiStyleSummary;
+export type SubjectEntity = ApiSubjectSummary;
+export type GuidanceEntity = ApiGuidance;
+type Category = ApiSubjectCategory;
 
-export interface SubjectEntity {
-  id: string;
-  name: string;
-  isFavorite: boolean;
-  isTransparent: boolean;
-  categoryId: string | null;
-  description?: string | null;
-}
-
-export interface GuidanceEntity {
-  id: string;
-  name: string;
-  description: string;
-}
-
-interface Category {
-  id: string;
-  name: string;
-  color: string | null;
-}
 
 interface ConstructModeSelectorProps {
   styles: StyleEntity[];
@@ -68,7 +44,10 @@ interface ConstructModeSelectorProps {
 }
 
 function StyleDetailPanel({ style }: { style: StyleEntity }) {
-  const { description, palette, renderingCues } = style;
+  const { description } = style;
+  // Older styles stored plain string arrays; only structured values have something to show here
+  const palette = isStructuredPalette(style.palette) ? style.palette : null;
+  const renderingCues = isStructuredCues(style.renderingCues) ? style.renderingCues : null;
   const hasContent = description || palette || renderingCues;
   if (!hasContent) return null;
 

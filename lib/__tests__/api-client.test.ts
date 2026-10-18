@@ -83,6 +83,38 @@ describe('api resources', () => {
   });
 });
 
+describe('subjects, categories, prompts and agents', () => {
+  it('sends null categoryId to mean uncategorized', async () => {
+    const fetchMock = mockFetch({ subject: { id: 's1' } });
+    await api.subjects.update('s1', { categoryId: null });
+
+    expect(fetchMock.mock.calls[0][1]).toMatchObject({ method: 'PATCH', body: '{"categoryId":null}' });
+  });
+
+  it('unwraps categories and prompts envelopes', async () => {
+    mockFetch({ categories: [{ id: 'c1' }] });
+    expect(await api.subjectCategories.list()).toEqual([{ id: 'c1' }]);
+
+    mockFetch({ prompts: [{ id: 'p1' }] });
+    expect(await api.prompts.list()).toEqual([{ id: 'p1' }]);
+  });
+
+  it('returns the full compose-prompt response so callers get promptId too', async () => {
+    mockFetch({ promptText: 'a robot', promptId: 'p9' });
+    const result = await api.agents.composePrompt({ subjectId: 's', guidanceIds: [], aiConfig: {} });
+
+    expect(result).toEqual({ promptText: 'a robot', promptId: 'p9' });
+  });
+
+  it('surfaces agent errors with the server message', async () => {
+    mockFetch({ error: 'Model unavailable' }, { status: 503 });
+    await expect(api.agents.adjustPrompt({ basePrompt: 'x', suggestion: 'y', aiConfig: {} })).rejects.toMatchObject({
+      message: 'Model unavailable',
+      status: 503,
+    });
+  });
+});
+
 describe('errorMessage', () => {
   it('returns the message of an Error and a fallback otherwise', () => {
     expect(errorMessage(new Error('boom'))).toBe('boom');

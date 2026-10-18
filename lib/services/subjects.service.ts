@@ -3,6 +3,9 @@ import { subjects, Subject, NewSubject, images, generations, batchPrompts, promp
 import { eq, desc, and, exists } from 'drizzle-orm';
 import { BaseService } from './base.service';
 
+/** A subject with its family size and up to three preview image ids. */
+export type SubjectSummary = Subject & { versionCount: number; previews: { id: string }[] };
+
 /**
  * Service for managing subjects with versioning support.
  *
@@ -20,7 +23,7 @@ export class SubjectsService extends BaseService<typeof subjects, Subject, NewSu
    * @param options - Filter options
    * @returns Array of latest subject versions with their version count
    */
-  async getLatestSubjects(options: { categoryId?: string; favoritesOnly?: boolean } = {}): Promise<(Subject & { versionCount: number })[]> {
+  async getLatestSubjects(options: { categoryId?: string; favoritesOnly?: boolean } = {}): Promise<SubjectSummary[]> {
     const { categoryId, favoritesOnly } = options;
 
     // Build where conditions

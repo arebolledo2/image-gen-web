@@ -6,27 +6,12 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Plus, Loader2, FileText, Box, Palette, Compass } from "lucide-react";
+import { api } from "@/lib/api-client";
+import type { ApiPrompt } from "@/lib/types/api";
 
-interface Prompt {
-  id: string;
-  name: string;
-  promptText: string;
-  createdAt: string;
-  style: {
-    name: string;
-  };
-  subject: {
-    name: string;
-  };
-  promptGuidance: Array<{
-    guidance: {
-      name: string;
-    }
-  }>;
-}
 
 export default function PromptsPage() {
-  const [prompts, setPrompts] = useState<Prompt[]>([]);
+  const [prompts, setPrompts] = useState<ApiPrompt[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -34,9 +19,8 @@ export default function PromptsPage() {
 
     async function load() {
       try {
-        const response = await fetch('/api/prompts');
-        const data = await response.json();
-        if (!cancelled) setPrompts(data.prompts || []);
+        const data = await api.prompts.list();
+        if (!cancelled) setPrompts(data);
       } catch (error) {
         console.error('Error fetching prompts:', error);
       } finally {
@@ -112,18 +96,18 @@ export default function PromptsPage() {
                 <div className="flex items-center gap-4 flex-wrap">
                   <div className="flex items-center gap-1 text-sm bg-muted px-2 py-1 rounded">
                     <Palette className="h-3 w-3" />
-                    <span className="font-medium">Style:</span> {prompt.style.name}
+                    <span className="font-medium">Style:</span> {prompt.style?.name ?? 'Unknown'}
                   </div>
                   <div className="flex items-center gap-1 text-sm bg-muted px-2 py-1 rounded">
                     <Box className="h-3 w-3" />
-                    <span className="font-medium">Subject:</span> {prompt.subject.name}
+                    <span className="font-medium">Subject:</span> {prompt.subject?.name ?? 'Unknown'}
                   </div>
                   {prompt.promptGuidance.length > 0 && (
                     <div className="flex items-center gap-1 flex-wrap">
                         <Compass className="h-3 w-3 text-muted-foreground" />
                         {prompt.promptGuidance.map((pg, i) => (
                             <Badge key={i} variant="secondary" className="text-[10px]">
-                                {pg.guidance.name}
+                                {pg.guidance?.name}
                             </Badge>
                         ))}
                     </div>

@@ -8,13 +8,20 @@
  * const guidance = await api.guidance.list();
  * try { await api.guidance.remove(id) } catch (e) { toast.error(errorMessage(e)) }
  */
+import type { AIRequestConfigInput } from '@/lib/ai/config';
 import type {
   ApiGuidance,
   ApiGuidanceDetail,
+  ApiPrompt,
   ApiStyle,
   ApiStyleBatch,
   ApiStyleDetail,
   ApiStyleSummary,
+  ApiSubject,
+  ApiSubjectCategory,
+  ApiSubjectDetail,
+  ApiSubjectImage,
+  ApiSubjectSummary,
   StylePalette,
   StyleRenderingCues,
 } from '@/lib/types/api';
@@ -85,6 +92,23 @@ export interface StyleUpdate {
   renderingCues?: StyleRenderingCues;
 }
 
+export interface SubjectInput {
+  name: string;
+  description?: string;
+  isTransparent?: boolean;
+  /** `null` means uncategorized */
+  categoryId?: string | null;
+}
+
+export interface CategoryInput {
+  name: string;
+  color?: string;
+  description?: string;
+}
+
+/** AI model overrides forwarded to agent routes (see `useAIModelSettings().toRequestConfig`). */
+type AiConfig = AIRequestConfigInput;
+
 export const api = {
   guidance: {
     list: async () => (await request<{ guidance: ApiGuidance[] }>('/api/guidance')).guidance,
@@ -97,6 +121,73 @@ export const api = {
     remove: (id: string) => request<{ success: true }>(`/api/guidance/${id}`, { method: 'DELETE' }),
     createVersion: async (id: string) =>
       (await request<{ guidance: ApiGuidance }>(`/api/guidance/${id}/version`, { method: 'POST' })).guidance,
+  },
+
+  subjects: {
+    list: async (options: { categoryId?: string; favoritesOnly?: boolean } = {}) =>
+      (await request<{ subjects: ApiSubjectSummary[] }>('/api/subjects', { query: options })).subjects,
+    get: async (id: string) => (await request<{ subject: ApiSubjectDetail }>(`/api/subjects/${id}`)).subject,
+    create: async (data: SubjectInput) =>
+      (await request<{ subject: ApiSubject }>('/api/subjects', { method: 'POST', body: data })).subject,
+    update: async (id: string, data: Partial<SubjectInput>) =>
+      (await request<{ subject: ApiSubject }>(`/api/subjects/${id}`, { method: 'PATCH', body: data })).subject,
+    remove: (id: string) => request<{ success: true }>(`/api/subjects/${id}`, { method: 'DELETE' }),
+    createVersion: async (id: string) =>
+      (await request<{ subject: ApiSubject }>(`/api/subjects/${id}/version`, { method: 'POST' })).subject,
+    toggleFavorite: async (id: string) =>
+      (await request<{ subject: ApiSubject }>(`/api/subjects/${id}/favorite`, { method: 'PATCH' })).subject,
+    images: async (id: string) =>
+      (await request<{ images: ApiSubjectImage[] }>(`/api/subjects/${id}/images`)).images,
+  },
+
+  subjectCategories: {
+    list: async () =>
+      (await request<{ categories: ApiSubjectCategory[] }>('/api/subject-categories')).categories,
+    create: async (data: CategoryInput) =>
+      (await request<{ category: ApiSubjectCategory }>('/api/subject-categories', { method: 'POST', body: data })).category,
+    remove: (id: string) => request<{ success: true }>(`/api/subject-categories/${id}`, { method: 'DELETE' }),
+  },
+
+  prompts: {
+    list: async () => (await request<{ prompts: ApiPrompt[] }>('/api/prompts')).prompts,
+    get: async (id: string) => (await request<{ prompt: ApiPrompt }>(`/api/prompts/${id}`)).prompt,
+    create: async (data: {
+      name: string;
+      styleId: string;
+      subjectId: string;
+      guidanceIds?: string[];
+      promptStyle?: string;
+    }) => (await request<{ prompt: ApiPrompt }>('/api/prompts', { method: 'POST', body: data })).prompt,
+    remove: (id: string) => request<{ success: true }>(`/api/prompts/${id}`, { method: 'DELETE' }),
+  },
+
+  batches: {
+    create: async (data: {
+      name: string;
+      description?: string;
+      provider: string;
+      defaults?: { count?: number; resolution?: string };
+      prompts: { promptText: string; promptId?: string; overrides?: { count?: number } }[];
+    }) => (await request<{ batch: { id: string } }>('/api/batches', { method: 'POST', body: data })).batch,
+  },
+
+  agents: {
+    createSubject: async (concept: string, aiConfig: AiConfig) =>
+      (await request<{ subject: { name: string; description: string } }>('/api/agents/create-subject', {
+        method: 'POST',
+        body: { concept, aiConfig },
+      })).subject,
+    composePrompt: (data: {
+      styleId?: string;
+      subjectId: string;
+      guidanceIds: string[];
+      promptStyle?: string;
+      aiConfig: AiConfig;
+    }) => request<{ promptText: string; promptId?: string }>('/api/agents/compose-prompt', { method: 'POST', body: data }),
+    adjustPrompt: async (data: { basePrompt: string; suggestion: string; promptStyle?: string; aiConfig: AiConfig }) =>
+      (await request<{ promptText: string }>('/api/agents/adjust-prompt', { method: 'POST', body: data })).promptText,
+    suggestVariations: async (data: { basePrompt: string; context: string; isTransparent: boolean; aiConfig: AiConfig }) =>
+      (await request<{ variations: string[] }>('/api/agents/suggest-variations', { method: 'POST', body: data })).variations,
   },
 
   styles: {
