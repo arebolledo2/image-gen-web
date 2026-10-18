@@ -19,7 +19,7 @@ interface BatchHeaderProps {
     defaults?: {
       count?: number;
       resolution?: string;
-    };
+    } | null;
   };
   executing: boolean;
   creatingVersion: boolean;

@@ -16,14 +16,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Loader2, Sparkles, Check } from "lucide-react";
 import { toast } from "sonner";
 import Image from "next/image";
-
-interface LineageImage {
-    id: string;
-    fileName: string;
-    promptText: string;
-    batchName: string;
-    batchVersion: number;
-}
+import { api } from "@/lib/api-client";
+import type { ApiLineageImage } from "@/lib/types/api";
 
 interface AIAssistButtonWithReferencesProps {
     onGenerate: (description: string, referenceImageIds: string[]) => Promise<void>;
@@ -47,7 +41,7 @@ export function AIAssistButtonWithReferences({
     const [open, setOpen] = useState(false);
     const [input, setInput] = useState("");
     const [loading, setLoading] = useState(false);
-    const [lineageImages, setLineageImages] = useState<LineageImage[]>([]);
+    const [lineageImages, setLineageImages] = useState<ApiLineageImage[]>([]);
     const [loadingImages, setLoadingImages] = useState(false);
     const [selectedImageIds, setSelectedImageIds] = useState<Set<string>>(new Set());
 
@@ -70,10 +64,10 @@ export function AIAssistButtonWithReferences({
         if (!fetchBatchId) return;
 
         let cancelled = false;
-        fetch(`/api/batches/${fetchBatchId}/lineage-images?limit=12`)
-            .then((res) => res.json())
+        api.batches
+            .lineageImages(fetchBatchId, 12)
             .then((data) => {
-                if (!cancelled) setLineageImages(data.images || []);
+                if (!cancelled) setLineageImages(data.images);
             })
             .catch((error) => {
                 console.error("Error fetching lineage images:", error);

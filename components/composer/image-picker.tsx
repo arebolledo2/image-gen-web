@@ -14,12 +14,8 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Loader2, Search, Plus, Heart } from "lucide-react";
 import type { GalleryImage } from "@/components/image-gallery-modal";
-
-interface Category {
-  id: string;
-  name: string;
-  color: string | null;
-}
+import { api } from "@/lib/api-client";
+import type { ApiSubjectCategory } from "@/lib/types/api";
 
 interface ImagePickerProps {
   onAddImage: (image: GalleryImage) => void;
@@ -29,7 +25,7 @@ const LIMIT = 20;
 
 export function ImagePicker({ onAddImage }: ImagePickerProps) {
   const [images, setImages] = useState<GalleryImage[]>([]);
-  const [categories, setCategories] = useState<Category[]>([]);
+  const [categories, setCategories] = useState<ApiSubjectCategory[]>([]);
   const [filterCategoryId, setFilterCategoryId] = useState("all");
   const [favoritesOnly, setFavoritesOnly] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -40,9 +36,9 @@ export function ImagePicker({ onAddImage }: ImagePickerProps) {
   const observerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    fetch("/api/subject-categories")
-      .then((r) => r.json())
-      .then((data) => setCategories(data.categories || []))
+    api.subjectCategories
+      .list()
+      .then(setCategories)
       .catch(console.error);
   }, []);
 
@@ -57,18 +53,14 @@ export function ImagePicker({ onAddImage }: ImagePickerProps) {
       else setFetchingMore(true);
 
       try {
-        const url = new URL("/api/images", window.location.origin);
-        url.searchParams.append("limit", LIMIT.toString());
-        url.searchParams.append("offset", offset.toString());
-        url.searchParams.append("transparentOnly", "true");
-        if (favoritesOnly) url.searchParams.append("favoritesOnly", "true");
-        if (debouncedSearch) url.searchParams.append("search", debouncedSearch);
-        if (filterCategoryId !== "all")
-          url.searchParams.append("categoryId", filterCategoryId);
-
-        const response = await fetch(url.toString());
-        const data = await response.json();
-        const newImages = data.images || [];
+        const { images: newImages } = await api.images.list({
+          limit: LIMIT,
+          offset,
+          transparentOnly: true,
+          favoritesOnly: favoritesOnly || undefined,
+          search: debouncedSearch || undefined,
+          categoryId: filterCategoryId !== "all" ? filterCategoryId : undefined,
+        });
 
         if (isInitial) {
           setImages(newImages);

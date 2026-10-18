@@ -9,34 +9,13 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Plus, Loader2, ImageIcon, Trash2, Star } from "lucide-react";
 import { toast } from "sonner";
-import type { ProviderType } from "@/lib/config/resolution-presets";
+import { api, errorMessage } from "@/lib/api-client";
+import type { ApiBatchSummary, ApiSubjectCategory } from "@/lib/types/api";
 
-interface Batch {
-  id: string;
-  name: string;
-  description: string | null;
-  status: string;
-  provider: ProviderType;
-  createdAt: string;
-  batchPrompts: unknown[];
-  generations: {
-    images: {
-      id: string;
-      fileName: string;
-    }[];
-  }[];
-  isFavorite: boolean;
-}
-
-interface Category {
-  id: string;
-  name: string;
-  color: string | null;
-}
 
 export default function BatchesPage() {
-  const [batches, setBatches] = useState<Batch[]>([]);
-  const [categories, setCategories] = useState<Category[]>([]);
+  const [batches, setBatches] = useState<ApiBatchSummary[]>([]);
+  const [categories, setCategories] = useState<ApiSubjectCategory[]>([]);
   const [filterCategoryId, setFilterCategoryId] = useState<string>("all");
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -49,9 +28,8 @@ export default function BatchesPage() {
 
     async function load() {
       try {
-        const response = await fetch('/api/subject-categories');
-        const data = await response.json();
-        if (!cancelled) setCategories(data.categories || []);
+        const data = await api.subjectCategories.list();
+        if (!cancelled) setCategories(data);
       } catch (error) {
         console.error('Error fetching categories:', error);
       }
@@ -71,25 +49,20 @@ export default function BatchesPage() {
     }
 
     try {
-      const url = new URL('/api/batches', window.location.origin);
-      url.searchParams.append('page', pageNum.toString());
-      url.searchParams.append('limit', '9');
-      if (filterCategoryId !== 'all') {
-        url.searchParams.append('categoryId', filterCategoryId);
-      }
-      if (favoritesOnly) {
-        url.searchParams.append('favoritesOnly', 'true');
-      }
-      const response = await fetch(url.toString());
-      const data = await response.json();
+      const data = await api.batches.list({
+        page: pageNum,
+        limit: 9,
+        categoryId: filterCategoryId !== 'all' ? filterCategoryId : undefined,
+        favoritesOnly: favoritesOnly || undefined,
+      });
 
       if (append) {
-        setBatches((prev) => [...prev, ...(data.batches || [])]);
+        setBatches((prev) => [...prev, ...data.batches]);
       } else {
-        setBatches(data.batches || []);
+        setBatches(data.batches);
       }
 
-      setTotalPages(data.pagination?.totalPages || 1);
+      setTotalPages(data.pagination.totalPages || 1);
       setPage(pageNum);
     } catch (error) {
       console.error('Error fetching batches:', error);
@@ -136,20 +109,14 @@ export default function BatchesPage() {
     }
 
     try {
-      const response = await fetch(`/api/batches/${batchId}`, {
-        method: 'DELETE',
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to delete batch');
-      }
+      await api.batches.remove(batchId);
 
       // Remove from local state
       setBatches((prev) => prev.filter((b) => b.id !== batchId));
       toast.success('Batch deleted');
     } catch (error) {
       console.error('Error deleting batch:', error);
-      toast.error('Failed to delete batch');
+      toast.error(errorMessage(error, 'Failed to delete batch'));
     }
   };
 
@@ -157,18 +124,13 @@ export default function BatchesPage() {
     e.preventDefault();
     e.stopPropagation();
     try {
-      const response = await fetch(`/api/batches/${batchId}/favorite`, {
-        method: 'PATCH',
-      });
-      if (response.ok) {
-        const data = await response.json();
-        setBatches(batches.map(b =>
-          b.id === batchId ? { ...b, isFavorite: data.batch.isFavorite } : b
-        ));
-      }
+      const updated = await api.batches.toggleFavorite(batchId);
+      setBatches((prev) => prev.map(b =>
+        b.id === batchId ? { ...b, isFavorite: updated.isFavorite } : b
+      ));
     } catch (error) {
       console.error('Error toggling favorite:', error);
-      toast.error("Failed to update favorite");
+      toast.error(errorMessage(error, "Failed to update favorite"));
     }
   };
 

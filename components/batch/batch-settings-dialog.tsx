@@ -16,6 +16,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Settings, Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import { api, errorMessage } from "@/lib/api-client";
 import { getResolutionPresetsForProvider, type ProviderType, DEFAULT_RESOLUTION } from "@/lib/config/resolution-presets";
 
 interface BatchSettingsDialogProps {
@@ -25,7 +26,7 @@ interface BatchSettingsDialogProps {
         defaults?: {
             count?: number;
             resolution?: string;
-        };
+        } | null;
     };
     onSettingsUpdated: () => void;
 }
@@ -58,28 +59,20 @@ export function BatchSettingsDialog({
     const handleSave = async () => {
         setSaving(true);
         try {
-            const response = await fetch(`/api/batches/${batchId}/settings`, {
-                method: 'PATCH',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    provider,
-                    defaults: {
-                        count,
-                        resolution,
-                    },
-                }),
+            await api.batches.updateSettings(batchId, {
+                provider,
+                defaults: {
+                    count,
+                    resolution,
+                },
             });
-
-            if (!response.ok) {
-                throw new Error('Failed to update settings');
-            }
 
             toast.success('Settings updated!');
             setOpen(false);
             onSettingsUpdated();
         } catch (error) {
             console.error('Error updating settings:', error);
-            toast.error('Failed to update settings');
+            toast.error(errorMessage(error, 'Failed to update settings'));
         } finally {
             setSaving(false);
         }

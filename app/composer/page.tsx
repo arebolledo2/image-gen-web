@@ -50,6 +50,7 @@ import type {
 } from "@/components/composer/types";
 import { isSolidBackground } from "@/components/composer/types";
 import type { GalleryImage } from "@/components/image-gallery-modal";
+import { api } from "@/lib/api-client";
 
 const SOLID_BACKGROUNDS: { value: SolidBackground; label: string }[] = [
   { value: "checkered", label: "Checkered" },
@@ -57,11 +58,6 @@ const SOLID_BACKGROUNDS: { value: SolidBackground; label: string }[] = [
   { value: "white", label: "White" },
   { value: "gray", label: "Dark Gray" },
 ];
-
-interface Category {
-  id: string;
-  name: string;
-}
 
 interface SavedLayout {
   id: string;
@@ -101,20 +97,14 @@ export default function ComposerPage() {
   useEffect(() => {
     async function fetchBackgrounds() {
       try {
-        const catRes = await fetch("/api/subject-categories");
-        const catData = await catRes.json();
-        const categories: Category[] = catData.categories || [];
+        const categories = await api.subjectCategories.list();
         const bgCategory = categories.find(
           (c) => c.name.toLowerCase() === "backgrounds" || c.name.toLowerCase() === "background"
         );
         if (!bgCategory) return;
 
-        const url = new URL("/api/images", window.location.origin);
-        url.searchParams.append("categoryId", bgCategory.id);
-        url.searchParams.append("limit", "50");
-        const imgRes = await fetch(url.toString());
-        const imgData = await imgRes.json();
-        setBackgroundImages(imgData.images || []);
+        const imgData = await api.images.list({ categoryId: bgCategory.id, limit: 50 });
+        setBackgroundImages(imgData.images);
       } catch (error) {
         console.error("Error fetching background images:", error);
       }
@@ -125,9 +115,8 @@ export default function ComposerPage() {
   // Fetch saved layouts
   const loadLayouts = useCallback(async (): Promise<SavedLayout[] | null> => {
     try {
-      const res = await fetch("/api/composer-layouts");
-      const data = await res.json();
-      return data.layouts || [];
+      // The column stores the background as a loose string; the composer narrows it to its known values
+      return (await api.composerLayouts.list()) as SavedLayout[];
     } catch (error) {
       console.error("Error fetching layouts:", error);
       return null;
@@ -210,23 +199,13 @@ export default function ComposerPage() {
     try {
       if (currentLayoutId && !saveAsNew) {
         // Update existing
-        const res = await fetch(`/api/composer-layouts/${currentLayoutId}`, {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ name, data: layoutData }),
-        });
-        const data = await res.json();
-        setCurrentLayoutName(data.layout.name);
+        const layout = await api.composerLayouts.update(currentLayoutId, { name, data: layoutData });
+        setCurrentLayoutName(layout.name);
       } else {
         // Create new
-        const res = await fetch("/api/composer-layouts", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ name, data: layoutData }),
-        });
-        const data = await res.json();
-        setCurrentLayoutId(data.layout.id);
-        setCurrentLayoutName(data.layout.name);
+        const layout = await api.composerLayouts.create({ name, data: layoutData });
+        setCurrentLayoutId(layout.id);
+        setCurrentLayoutName(layout.name);
       }
       await fetchLayouts();
       setSaveDialogOpen(false);
@@ -254,7 +233,7 @@ export default function ComposerPage() {
   // Delete layout
   async function handleDeleteLayout(id: string) {
     try {
-      await fetch(`/api/composer-layouts/${id}`, { method: "DELETE" });
+      await api.composerLayouts.remove(id);
       if (currentLayoutId === id) {
         setCurrentLayoutId(null);
         setCurrentLayoutName(null);

@@ -2,38 +2,21 @@
 
 /**
  * Hook for fetching and managing batch data.
- * Note: Uses `any` for dynamic batch data from API.
  */
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState, useEffect, useCallback } from "react";
-
-interface Batch {
-  id: string;
-  name: string;
-  version: number;
-  description: string | null;
-  status: string;
-  provider: 'openai' | 'openrouter' | 'gemini' | 'gemini3' | 'comfyui' | 'comfyui-krea';
-  createdAt: string;
-  completedAt: string | null;
-  defaults: any;
-  batchPrompts: any[];
-  generations: any[];
-  parentBatch?: { id: string; name: string } | null;
-  childBatches?: { id: string; name: string; version: number }[];
-}
+import { api } from "@/lib/api-client";
+import type { ApiBatchDetail } from "@/lib/types/api";
 
 export function useBatchData(batchId: string | string[] | undefined) {
-  const [batch, setBatch] = useState<Batch | null>(null);
+  const [batch, setBatch] = useState<ApiBatchDetail | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const requestBatch = useCallback(async (): Promise<{ ok: true; batch: Batch | null } | { ok: false } | null> => {
+  const requestBatch = useCallback(async (): Promise<{ ok: true; batch: ApiBatchDetail } | { ok: false } | null> => {
     if (!batchId) return null;
 
     try {
-      const response = await fetch(`/api/batches/${batchId}`);
-      const data = await response.json();
-      return { ok: true, batch: data.batch };
+      const id = Array.isArray(batchId) ? batchId[0] : batchId;
+      return { ok: true, batch: await api.batches.get(id) };
     } catch (error) {
       console.error('Error fetching batch:', error);
       return { ok: false };

@@ -11,6 +11,7 @@ import { Loader2, Plus, X } from "lucide-react";
 import { AIAssistButton } from "@/components/agents/ai-assist-button";
 import { toast } from "sonner";
 import { useAIModelSettings } from "@/components/providers/ai-model-settings-provider";
+import { api, errorMessage } from "@/lib/api-client";
 
 export default function NewStylePage() {
   const router = useRouter();
@@ -70,17 +71,7 @@ export default function NewStylePage() {
   };
 
   const handleAIGenerate = async (aiDescription: string) => {
-    const response = await fetch('/api/agents/create-style', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ description: aiDescription, aiConfig: toRequestConfig() }),
-    });
-
-    if (!response.ok) {
-      throw new Error('Failed to generate style');
-    }
-
-    const { style } = await response.json();
+    const style = await api.agents.createStyle(aiDescription, toRequestConfig());
 
     // Populate form with AI-generated style
     setName(style.name);
@@ -98,35 +89,25 @@ export default function NewStylePage() {
     setLoading(true);
 
     try {
-      const response = await fetch('/api/styles', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name,
-          description,
-          palette: {
-            primary: primaryColors.filter(c => c),
-            accent: accentColors.filter(c => c),
-            background: backgroundColor,
-          },
-          renderingCues: {
-            materials: materials.filter(m => m.trim()),
-            effects: effects.filter(e => e.trim()),
-            finish,
-          },
-        }),
+      const created = await api.styles.create({
+        name,
+        description,
+        palette: {
+          primary: primaryColors.filter(c => c),
+          accent: accentColors.filter(c => c),
+          background: backgroundColor,
+        },
+        renderingCues: {
+          materials: materials.filter(m => m.trim()),
+          effects: effects.filter(e => e.trim()),
+          finish,
+        },
       });
-
-      if (!response.ok) {
-        throw new Error('Failed to create style');
-      }
-
-      const data = await response.json();
       toast.success('Style created successfully!');
-      router.push(`/styles/${data.style.id}`);
+      router.push(`/styles/${created.id}`);
     } catch (error) {
       console.error('Error creating style:', error);
-      toast.error('Failed to create style');
+      toast.error(errorMessage(error, 'Failed to create style'));
     } finally {
       setLoading(false);
     }

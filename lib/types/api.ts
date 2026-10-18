@@ -7,7 +7,20 @@
  *
  * Type-only imports: nothing from the schema (or drizzle) ends up in the client bundle.
  */
-import type { Guidance, Prompt, Style, Subject, SubjectCategory } from '@/lib/db/schema';
+import type {
+  Batch,
+  BatchPrompt,
+  ComposerLayout,
+  Generation,
+  Guidance,
+  Image,
+  ImageEdit,
+  Prompt,
+  SquishAnimation,
+  Style,
+  Subject,
+  SubjectCategory,
+} from '@/lib/db/schema';
 
 /** What a value looks like after `JSON.stringify` → `JSON.parse`. */
 export type Serialized<T> = T extends Date
@@ -104,3 +117,111 @@ export type ApiPrompt = Serialized<Prompt> & {
   subject: ApiSubject | null;
   promptGuidance: { guidance: ApiGuidance | null }[];
 };
+
+// -----------------------------------------------------------------------------
+// Batches
+// -----------------------------------------------------------------------------
+
+export type ApiBatch = Serialized<Batch>;
+export type ApiBatchPrompt = Serialized<BatchPrompt>;
+export type ApiGeneration = Serialized<Generation>;
+
+export interface ApiPagination {
+  page: number;
+  limit: number;
+  totalCount: number;
+  totalPages: number;
+}
+
+/** GET /api/batches: a trimmed batch with just enough to render a card */
+export type ApiBatchSummary = ApiBatch & {
+  batchPrompts: Pick<ApiBatchPrompt, 'id' | 'promptText' | 'order'>[];
+  generations: (Pick<ApiGeneration, 'id' | 'status'> & { images: Pick<ApiImage, 'id' | 'fileName'>[] })[];
+};
+
+/** GET /api/batches/[id] */
+export type ApiBatchDetail = ApiBatch & {
+  parentBatch: ApiBatch | null;
+  childBatches: ApiBatch[];
+  batchPrompts: (ApiBatchPrompt & { prompt: ApiPrompt | null })[];
+  generations: (ApiGeneration & { images: ApiImage[] })[];
+};
+
+/** GET /api/batches/[id]/lineage-images */
+export interface ApiLineageImage {
+  id: string;
+  fileName: string;
+  filePath: string;
+  promptText: string;
+  batchId: string;
+  batchName: string;
+  batchVersion: number;
+}
+
+export interface ApiLineageImages {
+  images: ApiLineageImage[];
+  hasLineage: boolean;
+  parentBatchIds?: string[];
+}
+
+// -----------------------------------------------------------------------------
+// Images and their derived files
+// -----------------------------------------------------------------------------
+
+export type ApiImage = Serialized<Image>;
+export type ApiSquishAnimation = Serialized<SquishAnimation>;
+export type ApiImageEdit = Serialized<ImageEdit>;
+
+/** GET /api/images (the list route attaches the generation, its batch and batch prompt) */
+export type ApiImageListItem = ApiImage & {
+  generation: ApiGeneration & { batch: ApiBatch; batchPrompt: ApiBatchPrompt };
+};
+
+/** GET /api/images */
+export interface ApiImageList {
+  images: ApiImageListItem[];
+  total: number;
+  hasMore: boolean;
+}
+
+/** GET /api/images/[id]: an image with the style, subject and guidance that produced it */
+export interface ApiImageDetail {
+  id: string;
+  filePath: string;
+  fileName: string;
+  mediaType: string;
+  isFavorite: boolean;
+  transparentFilePath: string | null;
+  flippedFilePath: string | null;
+  createdAt: string;
+  generation: {
+    batch: { id: string; name: string } | null;
+    batchPrompt: {
+      id: string;
+      promptText: string;
+      prompt: {
+        style: { id: string; name: string } | null;
+        subject: { id: string; name: string } | null;
+        guidance: { id: string; name: string }[];
+      } | null;
+    } | null;
+  };
+}
+
+/** POST /api/images/[id]/transparent and /api/image-edits/[id]/transparent */
+export type ApiTransparencyResult =
+  | { success: true; transparentFilePath?: string; transparentEditPath?: string }
+  | {
+      success: false;
+      /** The click landed on a transparent area and no visible pixel could be sampled */
+      alreadyTransparent: true;
+      message: string;
+      transparentFilePath?: string | null;
+      transparentEditPath?: string | null;
+    };
+
+// -----------------------------------------------------------------------------
+// Composer
+// -----------------------------------------------------------------------------
+
+export type ApiComposerLayout = Serialized<ComposerLayout>;

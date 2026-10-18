@@ -11,6 +11,7 @@ import { Loader2, Sparkles } from "lucide-react";
 import { type ProviderType } from "@/lib/config/resolution-presets";
 import { toast } from "sonner";
 import { useAIModelSettings } from "@/components/providers/ai-model-settings-provider";
+import { api, agentErrorMessage } from "@/lib/api-client";
 
 interface ResolutionPreset {
   id: string;
@@ -30,25 +31,6 @@ interface BatchDefaultsFormProps {
   defaultCount: number;
   setDefaultCount: (count: number) => void;
   promptTexts: string[];
-}
-
-async function getErrorMessage(response: Response): Promise<string> {
-  const fallback = 'Failed to generate metadata';
-
-  try {
-    const data = await response.json();
-    const details = [
-      typeof data.error === 'string' ? data.error : undefined,
-      typeof data.remediation === 'string' ? data.remediation : undefined,
-      typeof data.provider === 'string' && typeof data.model === 'string'
-        ? `Provider: ${data.provider}, model: ${data.model}`
-        : undefined,
-    ].filter(Boolean);
-
-    return details.length > 0 ? details.join(' ') : fallback;
-  } catch {
-    return response.statusText ? `${fallback}: ${response.statusText}` : fallback;
-  }
 }
 
 export function BatchDefaultsForm({
@@ -74,21 +56,12 @@ export function BatchDefaultsForm({
     setMetadataLoading(true);
     try {
       const combinedPrompt = promptTexts.join('\n');
-      const response = await fetch('/api/agents/create-batch-metadata', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ promptText: combinedPrompt, aiConfig: toRequestConfig() }),
-      });
-
-      if (!response.ok) {
-        throw new Error(await getErrorMessage(response));
-      }
-      const data = await response.json();
+      const data = await api.agents.createBatchMetadata(combinedPrompt, toRequestConfig());
       setName(data.name);
       setDescription(data.description);
     } catch (error) {
       console.error('Error generating metadata:', error);
-      toast.error(error instanceof Error ? error.message : 'Failed to generate metadata');
+      toast.error(agentErrorMessage(error, 'Failed to generate metadata'));
     } finally {
       setMetadataLoading(false);
     }

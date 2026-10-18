@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { toast } from "sonner";
+import { api, errorMessage } from "@/lib/api-client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Loader2, X, Plus, Sparkles } from "lucide-react";
@@ -65,35 +66,24 @@ export function StyleEditForm({
 
     setAiLoading(true);
     try {
-      const response = await fetch("/api/agents/edit-style", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          currentStyle: {
-            name: editName,
-            description: editDescription,
-            palette: {
-              primary: editPrimaryColors,
-              accent: editAccentColors,
-              background: editBackground,
-            },
-            renderingCues: {
-              materials: editMaterials,
-              effects: editEffects,
-              finish: editFinish,
-            },
+      const newStyle = await api.agents.editStyle({
+        currentStyle: {
+          name: editName,
+          description: editDescription,
+          palette: {
+            primary: editPrimaryColors,
+            accent: editAccentColors,
+            background: editBackground,
           },
-          userRequest: aiRequest,
-          aiConfig: toRequestConfig(),
-        }),
+          renderingCues: {
+            materials: editMaterials,
+            effects: editEffects,
+            finish: editFinish,
+          },
+        },
+        userRequest: aiRequest,
+        aiConfig: toRequestConfig(),
       });
-
-      if (!response.ok) {
-        throw new Error("Failed to get AI suggestions");
-      }
-
-      const data = await response.json();
-      const newStyle = data.style;
 
       setEditName(newStyle.name);
       setEditDescription(newStyle.description || "");
@@ -108,7 +98,7 @@ export function StyleEditForm({
       setAiRequest("");
     } catch (error) {
       console.error("Error with AI assist:", error);
-      toast.error("Failed to get AI suggestions");
+      toast.error(errorMessage(error, "Failed to get AI suggestions"));
     } finally {
       setAiLoading(false);
     }

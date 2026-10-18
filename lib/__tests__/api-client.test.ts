@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { api, ApiClientError, errorMessage, request } from '../api-client';
+import { agentErrorMessage, api, ApiClientError, errorMessage, request } from '../api-client';
 
 function mockFetch(body: unknown, init: { status?: number; json?: boolean } = {}) {
   const fn = vi.fn().mockResolvedValue({
@@ -112,6 +112,58 @@ describe('subjects, categories, prompts and agents', () => {
       message: 'Model unavailable',
       status: 503,
     });
+  });
+});
+
+describe('images and batches', () => {
+  it('serialises image list filters, dropping undefined ones', async () => {
+    const fetchMock = mockFetch({ images: [], total: 0, hasMore: false });
+    await api.images.list({ batchId: 'b1', limit: 20, offset: 40, favoritesOnly: undefined });
+
+    expect(fetchMock.mock.calls[0][0]).toBe('/api/images?batchId=b1&limit=20&offset=40');
+  });
+
+  it('passes editId and animationId as query params on DELETE', async () => {
+    const fetchMock = mockFetch({ success: true });
+    await api.images.deleteEdit('i1', 'e1');
+    await api.images.deleteAnimation('i1', 'a1');
+
+    expect(fetchMock.mock.calls[0][0]).toBe('/api/images/i1/edits?editId=e1');
+    expect(fetchMock.mock.calls[1][0]).toBe('/api/images/i1/squish?animationId=a1');
+    expect(fetchMock.mock.calls[0][1]).toMatchObject({ method: 'DELETE' });
+  });
+
+  it('returns the transparency result as-is so callers can handle success: false', async () => {
+    mockFetch({ success: false, alreadyTransparent: true, message: 'Click a visible area' });
+    const result = await api.images.makeTransparent('i1', { tolerance: 30 });
+
+    expect(result).toMatchObject({ success: false, alreadyTransparent: true });
+  });
+
+  it('keeps pagination alongside the batch list', async () => {
+    mockFetch({ batches: [{ id: 'b1' }], pagination: { page: 1, limit: 9, totalCount: 1, totalPages: 1 } });
+    const result = await api.batches.list({ page: 1, limit: 9 });
+
+    expect(result.pagination.totalPages).toBe(1);
+    expect(result.batches).toHaveLength(1);
+  });
+});
+
+describe('agentErrorMessage', () => {
+  it('joins error, remediation and provider details from the response body', () => {
+    const error = new ApiClientError('Failed', 503, {
+      error: 'Model failed.',
+      remediation: 'Start Ollama.',
+      provider: 'ollama',
+      model: 'qwen',
+    });
+
+    expect(agentErrorMessage(error, 'fallback')).toBe('Model failed. Start Ollama. Provider: ollama, model: qwen');
+  });
+
+  it('falls back to the error message, then the fallback', () => {
+    expect(agentErrorMessage(new ApiClientError('Server said no', 500), 'fallback')).toBe('Server said no');
+    expect(agentErrorMessage('weird', 'fallback')).toBe('fallback');
   });
 });
 

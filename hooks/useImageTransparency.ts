@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import type { GalleryImage } from '@/components/image-gallery-modal';
 import { toast } from 'sonner';
+import { api, errorMessage } from '@/lib/api-client';
 
 export function useImageTransparency() {
   const [showTransparent, setShowTransparent] = useState<Record<string, boolean>>({});
@@ -41,30 +42,15 @@ export function useImageTransparency() {
         editId = currentVersion.replace('edit-', '');
       }
 
-      const endpoint = isEdit
-        ? `/api/image-edits/${editId}/transparent`
-        : `/api/images/${image.id}/transparent`;
-
-      const response = await fetch(endpoint, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ tolerance, mode, samplePoint, forceOriginal, displayedDimensions }),
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to make image transparent');
-      }
-
-      const data = await response.json();
+      const options = { tolerance, mode, samplePoint, forceOriginal, displayedDimensions };
+      const data = isEdit && editId
+        ? await api.imageEdits.makeTransparent(editId, options)
+        : await api.images.makeTransparent(image.id, options);
 
       // Handle the case where user clicked on transparent pixel
-      if (data.alreadyTransparent) {
+      if (!data.success) {
         toast.error(data.message || 'The selected pixel is already transparent. Please click on a visible area.');
         return;
-      }
-
-      if (!data.success) {
-        throw new Error(data.message || 'Failed to make image transparent');
       }
 
       // Update version to bust cache
@@ -89,7 +75,7 @@ export function useImageTransparency() {
         } else {
           onSuccess({
             ...image,
-            transparentFilePath: data.transparentFilePath
+            transparentFilePath: data.transparentFilePath ?? image.transparentFilePath
           });
         }
       }
@@ -126,20 +112,10 @@ export function useImageTransparency() {
     try {
       const sourceVersion = currentVersion || 'transparent';
 
-      const response = await fetch(`/api/images/${image.id}/flip`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sourceVersion }),
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to flip image');
-      }
-
-      const data = await response.json();
+      const data = await api.images.flip(image.id, sourceVersion);
 
       if (!data.success) {
-        throw new Error(data.message || 'Failed to flip image');
+        throw new Error('Failed to flip image');
       }
 
       // Update version to bust cache
@@ -156,7 +132,7 @@ export function useImageTransparency() {
       toast.success(`Image flipped successfully!`);
     } catch (error) {
       console.error('Error flipping image:', error);
-      toast.error(error instanceof Error ? error.message : 'Failed to flip image');
+      toast.error(errorMessage(error, 'Failed to flip image'));
     } finally {
       setProcessingFlip(prev => ({ ...prev, [image.id]: false }));
     }

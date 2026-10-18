@@ -2,26 +2,24 @@
 
 /**
  * Hook for AI image editing.
- * Note: Uses `any` for dynamic edit data from API.
  */
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState, useCallback } from "react";
 import { type GalleryImage } from "@/components/image-gallery-modal";
 import { toast } from "sonner";
+import { api, errorMessage } from "@/lib/api-client";
+import type { ApiImageEdit } from "@/lib/types/api";
 
 export function useImageEdits() {
   const [processingEdit, setProcessingEdit] = useState<Record<string, boolean>>({});
   const [editPrompt, setEditPrompt] = useState<Record<string, string>>({});
-  const [imageEdits, setImageEdits] = useState<Record<string, any[]>>({});
+  const [imageEdits, setImageEdits] = useState<Record<string, ApiImageEdit[]>>({});
   const [loadingEdits, setLoadingEdits] = useState<Record<string, boolean>>({});
 
   const fetchImageEdits = useCallback(async (imageId: string) => {
     setLoadingEdits(prev => ({ ...prev, [imageId]: true }));
     try {
-      const response = await fetch(`/api/images/${imageId}/edits`);
-      if (!response.ok) throw new Error('Failed to fetch edits');
-      const data = await response.json();
-      setImageEdits(prev => ({ ...prev, [imageId]: data.edits || [] }));
+      const edits = await api.images.edits(imageId);
+      setImageEdits(prev => ({ ...prev, [imageId]: edits }));
     } catch (error) {
       console.error('Error fetching image edits:', error);
     } finally {
@@ -45,20 +43,10 @@ export function useImageEdits() {
     setProcessingEdit(prev => ({ ...prev, [image.id]: true }));
 
     try {
-      const response = await fetch(`/api/images/${image.id}/ai-edit`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sourceVersion, userPrompt: prompt }),
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to generate AI edit');
-      }
-
-      const data = await response.json();
+      const data = await api.images.aiEdit(image.id, { sourceVersion, userPrompt: prompt });
 
       if (!data.success) {
-        throw new Error(data.error || 'Failed to generate AI edit');
+        throw new Error('Failed to generate AI edit');
       }
 
       // Refresh edits list
@@ -72,7 +60,7 @@ export function useImageEdits() {
       toast.success(`Edit "${data.edit.generatedName}" generated successfully!`);
     } catch (error) {
       console.error('Error generating AI edit:', error);
-      toast.error(error instanceof Error ? error.message : 'Failed to generate AI edit');
+      toast.error(errorMessage(error, 'Failed to generate AI edit'));
     } finally {
       setProcessingEdit(prev => ({ ...prev, [image.id]: false }));
     }
@@ -82,13 +70,7 @@ export function useImageEdits() {
     if (!confirm('Delete this edit? (This will also delete the transparent version if it exists)')) return;
 
     try {
-      const response = await fetch(`/api/images/${imageId}/edits?editId=${editId}`, {
-        method: 'DELETE',
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to delete edit');
-      }
+      await api.images.deleteEdit(imageId, editId);
 
       // Refresh edits list
       await fetchImageEdits(imageId);

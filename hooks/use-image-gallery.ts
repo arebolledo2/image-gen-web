@@ -2,6 +2,7 @@
 
 import { useState, useCallback, useRef, useEffect } from "react";
 import { type GalleryImage } from "@/components/image-gallery-modal";
+import { api } from "@/lib/api-client";
 
 const IMAGES_LIMIT = 20;
 
@@ -20,10 +21,11 @@ export function useImageGallery(batchId: string | string[] | undefined, hasBatch
     else setFetchingMore(true);
 
     try {
-      const response = await fetch(`/api/images?batchId=${batchId}&limit=${IMAGES_LIMIT}&offset=${currentOffset}`);
-      const data = await response.json();
-
-      const newImages = data.images || [];
+      const { images: newImages } = await api.images.list({
+        batchId: Array.isArray(batchId) ? batchId[0] : batchId,
+        limit: IMAGES_LIMIT,
+        offset: currentOffset,
+      });
       if (isInitial) {
         setImages(newImages);
       } else {

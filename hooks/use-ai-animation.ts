@@ -2,29 +2,27 @@
 
 /**
  * Hook for AI animation generation.
- * Note: Uses `any` for dynamic animation data from API.
  */
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState, useCallback } from "react";
 import { type GalleryImage } from "@/components/image-gallery-modal";
 import { toast } from "sonner";
+import { api, errorMessage } from "@/lib/api-client";
+import type { ApiSquishAnimation } from "@/lib/types/api";
 
 export function useAIAnimation() {
   const [processingAI, setProcessingAI] = useState<Record<string, boolean>>({});
   const [suggestingPrompt, setSuggestingPrompt] = useState<Record<string, boolean>>({});
   const [aiPrompt, setAIPrompt] = useState<Record<string, string>>({});
   const [aiGridSize, setAIGridSize] = useState<Record<string, 2 | 3 | 4>>({});
-  const [aiAnimations, setAIAnimations] = useState<Record<string, any[]>>({});
+  const [aiAnimations, setAIAnimations] = useState<Record<string, ApiSquishAnimation[]>>({});
   const [loadingAIAnimations, setLoadingAIAnimations] = useState<Record<string, boolean>>({});
 
   const fetchAIAnimations = useCallback(async (imageId: string) => {
     setLoadingAIAnimations(prev => ({ ...prev, [imageId]: true }));
     try {
-      const response = await fetch(`/api/images/${imageId}/squish`);
-      if (!response.ok) throw new Error('Failed to fetch animations');
-      const data = await response.json();
+      const animations = await api.images.squishAnimations(imageId);
       // Filter for AI-generated animations
-      const aiOnly = (data.animations || []).filter((anim: any) => anim.generatedBy === 'ai');
+      const aiOnly = animations.filter((anim) => anim.generatedBy === 'ai');
       setAIAnimations(prev => ({ ...prev, [imageId]: aiOnly }));
     } catch (error) {
       console.error('Error fetching AI animations:', error);
@@ -39,25 +37,11 @@ export function useAIAnimation() {
     setSuggestingPrompt(prev => ({ ...prev, [image.id]: true }));
 
     try {
-      const response = await fetch(`/api/images/${image.id}/suggest-animation`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to suggest animation');
-      }
-
-      const data = await response.json();
-
-      if (!data.success) {
-        throw new Error(data.error || 'Failed to suggest animation');
-      }
-
-      setAIPrompt(prev => ({ ...prev, [image.id]: data.suggestion || '' }));
+      const suggestion = await api.images.suggestAnimation(image.id);
+      setAIPrompt(prev => ({ ...prev, [image.id]: suggestion || '' }));
     } catch (error) {
       console.error('Error suggesting animation:', error);
-      toast.error('Failed to suggest animation');
+      toast.error(errorMessage(error, 'Failed to suggest animation'));
     } finally {
       setSuggestingPrompt(prev => ({ ...prev, [image.id]: false }));
     }
@@ -77,20 +61,10 @@ export function useAIAnimation() {
     setProcessingAI(prev => ({ ...prev, [image.id]: true }));
 
     try {
-      const response = await fetch(`/api/images/${image.id}/ai-animation`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt, gridSize }),
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to generate AI animation');
-      }
-
-      const data = await response.json();
+      const data = await api.images.createAiAnimation(image.id, { prompt, gridSize });
 
       if (!data.success) {
-        throw new Error(data.error || 'Failed to generate AI animation');
+        throw new Error('Failed to generate AI animation');
       }
 
       // Refresh animations list
@@ -104,7 +78,7 @@ export function useAIAnimation() {
       toast.success('AI animation generated successfully!');
     } catch (error) {
       console.error('Error generating AI animation:', error);
-      toast.error(error instanceof Error ? error.message : 'Failed to generate AI animation');
+      toast.error(errorMessage(error, 'Failed to generate AI animation'));
     } finally {
       setProcessingAI(prev => ({ ...prev, [image.id]: false }));
     }
@@ -114,13 +88,7 @@ export function useAIAnimation() {
     if (!confirm('Delete this AI animation?')) return;
 
     try {
-      const response = await fetch(`/api/images/${imageId}/squish?animationId=${animationId}`, {
-        method: 'DELETE',
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to delete AI animation');
-      }
+      await api.images.deleteAnimation(imageId, animationId);
 
       // Refresh animations list
       await fetchAIAnimations(imageId);

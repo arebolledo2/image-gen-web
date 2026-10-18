@@ -2,29 +2,27 @@
 
 /**
  * Hook for squish animation generation.
- * Note: Uses `any` for dynamic animation data from API.
  */
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState, useCallback } from "react";
 import { type GalleryImage } from "@/components/image-gallery-modal";
 import { toast } from "sonner";
+import { api } from "@/lib/api-client";
+import type { ApiSquishAnimation } from "@/lib/types/api";
 
 export function useSquishAnimation() {
   const [processingSquish, setProcessingSquish] = useState<Record<string, boolean>>({});
   const [squishIntensity, setSquishIntensity] = useState<Record<string, number>>({});
   const [squishFrameCount, setSquishFrameCount] = useState<Record<string, number>>({});
   const [squishAnimationType, setSquishAnimationType] = useState<Record<string, 'bounce' | 'squash_stretch'>>({});
-  const [squishAnimations, setSquishAnimations] = useState<Record<string, any[]>>({});
+  const [squishAnimations, setSquishAnimations] = useState<Record<string, ApiSquishAnimation[]>>({});
   const [loadingSquishAnimations, setLoadingSquishAnimations] = useState<Record<string, boolean>>({});
   const [selectedVersion, setSelectedVersion] = useState<Record<string, string>>({});
 
   const fetchSquishAnimations = useCallback(async (imageId: string) => {
     setLoadingSquishAnimations(prev => ({ ...prev, [imageId]: true }));
     try {
-      const response = await fetch(`/api/images/${imageId}/squish`);
-      if (!response.ok) throw new Error('Failed to fetch squish animations');
-      const data = await response.json();
-      setSquishAnimations(prev => ({ ...prev, [imageId]: data.animations || [] }));
+      const animations = await api.images.squishAnimations(imageId);
+      setSquishAnimations(prev => ({ ...prev, [imageId]: animations }));
     } catch (error) {
       console.error('Error fetching squish animations:', error);
     } finally {
@@ -42,20 +40,10 @@ export function useSquishAnimation() {
     setProcessingSquish(prev => ({ ...prev, [image.id]: true }));
 
     try {
-      const response = await fetch(`/api/images/${image.id}/squish`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ frameCount, intensity, animationType }),
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to generate squish animation');
-      }
-
-      const data = await response.json();
+      const data = await api.images.createSquish(image.id, { frameCount, intensity, animationType });
 
       if (!data.success) {
-        throw new Error(data.error || 'Failed to generate squish animation');
+        throw new Error('Failed to generate squish animation');
       }
 
       // Refresh animations list
@@ -79,13 +67,7 @@ export function useSquishAnimation() {
     if (!confirm('Delete this squish animation?')) return;
 
     try {
-      const response = await fetch(`/api/images/${imageId}/squish?animationId=${animationId}`, {
-        method: 'DELETE',
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to delete squish animation');
-      }
+      await api.images.deleteAnimation(imageId, animationId);
 
       // Refresh animations list
       await fetchSquishAnimations(imageId);

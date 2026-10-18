@@ -15,17 +15,13 @@ import { Input } from "@/components/ui/input";
 import { useImageTransparency } from "@/hooks/useImageTransparency";
 import { useSquishAnimation } from "@/hooks/use-squish-animation";
 import { useAIAnimation } from "@/hooks/use-ai-animation";
-
-interface Category {
-  id: string;
-  name: string;
-  color: string | null;
-}
+import { api } from "@/lib/api-client";
+import type { ApiSubjectCategory } from "@/lib/types/api";
 
 export default function GalleryPage() {
   const router = useRouter();
   const [images, setImages] = useState<GalleryImage[]>([]);
-  const [categories, setCategories] = useState<Category[]>([]);
+  const [categories, setCategories] = useState<ApiSubjectCategory[]>([]);
   const [filterCategoryId, setFilterCategoryId] = useState<string>("all");
   const [loading, setLoading] = useState(true);
   const [fetchingMore, setFetchingMore] = useState(false);
@@ -41,9 +37,8 @@ export default function GalleryPage() {
 
     async function load() {
       try {
-        const response = await fetch('/api/subject-categories');
-        const data = await response.json();
-        if (!cancelled) setCategories(data.categories || []);
+        const data = await api.subjectCategories.list();
+        if (!cancelled) setCategories(data);
       } catch (error) {
         console.error('Error fetching categories:', error);
       }
@@ -119,21 +114,13 @@ export default function GalleryPage() {
     else setFetchingMore(true);
 
     try {
-      const url = new URL('/api/images', window.location.origin);
-      url.searchParams.append('limit', LIMIT.toString());
-      url.searchParams.append('offset', currentOffset.toString());
-      url.searchParams.append('favoritesOnly', favOnly.toString());
-      if (searchTerm) {
-        url.searchParams.append('search', searchTerm);
-      }
-      if (categoryId !== 'all') {
-        url.searchParams.append('categoryId', categoryId);
-      }
-
-      const response = await fetch(url.toString());
-      const data = await response.json();
-
-      const newImages = data.images || [];
+      const { images: newImages } = await api.images.list({
+        limit: LIMIT,
+        offset: currentOffset,
+        favoritesOnly: favOnly,
+        search: searchTerm || undefined,
+        categoryId: categoryId !== 'all' ? categoryId : undefined,
+      });
       if (isInitial) {
         setImages(newImages);
       } else {
@@ -162,15 +149,7 @@ export default function GalleryPage() {
     setImages(prev => prev.map(img => img.id === image.id ? { ...img, isFavorite: newStatus } : img));
 
     try {
-      const response = await fetch(`/api/images/${image.id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ isFavorite: newStatus }),
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to update favorite status');
-      }
+      await api.images.setFavorite(image.id, newStatus);
 
       // If we are in favorites-only view and we just unfavorited an image, remove it from the list
       if (favoritesOnly && !newStatus) {

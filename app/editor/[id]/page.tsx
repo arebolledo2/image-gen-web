@@ -33,6 +33,7 @@ import { useSquishAnimation } from "@/hooks/use-squish-animation";
 import { useAIAnimation } from "@/hooks/use-ai-animation";
 import { useImageEdits } from "@/hooks/use-image-edits";
 import type { GalleryImage } from "@/components/image-gallery-modal";
+import { api } from "@/lib/api-client";
 
 export default function EditorPage() {
   const params = useParams();
@@ -107,12 +108,7 @@ export default function EditorPage() {
   useEffect(() => {
     const fetchImage = async () => {
       try {
-        const response = await fetch(`/api/images/${imageId}`);
-        if (!response.ok) {
-          throw new Error('Failed to fetch image');
-        }
-        const data = await response.json();
-        setImage(data);
+        setImage(await api.images.get(imageId));
       } catch (error) {
         console.error('Error fetching image:', error);
       } finally {
@@ -243,15 +239,15 @@ export default function EditorPage() {
       textToCopy = image.flippedFilePath.split('/').pop() || image.fileName;
     } else if (version.startsWith('squish-')) {
       const animationId = version.replace('squish-', '');
-      const animation = squishAnimations[image.id]?.find((a: any) => a.id === animationId);
-      const path = animation?.spritesheetPath || animation?.filePath;
+      const animation = squishAnimations[image.id]?.find((a) => a.id === animationId);
+      const path = animation?.spritesheetPath;
       if (path) {
         textToCopy = path.split(/[/\\]/).pop() || textToCopy;
       }
     } else if (version.startsWith('ai-')) {
       const animationId = version.replace('ai-', '');
-      const animation = aiAnimations[image.id]?.find((a: any) => a.id === animationId);
-      const path = animation?.spritesheetPath || animation?.filePath;
+      const animation = aiAnimations[image.id]?.find((a) => a.id === animationId);
+      const path = animation?.spritesheetPath;
       if (path) {
         textToCopy = path.split(/[/\\]/).pop() || textToCopy;
       }
@@ -283,15 +279,7 @@ export default function EditorPage() {
     setImage({ ...image, isFavorite: newStatus });
 
     try {
-      const response = await fetch(`/api/images/${image.id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ isFavorite: newStatus }),
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to update favorite status');
-      }
+      await api.images.setFavorite(image.id, newStatus);
     } catch (error) {
       console.error('Error toggling favorite:', error);
       setImage({ ...image, isFavorite: !newStatus });
