@@ -1,95 +1,49 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/db';
-import { guidance } from '@/lib/db/schema';
-import { eq } from 'drizzle-orm';
+import { z } from 'zod';
+import { guidanceService } from '@/lib/services';
+import { handleApiError, notFound, parseBody } from '@/lib/api/errors';
 
-// GET /api/guidance/[id] - Get a single guidance
-export async function GET(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+type RouteContext = { params: Promise<{ id: string }> };
+
+const updateGuidanceSchema = z.object({
+  name: z.string().optional(),
+  description: z.string().optional(),
+});
+
+// GET /api/guidance/[id] - Get a single guidance with its lineage
+export async function GET(_request: NextRequest, { params }: RouteContext) {
   try {
     const { id } = await params;
+    const guidance = await guidanceService.getGuidanceWithLineage(id);
+    if (!guidance) throw notFound('Guidance');
 
-    const guidanceItem = await db.query.guidance.findFirst({
-      where: eq(guidance.id, id),
-      with: {
-        parentGuidance: true,
-        childGuidances: true,
-      },
-    });
-
-    if (!guidanceItem) {
-      return NextResponse.json(
-        { error: 'Guidance not found' },
-        { status: 404 }
-      );
-    }
-
-    return NextResponse.json({ guidance: guidanceItem });
+    return NextResponse.json({ guidance });
   } catch (error) {
-    console.error('Error fetching guidance:', error);
-    return NextResponse.json(
-      { error: 'Failed to fetch guidance' },
-      { status: 500 }
-    );
+    return handleApiError(error, 'fetch guidance');
   }
 }
 
 // PATCH /api/guidance/[id] - Update a guidance
-export async function PATCH(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function PATCH(request: NextRequest, { params }: RouteContext) {
   try {
     const { id } = await params;
-    const body = await request.json();
-    const { name, description } = body;
+    const data = await parseBody(request, updateGuidanceSchema);
+    const guidance = await guidanceService.updateGuidance(id, data);
+    if (!guidance) throw notFound('Guidance');
 
-    // Build update object with only provided fields
-    const updateData: { name?: string; description?: string } = {};
-    if (name !== undefined) updateData.name = name;
-    if (description !== undefined) updateData.description = description;
-
-    const [updatedGuidance] = await db
-      .update(guidance)
-      .set(updateData)
-      .where(eq(guidance.id, id))
-      .returning();
-
-    if (!updatedGuidance) {
-      return NextResponse.json(
-        { error: 'Guidance not found' },
-        { status: 404 }
-      );
-    }
-
-    return NextResponse.json({ guidance: updatedGuidance });
+    return NextResponse.json({ guidance });
   } catch (error) {
-    console.error('Error updating guidance:', error);
-    return NextResponse.json(
-      { error: 'Failed to update guidance' },
-      { status: 500 }
-    );
+    return handleApiError(error, 'update guidance');
   }
 }
 
 // DELETE /api/guidance/[id] - Delete a guidance
-export async function DELETE(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function DELETE(_request: NextRequest, { params }: RouteContext) {
   try {
     const { id } = await params;
-
-    await db.delete(guidance).where(eq(guidance.id, id));
-
+    await guidanceService.delete(id);
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error('Error deleting guidance:', error);
-    return NextResponse.json(
-      { error: 'Failed to delete guidance' },
-      { status: 500 }
-    );
+    return handleApiError(error, 'delete guidance');
   }
 }

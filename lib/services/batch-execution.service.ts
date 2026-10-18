@@ -8,9 +8,38 @@
 import { db } from '@/lib/db';
 import { batches, generations, Batch, NewBatch, NewGeneration, Generation } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
+import { queueBatchExecution } from '@/lib/queue/batch-queue';
+import { notFound } from '@/lib/api/errors';
 import type { BatchPromptOverrides, BatchDefaults } from '@/lib/types/common';
 
 export class BatchExecutionService {
+  /**
+   * Mark a batch as queued and enqueue one job per prompt run.
+   * If enqueueing fails the batch is marked failed instead of being left as queued.
+   *
+   * @throws ApiError 404 if the batch does not exist
+   * @returns Number of jobs queued
+   */
+  async executeBatch(id: string): Promise<{ jobsQueued: number }> {
+    const batch = await db.query.batches.findFirst({
+      where: eq(batches.id, id),
+      with: {
+        batchPrompts: {
+          orderBy: (batchPrompts, { asc }) => [asc(batchPrompts.order)],
+        },
+      },
+    });
+    if (!batch) throw notFound('Batch');
+
+    await this.updateBatchStatus(id, 'queued');
+    try {
+      return await queueBatchExecution(batch);
+    } catch (error) {
+      await this.updateBatchStatus(id, 'failed');
+      throw error;
+    }
+  }
+
   /**
    * Execute a database transaction
    */

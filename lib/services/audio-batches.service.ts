@@ -7,6 +7,8 @@ import { db } from '@/lib/db';
 import { audioBatches, audioBatchPrompts, audioGenerations, AudioBatch, NewAudioBatch, AudioGeneration, NewAudioGeneration } from '@/lib/db/schema';
 import { eq, desc, inArray } from 'drizzle-orm';
 import { BaseService } from './base.service';
+import { queueAudioBatchExecution } from '@/lib/queue/audio-batch-queue';
+import { notFound } from '@/lib/api/errors';
 import type { AudioBatchPromptOverrides, AudioBatchDefaults } from '@/lib/types/common';
 
 /**
@@ -227,6 +229,33 @@ export class AudioBatchesService extends BaseService<typeof audioBatches, AudioB
     }
   ): Promise<AudioBatch | undefined> {
     return this.update(id, data);
+  }
+
+  /**
+   * Mark an audio batch as queued and enqueue one job per prompt run.
+   * If enqueueing fails the batch is marked failed instead of being left as queued.
+   *
+   * @throws ApiError 404 if the audio batch does not exist
+   * @returns Number of jobs queued
+   */
+  async executeAudioBatch(id: string): Promise<{ jobsQueued: number }> {
+    const audioBatch = await db.query.audioBatches.findFirst({
+      where: eq(audioBatches.id, id),
+      with: {
+        audioBatchPrompts: {
+          orderBy: (audioBatchPrompts, { asc }) => [asc(audioBatchPrompts.order)],
+        },
+      },
+    });
+    if (!audioBatch) throw notFound('Audio batch');
+
+    await this.updateAudioBatchStatus(id, 'queued');
+    try {
+      return await queueAudioBatchExecution(audioBatch);
+    } catch (error) {
+      await this.updateAudioBatchStatus(id, 'failed');
+      throw error;
+    }
   }
 
   /**

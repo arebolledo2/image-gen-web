@@ -2,6 +2,7 @@ import { db } from '@/lib/db';
 import { guidance, Guidance, NewGuidance } from '@/lib/db/schema';
 import { eq, desc } from 'drizzle-orm';
 import { BaseService } from './base.service';
+import { ApiError } from '@/lib/api/errors';
 
 /**
  * Service for managing guidance modifiers with versioning support.
@@ -163,7 +164,7 @@ export class GuidanceService extends BaseService<typeof guidance, Guidance, NewG
   ): Promise<Guidance> {
     const parentGuide = await this.findById(parentGuidanceId);
     if (!parentGuide) {
-      throw new Error(`Parent guidance ${parentGuidanceId} not found`);
+      throw new ApiError(404, `Parent guidance ${parentGuidanceId} not found`);
     }
 
     return this.create({
