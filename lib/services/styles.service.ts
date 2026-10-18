@@ -4,6 +4,9 @@ import { desc, eq } from 'drizzle-orm';
 import { BaseService } from './base.service';
 import { ApiError } from '@/lib/api/errors';
 
+/** A style with its family size and up to three preview image ids. */
+export type StyleSummary = Style & { versionCount: number; previews: { id: string }[] };
+
 /**
  * Service for managing art styles with versioning support.
  *
@@ -21,7 +24,7 @@ export class StylesService extends BaseService<typeof styles, Style, NewStyle> {
    * @param options - Filter options
    * @returns Array of latest style versions with their version count
    */
-  async getLatestStyles(options: { favoritesOnly?: boolean } = {}): Promise<(Style & { versionCount: number })[]> {
+  async getLatestStyles(options: { favoritesOnly?: boolean } = {}): Promise<StyleSummary[]> {
     const { favoritesOnly } = options;
 
     // Get all styles ordered by creation date

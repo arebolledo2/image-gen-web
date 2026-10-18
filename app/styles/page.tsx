@@ -8,29 +8,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Plus, Loader2, Palette, Star, Trash2 } from "lucide-react";
 import { toast } from "sonner";
-
-interface Style {
-  id: string;
-  name: string;
-  version: number;
-  description: string | null;
-  palette: string[] | {
-    primary: string[];
-    accent: string[];
-    background: string;
-  };
-  renderingCues: string[] | {
-    materials: string[];
-    effects: string[];
-    finish: string;
-  };
-  createdAt: string;
-  isFavorite: boolean;
-  previews?: { id: string }[];
-}
+import { api, errorMessage } from "@/lib/api-client";
+import type { ApiStyleSummary } from "@/lib/types/api";
 
 export default function StylesPage() {
-  const [styles, setStyles] = useState<Style[]>([]);
+  const [styles, setStyles] = useState<ApiStyleSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [favoritesOnly, setFavoritesOnly] = useState(false);
 
@@ -39,9 +21,8 @@ export default function StylesPage() {
 
     async function load() {
       try {
-        const response = await fetch('/api/styles');
-        const data = await response.json();
-        if (!cancelled) setStyles(data.styles || []);
+        const data = await api.styles.list();
+        if (!cancelled) setStyles(data);
       } catch (error) {
         console.error('Error fetching styles:', error);
       } finally {
@@ -59,18 +40,13 @@ export default function StylesPage() {
     e.preventDefault();
     e.stopPropagation();
     try {
-      const response = await fetch(`/api/styles/${styleId}/favorite`, {
-        method: 'PATCH',
-      });
-      if (response.ok) {
-        const data = await response.json();
-        setStyles(styles.map(s =>
-          s.id === styleId ? { ...s, isFavorite: data.style.isFavorite } : s
-        ));
-      }
+      const updated = await api.styles.toggleFavorite(styleId);
+      setStyles((prev) => prev.map(s =>
+        s.id === styleId ? { ...s, isFavorite: updated.isFavorite } : s
+      ));
     } catch (error) {
       console.error('Error toggling favorite:', error);
-      toast.error("Failed to update favorite");
+      toast.error(errorMessage(error, "Failed to update favorite"));
     }
   };
 
@@ -83,19 +59,12 @@ export default function StylesPage() {
     }
 
     try {
-      const response = await fetch(`/api/styles/${styleId}`, {
-        method: 'DELETE',
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to delete style');
-      }
-
+      await api.styles.remove(styleId);
       setStyles((prev) => prev.filter((s) => s.id !== styleId));
       toast.success('Style deleted');
     } catch (error) {
       console.error('Error deleting style:', error);
-      toast.error('Failed to delete style');
+      toast.error(errorMessage(error, 'Failed to delete style'));
     }
   };
 

@@ -12,57 +12,19 @@ import { StylePaletteDisplay } from "@/components/styles/style-palette-display";
 import { StyleRenderingCuesDisplay } from "@/components/styles/style-rendering-cues-display";
 import { StyleLineage } from "@/components/styles/style-lineage";
 import { StyleBatchesSection } from "@/components/styles/style-batches-section";
-
-interface Style {
-  id: string;
-  name: string;
-  version: number;
-  description: string | null;
-  palette: string[] | {
-    primary: string[];
-    accent: string[];
-    background: string;
-  };
-  renderingCues: string[] | {
-    materials: string[];
-    effects: string[];
-    finish: string;
-  };
-  createdAt: string;
-  parentStyle?: {
-    id: string;
-    name: string;
-  } | null;
-  childStyles?: {
-    id: string;
-    name: string;
-    version: number;
-  }[];
-}
-
-interface StyleBatch {
-  id: string;
-  name: string;
-  status: string;
-  createdAt: string;
-  generations: {
-    images: {
-      id: string;
-      fileName: string;
-    }[];
-  }[];
-}
+import { api } from "@/lib/api-client";
+import type { ApiStyleBatch, ApiStyleDetail } from "@/lib/types/api";
 
 export default function StyleDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const router = useRouter();
-  const [style, setStyle] = useState<Style | null>(null);
+  const [style, setStyle] = useState<ApiStyleDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [deleting, setDeleting] = useState(false);
   const [creatingVersion, setCreatingVersion] = useState(false);
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [batches, setBatches] = useState<StyleBatch[]>([]);
+  const [batches, setBatches] = useState<ApiStyleBatch[]>([]);
   const [loadingBatches, setLoadingBatches] = useState(true);
 
   // Edit state for all fields
@@ -78,12 +40,7 @@ export default function StyleDetailPage({ params }: { params: Promise<{ id: stri
   useEffect(() => {
     const fetchStyle = async () => {
       try {
-        const response = await fetch(`/api/styles/${id}`);
-        if (!response.ok) {
-          throw new Error("Failed to fetch style");
-        }
-        const data = await response.json();
-        const styleData = data.style;
+        const styleData = await api.styles.get(id);
         setStyle(styleData);
 
         // Initialize edit state
@@ -112,11 +69,7 @@ export default function StyleDetailPage({ params }: { params: Promise<{ id: stri
 
     const fetchBatches = async () => {
       try {
-        const response = await fetch(`/api/styles/${id}/batches`);
-        if (response.ok) {
-          const data = await response.json();
-          setBatches(data.batches || []);
-        }
+        setBatches(await api.styles.batches(id));
       } catch (error) {
         console.error("Error fetching style batches:", error);
       } finally {
@@ -135,14 +88,7 @@ export default function StyleDetailPage({ params }: { params: Promise<{ id: stri
 
     setDeleting(true);
     try {
-      const response = await fetch(`/api/styles/${id}`, {
-        method: "DELETE",
-      });
-
-      if (!response.ok) {
-        throw new Error("Failed to delete style");
-      }
-
+      await api.styles.remove(id);
       router.push("/styles");
     } catch (error) {
       console.error("Error deleting style:", error);
@@ -155,16 +101,8 @@ export default function StyleDetailPage({ params }: { params: Promise<{ id: stri
   const handleCreateVersion = async () => {
     setCreatingVersion(true);
     try {
-      const response = await fetch(`/api/styles/${id}/version`, {
-        method: "POST",
-      });
-
-      if (!response.ok) {
-        throw new Error("Failed to create version");
-      }
-
-      const data = await response.json();
-      router.push(`/styles/${data.style.id}`);
+      const created = await api.styles.createVersion(id);
+      router.push(`/styles/${created.id}`);
     } catch (error) {
       console.error("Error creating version:", error);
       toast.error("Failed to create version");
@@ -176,31 +114,22 @@ export default function StyleDetailPage({ params }: { params: Promise<{ id: stri
   const handleSave = async () => {
     setSaving(true);
     try {
-      const response = await fetch(`/api/styles/${id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: editName,
-          description: editDescription,
-          palette: {
-            primary: editPrimaryColors,
-            accent: editAccentColors,
-            background: editBackground,
-          },
-          renderingCues: {
-            materials: editMaterials,
-            effects: editEffects,
-            finish: editFinish,
-          },
-        }),
+      const updated = await api.styles.update(id, {
+        name: editName,
+        description: editDescription,
+        palette: {
+          primary: editPrimaryColors,
+          accent: editAccentColors,
+          background: editBackground,
+        },
+        renderingCues: {
+          materials: editMaterials,
+          effects: editEffects,
+          finish: editFinish,
+        },
       });
-
-      if (!response.ok) {
-        throw new Error("Failed to save changes");
-      }
-
-      const data = await response.json();
-      setStyle(data.style);
+      // The PATCH response has no lineage, so keep the parent/children we already loaded
+      setStyle((prev) => (prev ? { ...prev, ...updated } : prev));
       toast.success("Style updated successfully!");
       setEditing(false);
     } catch (error) {

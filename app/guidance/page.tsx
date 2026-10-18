@@ -9,29 +9,22 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Plus, Loader2, Compass, X } from "lucide-react";
-
-interface Guidance {
-  id: string;
-  name: string;
-  version: number;
-  description: string;
-  createdAt: string;
-}
+import { toast } from "sonner";
+import { api, errorMessage } from "@/lib/api-client";
+import type { ApiGuidance } from "@/lib/types/api";
 
 export default function GuidancePage() {
   const router = useRouter();
-  const [guidanceList, setGuidanceList] = useState<Guidance[]>([]);
+  const [guidanceList, setGuidanceList] = useState<ApiGuidance[]>([]);
   const [loading, setLoading] = useState(true);
   const [showNewForm, setShowNewForm] = useState(false);
   const [newName, setNewName] = useState("");
   const [newDescription, setNewDescription] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
-  const requestGuidance = async (): Promise<Guidance[] | null> => {
+  const requestGuidance = async (): Promise<ApiGuidance[] | null> => {
     try {
-      const response = await fetch('/api/guidance');
-      const data = await response.json();
-      return data.guidance || [];
+      return await api.guidance.list();
     } catch (error) {
       console.error('Error fetching guidance:', error);
       return null;
@@ -60,19 +53,14 @@ export default function GuidancePage() {
     e.preventDefault();
     setSubmitting(true);
     try {
-      const response = await fetch('/api/guidance', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: newName, description: newDescription }),
-      });
-      if (response.ok) {
-        setNewName("");
-        setNewDescription("");
-        setShowNewForm(false);
-        fetchGuidance();
-      }
+      await api.guidance.create({ name: newName, description: newDescription });
+      setNewName("");
+      setNewDescription("");
+      setShowNewForm(false);
+      fetchGuidance();
     } catch (error) {
       console.error('Error creating guidance:', error);
+      toast.error(errorMessage(error, 'Failed to create guidance'));
     } finally {
       setSubmitting(false);
     }

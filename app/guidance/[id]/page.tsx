@@ -9,28 +9,13 @@ import { Badge } from "@/components/ui/badge";
 import { Loader2, ArrowLeft, Trash2, Copy, Sparkles, ChevronRight, Pencil, Save, X } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-
-interface Guidance {
-  id: string;
-  name: string;
-  version: number;
-  description: string;
-  createdAt: string;
-  parentGuidance?: {
-    id: string;
-    name: string;
-  } | null;
-  childGuidances?: {
-    id: string;
-    name: string;
-    version: number;
-  }[];
-}
+import { api } from "@/lib/api-client";
+import type { ApiGuidanceDetail } from "@/lib/types/api";
 
 export default function GuidanceDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const router = useRouter();
-  const [guidance, setGuidance] = useState<Guidance | null>(null);
+  const [guidance, setGuidance] = useState<ApiGuidanceDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [deleting, setDeleting] = useState(false);
   const [creatingVersion, setCreatingVersion] = useState(false);
@@ -42,14 +27,10 @@ export default function GuidanceDetailPage({ params }: { params: Promise<{ id: s
   useEffect(() => {
     const fetchGuidance = async () => {
       try {
-        const response = await fetch(`/api/guidance/${id}`);
-        if (!response.ok) {
-          throw new Error("Failed to fetch guidance");
-        }
-        const data = await response.json();
-        setGuidance(data.guidance);
-        setEditName(data.guidance.name);
-        setEditDescription(data.guidance.description);
+        const data = await api.guidance.get(id);
+        setGuidance(data);
+        setEditName(data.name);
+        setEditDescription(data.description);
       } catch (error) {
         console.error("Error fetching guidance:", error);
         toast.error("Failed to load guidance");
@@ -69,14 +50,7 @@ export default function GuidanceDetailPage({ params }: { params: Promise<{ id: s
 
     setDeleting(true);
     try {
-      const response = await fetch(`/api/guidance/${id}`, {
-        method: "DELETE",
-      });
-
-      if (!response.ok) {
-        throw new Error("Failed to delete guidance");
-      }
-
+      await api.guidance.remove(id);
       router.push("/guidance");
     } catch (error) {
       console.error("Error deleting guidance:", error);
@@ -89,16 +63,8 @@ export default function GuidanceDetailPage({ params }: { params: Promise<{ id: s
   const handleCreateVersion = async () => {
     setCreatingVersion(true);
     try {
-      const response = await fetch(`/api/guidance/${id}/version`, {
-        method: "POST",
-      });
-
-      if (!response.ok) {
-        throw new Error("Failed to create version");
-      }
-
-      const data = await response.json();
-      router.push(`/guidance/${data.guidance.id}`);
+      const created = await api.guidance.createVersion(id);
+      router.push(`/guidance/${created.id}`);
     } catch (error) {
       console.error("Error creating version:", error);
       toast.error("Failed to create version");
@@ -110,21 +76,12 @@ export default function GuidanceDetailPage({ params }: { params: Promise<{ id: s
   const handleSave = async () => {
     setSaving(true);
     try {
-      const response = await fetch(`/api/guidance/${id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: editName,
-          description: editDescription,
-        }),
+      const updated = await api.guidance.update(id, {
+        name: editName,
+        description: editDescription,
       });
-
-      if (!response.ok) {
-        throw new Error("Failed to save changes");
-      }
-
-      const data = await response.json();
-      setGuidance(data.guidance);
+      // The PATCH response has no lineage, so keep the parent/children we already loaded
+      setGuidance((prev) => (prev ? { ...prev, ...updated } : prev));
       toast.success("Guidance updated successfully!");
       setEditing(false);
     } catch (error) {
