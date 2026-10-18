@@ -1,239 +1,108 @@
-/**
- * Squish Animation API Route
- * Note: Uses `any` for dynamic animation frame data structures.
- */
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/db';
-import { images, squishAnimations } from '@/lib/db/schema';
-import { eq } from 'drizzle-orm';
-import { Jimp } from 'jimp';
 import path from 'path';
 import fs from 'fs/promises';
+import { z } from 'zod';
+import { imagesService } from '@/lib/services';
+import { generateSquishSpritesheet, SQUISH_FRAME_COUNTS } from '@/lib/image-processing/squish';
+import { resolveStoragePath, toStoredPath } from '@/lib/storage/resolve-path';
+import { ApiError, handleApiError, notFound, parseBody } from '@/lib/api/errors';
 
-export async function POST(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+type RouteContext = { params: Promise<{ id: string }> };
+
+const INTENSITY_MESSAGE = 'Intensity must be between 0 and 100';
+
+const squishBodySchema = z.object({
+  frameCount: z
+    .number()
+    .refine((n) => (SQUISH_FRAME_COUNTS as readonly number[]).includes(n), 'Frame count must be 4, 8, 12, or 16')
+    .default(8),
+  intensity: z.number().min(0, INTENSITY_MESSAGE).max(100, INTENSITY_MESSAGE).default(20),
+  animationType: z.enum(['bounce', 'squash_stretch']).default('bounce'),
+});
+
+// POST - generate a squish sprite sheet for an image
+export async function POST(request: NextRequest, { params }: RouteContext) {
   try {
     const { id } = await params;
-    const body = await request.json();
-    const frameCount = body.frameCount ?? 8;
-    const intensity = body.intensity ?? 20; // 0-100 percentage
-    const animationType = body.animationType ?? 'bounce';
+    const options = await parseBody(request, squishBodySchema);
 
-    // Validate inputs
-    if (![4, 8, 12, 16].includes(frameCount)) {
-      return NextResponse.json({ error: 'Frame count must be 4, 8, 12, or 16' }, { status: 400 });
-    }
-    if (intensity < 0 || intensity > 100) {
-      return NextResponse.json({ error: 'Intensity must be between 0 and 100' }, { status: 400 });
-    }
-
-    const imageRecord = await db.query.images.findFirst({
-      where: eq(images.id, id),
-    });
-
-    if (!imageRecord) {
-      return NextResponse.json({ error: 'Image not found' }, { status: 404 });
-    }
+    const image = await imagesService.findById(id);
+    if (!image) throw notFound('Image');
 
     // Use transparent version if available, otherwise use original
-    const filePathToLoad = imageRecord.transparentFilePath || imageRecord.filePath;
-      const absolutePath = path.isAbsolute(filePathToLoad)
-        ? filePathToLoad
-        : path.join(/* turbopackIgnore: true */ process.cwd(), filePathToLoad);
+    const sourcePath = resolveStoragePath(image.transparentFilePath || image.filePath);
+    const result = await generateSquishSpritesheet(sourcePath, options);
 
-    const originalImage = await (Jimp as any).read(absolutePath);
-    const width = originalImage.bitmap.width;
-    const height = originalImage.bitmap.height;
+    const fileName = `${path.parse(image.fileName).name}_${Date.now()}_squish.png`;
+    const spritesheetPath = path.join(path.dirname(sourcePath), fileName);
+    await fs.writeFile(spritesheetPath, result.buffer);
 
-    // Generate frames with squish animation
-    const frames: any[] = [];
-    const intensityFactor = intensity / 100;
-
-    for (let i = 0; i < frameCount; i++) {
-      const t = i / frameCount; // 0 to 1
-      let scaleY: number;
-      let scaleX: number;
-
-      if (animationType === 'squash_stretch') {
-        // Squash and stretch with volume preservation
-        // Vertical compression with horizontal expansion
-        const squish = Math.sin(Math.PI * t) * Math.sin(Math.PI * t); // 0 -> 1 -> 0
-        scaleY = 1 - (intensityFactor * squish);
-        scaleX = 1 / scaleY; // Preserve volume
-      } else {
-        // Simple bounce - sine wave with easing
-        const bounce = Math.sin(Math.PI * t) * (1 - t * 0.3); // Slight decay
-        scaleY = 1 - (intensityFactor * bounce);
-        scaleX = 1 + (intensityFactor * bounce * 0.3); // Slight horizontal squish
-      }
-
-      // Create frame with scaled dimensions
-      const newHeight = Math.round(height * scaleY);
-      const newWidth = Math.round(width * scaleX);
-
-      // Clone and resize
-      const frame = originalImage.clone();
-      await frame.resize({ w: newWidth, h: newHeight });
-
-      // Create canvas of original size and center the scaled image
-      const canvas = new (Jimp as any)({
-        width,
-        height,
-        color: 0x00000000, // Transparent
-      });
-
-      const offsetX = Math.round((width - newWidth) / 2);
-      const offsetY = height - newHeight; // Anchor to bottom
-
-      canvas.composite(frame, offsetX, offsetY);
-      frames.push(canvas);
-    }
-
-    // Create horizontal sprite sheet
-    const spritesheetWidth = width * frameCount;
-    const spritesheetHeight = height;
-    const spritesheet = new (Jimp as any)({
-      width: spritesheetWidth,
-      height: spritesheetHeight,
-      color: 0x00000000,
-    });
-
-    // Composite all frames horizontally
-    for (let i = 0; i < frameCount; i++) {
-      spritesheet.composite(frames[i], i * width, 0);
-    }
-
-    // Save sprite sheet
-    const parsedPath = path.parse(absolutePath);
-    const timestamp = Date.now();
-    const spritesheetFileName = `${path.parse(imageRecord.fileName).name}_${timestamp}_squish.png`;
-    const spritesheetPath = path.join(parsedPath.dir, spritesheetFileName);
-
-    const buffer = await spritesheet.getBuffer('image/png');
-    await fs.writeFile(spritesheetPath, buffer);
-
-    // Store relative path
-    const relativePath = path.relative(process.cwd(), spritesheetPath);
-
-    // Insert into database
-    const [animation] = await db.insert(squishAnimations).values({
+    const animation = await imagesService.createSquishAnimation({
       imageId: id,
-      spritesheetPath: relativePath,
-      frameCount,
-      intensity,
-      animationType,
+      spritesheetPath: toStoredPath(spritesheetPath),
+      frameCount: options.frameCount,
+      intensity: options.intensity,
+      animationType: options.animationType,
       metadata: {
-        width: spritesheetWidth,
-        height: spritesheetHeight,
-        frameWidth: width,
-        frameHeight: height,
+        width: result.width,
+        height: result.height,
+        frameWidth: result.frameWidth,
+        frameHeight: result.frameHeight,
         duration: 500, // Default 500ms per cycle
       },
-    }).returning();
+    });
 
     return NextResponse.json({
       success: true,
       animation: {
         id: animation.id,
-        spritesheetPath: relativePath,
-        frameCount,
-        intensity,
-        animationType,
+        spritesheetPath: animation.spritesheetPath,
+        frameCount: options.frameCount,
+        intensity: options.intensity,
+        animationType: options.animationType,
         metadata: animation.metadata,
       },
     });
   } catch (error) {
-    console.error('Error generating squish animation:', error);
-    return NextResponse.json(
-      { error: 'Failed to generate squish animation', details: error instanceof Error ? error.message : 'Unknown error' },
-      { status: 500 }
-    );
+    return handleApiError(error, 'generate squish animation');
   }
 }
 
-// GET endpoint to list all squish animations for an image
-export async function GET(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+// GET - list all squish animations for an image
+export async function GET(_request: NextRequest, { params }: RouteContext) {
   try {
     const { id } = await params;
+    const image = await imagesService.findById(id);
+    if (!image) throw notFound('Image');
 
-    const imageRecord = await db.query.images.findFirst({
-      where: eq(images.id, id),
-      with: {
-        squishAnimations: true,
-      },
-    });
-
-    if (!imageRecord) {
-      return NextResponse.json({ error: 'Image not found' }, { status: 404 });
-    }
-
-    return NextResponse.json({
-      animations: imageRecord.squishAnimations || [],
-    });
+    const animations = await imagesService.getSquishAnimationsByImage(id);
+    return NextResponse.json({ animations });
   } catch (error) {
-    console.error('Error fetching squish animations:', error);
-    return NextResponse.json(
-      { error: 'Failed to fetch squish animations' },
-      { status: 500 }
-    );
+    return handleApiError(error, 'fetch squish animations');
   }
 }
 
-// DELETE endpoint to remove a squish animation
-export async function DELETE(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+// DELETE - remove a squish animation (?animationId=...)
+export async function DELETE(request: NextRequest, { params }: RouteContext) {
   try {
     const { id } = await params;
-    const { searchParams } = new URL(request.url);
-    const animationId = searchParams.get('animationId');
+    const animationId = new URL(request.url).searchParams.get('animationId');
+    if (!animationId) throw new ApiError(400, 'Animation ID required');
 
-    if (!animationId) {
-      return NextResponse.json({ error: 'Animation ID required' }, { status: 400 });
-    }
-
-    // Get animation record to delete file
-    const animation = await db.query.squishAnimations.findFirst({
-      where: eq(squishAnimations.id, animationId),
-    });
-
-    if (!animation) {
-      return NextResponse.json({ error: 'Animation not found' }, { status: 404 });
-    }
-
-    // Verify animation belongs to this image
-    if (animation.imageId !== id) {
-      return NextResponse.json({ error: 'Animation does not belong to this image' }, { status: 403 });
-    }
-
-    // Delete file
-      const absolutePath = path.isAbsolute(animation.spritesheetPath)
-        ? animation.spritesheetPath
-        : path.join(/* turbopackIgnore: true */ process.cwd(), animation.spritesheetPath);
+    const animation = await imagesService.getSquishAnimation(animationId);
+    if (!animation) throw notFound('Animation');
+    if (animation.imageId !== id) throw new ApiError(403, 'Animation does not belong to this image');
 
     try {
-      await fs.unlink(absolutePath);
+      await fs.unlink(resolveStoragePath(animation.spritesheetPath));
     } catch (error) {
-      console.error('Error deleting sprite sheet file:', error);
       // Continue with database deletion even if file deletion fails
+      console.error('Error deleting sprite sheet file:', error);
     }
 
-    // Delete from database
-    await db.delete(squishAnimations).where(eq(squishAnimations.id, animationId));
-
+    await imagesService.deleteSquishAnimation(animationId);
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error('Error deleting squish animation:', error);
-    return NextResponse.json(
-      { error: 'Failed to delete squish animation' },
-      { status: 500 }
-    );
+    return handleApiError(error, 'delete squish animation');
   }
 }

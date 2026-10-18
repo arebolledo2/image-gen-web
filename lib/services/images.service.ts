@@ -7,6 +7,7 @@ import { db } from '@/lib/db';
 import { images, squishAnimations, imageEdits, Image, NewImage, SquishAnimation, ImageEdit, generations, batchPrompts, prompts } from '@/lib/db/schema';
 import { eq, desc, inArray, exists, and } from 'drizzle-orm';
 import { BaseService } from './base.service';
+import { badRequest, notFound } from '@/lib/api/errors';
 
 /**
  * Handles image metadata, favorites, transformations (transparent, flipped),
@@ -233,6 +234,72 @@ export class ImagesService extends BaseService<typeof images, Image, NewImage> {
       where: eq(squishAnimations.imageId, imageId),
       orderBy: [desc(squishAnimations.createdAt)],
     });
+  }
+
+  /**
+   * Get a squish animation by ID
+   */
+  async getSquishAnimation(id: string): Promise<SquishAnimation | undefined> {
+    return db.query.squishAnimations.findFirst({ where: eq(squishAnimations.id, id) });
+  }
+
+  /**
+   * Get an image edit by ID
+   */
+  async getImageEdit(id: string): Promise<ImageEdit | undefined> {
+    return db.query.imageEdits.findFirst({ where: eq(imageEdits.id, id) });
+  }
+
+  /**
+   * Resolve the file to use as the source for a transformation.
+   *
+   * Supported versions: `original`, `transparent`, `flipped`, `edit-<id>`,
+   * `edit-transparent-<id>`, `squish-<id>` and `ai-<id>`.
+   *
+   * @throws ApiError 400 for an unknown version or a missing derived file, 404 for unknown edit/animation
+   */
+  async resolveSourceFile(
+    image: Image,
+    sourceVersion: string
+  ): Promise<{ filePath: string; name: string }> {
+    switch (sourceVersion) {
+      case 'original':
+        return { filePath: image.filePath, name: 'original' };
+      case 'transparent':
+        if (!image.transparentFilePath) {
+          throw badRequest('No transparent version available. Create transparency first.');
+        }
+        return { filePath: image.transparentFilePath, name: 'transparent' };
+      case 'flipped':
+        if (!image.flippedFilePath) throw badRequest('No flipped version available.');
+        return { filePath: image.flippedFilePath, name: 'flipped' };
+    }
+
+    if (sourceVersion.startsWith('edit-transparent-')) {
+      const edit = await this.getImageEdit(sourceVersion.slice('edit-transparent-'.length));
+      if (!edit) throw notFound('Edit');
+      if (!edit.transparentEditPath) throw badRequest('No transparent edit version available.');
+      return {
+        filePath: edit.transparentEditPath,
+        name: `edit_${edit.generatedName.replace(/\s+/g, '_')}_transparent`,
+      };
+    }
+    if (sourceVersion.startsWith('edit-')) {
+      const edit = await this.getImageEdit(sourceVersion.slice('edit-'.length));
+      if (!edit) throw notFound('Edit');
+      return {
+        filePath: edit.editedFilePath,
+        name: `edit_${edit.generatedName.replace(/\s+/g, '_')}`,
+      };
+    }
+    if (sourceVersion.startsWith('squish-') || sourceVersion.startsWith('ai-')) {
+      const animationId = sourceVersion.replace(/^(squish-|ai-)/, '');
+      const animation = await this.getSquishAnimation(animationId);
+      if (!animation) throw notFound('Animation');
+      return { filePath: animation.spritesheetPath, name: `animation_${animationId.substring(0, 8)}` };
+    }
+
+    throw badRequest('Invalid source version');
   }
 
   /**
