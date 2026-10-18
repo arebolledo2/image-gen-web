@@ -237,6 +237,18 @@ export class ImagesService extends BaseService<typeof images, Image, NewImage> {
   }
 
   /**
+   * Record the transparent version of an AI edit
+   */
+  async setImageEditTransparentPath(id: string, transparentEditPath: string): Promise<ImageEdit | undefined> {
+    const [edit] = await db
+      .update(imageEdits)
+      .set({ transparentEditPath })
+      .where(eq(imageEdits.id, id))
+      .returning();
+    return edit;
+  }
+
+  /**
    * Get a squish animation by ID
    */
   async getSquishAnimation(id: string): Promise<SquishAnimation | undefined> {

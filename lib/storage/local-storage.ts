@@ -1,5 +1,6 @@
 import fs from 'fs/promises';
 import path from 'path';
+import { resolveStoragePath } from './resolve-path';
 
 const OUTPUT_DIR = process.env.OUTPUT_DIR || '../image-gen/outputs';
 
@@ -56,6 +57,18 @@ export async function saveImage(
 
   // Return relative path for storage in database
   return path.relative(process.cwd(), filePath);
+}
+
+/**
+ * Write a derived file (transparent version, flip, ...) to a stored path, creating directories as needed.
+ *
+ * @param filePath - Absolute or project-relative destination path
+ * @param data - File contents
+ */
+export async function writeStoredFile(filePath: string, data: Buffer): Promise<void> {
+  const absolutePath = resolveStoragePath(filePath);
+  await fs.mkdir(path.dirname(absolutePath), { recursive: true });
+  await fs.writeFile(absolutePath, data);
 }
 
 /**
