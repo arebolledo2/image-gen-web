@@ -17,9 +17,12 @@ import { useImageTransparency } from "@/hooks/useImageTransparency";
 import { useSquishAnimation } from "@/hooks/use-squish-animation";
 import { useAIAnimation } from "@/hooks/use-ai-animation";
 import { toast } from "sonner";
+import { api, errorMessage } from "@/lib/api-client";
 
 export default function BatchDetailPage() {
   const params = useParams();
+  // [id] is always present on this route; catch-all style arrays are normalised to the first segment
+  const batchId = (Array.isArray(params.id) ? params.id[0] : params.id) ?? "";
   const router = useRouter();
   const { promptStyle } = useSettings();
   const { toRequestConfig } = useAIModelSettings();
@@ -109,23 +112,17 @@ export default function BatchDetailPage() {
   const handleExecute = useCallback(async () => {
     setExecuting(true);
     try {
-      const response = await fetch(`/api/batches/${params.id}/execute`, {
-        method: 'POST',
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to execute batch');
-      }
+      await api.batches.execute(batchId);
 
       toast.success('Batch execution started! This may take a while.');
       await refetchBatch();
     } catch (error) {
       console.error('Error executing batch:', error);
-      toast.error('Failed to execute batch');
+      toast.error(errorMessage(error, 'Failed to execute batch'));
     } finally {
       setExecuting(false);
     }
-  }, [params.id, refetchBatch]);
+  }, [batchId, refetchBatch]);
 
   const handleDelete = useCallback(async () => {
     if (!confirm('Are you sure you want to delete this batch?')) {
@@ -133,36 +130,26 @@ export default function BatchDetailPage() {
     }
 
     try {
-      await fetch(`/api/batches/${params.id}`, {
-        method: 'DELETE',
-      });
+      await api.batches.remove(batchId);
       router.push('/batches');
     } catch (error) {
       console.error('Error deleting batch:', error);
       toast.error('Failed to delete batch');
     }
-  }, [params.id, router]);
+  }, [batchId, router]);
 
   const handleCreateVersion = useCallback(async () => {
     setCreatingVersion(true);
     try {
-      const response = await fetch(`/api/batches/${params.id}/version`, {
-        method: "POST",
-      });
-
-      if (!response.ok) {
-        throw new Error("Failed to create version");
-      }
-
-      const data = await response.json();
-      router.push(`/batches/${data.batch.id}`);
+      const created = await api.batches.createVersion(batchId);
+      router.push(`/batches/${created.id}`);
     } catch (error) {
       console.error("Error creating version:", error);
       toast.error("Failed to create version");
     } finally {
       setCreatingVersion(false);
     }
-  }, [params.id, router]);
+  }, [batchId, router]);
 
   const handleToggleFavorite = useCallback(async (e: React.MouseEvent, image: GalleryImage) => {
     e.stopPropagation();
@@ -172,15 +159,7 @@ export default function BatchDetailPage() {
     updateImage(image.id, { isFavorite: newStatus });
 
     try {
-      const response = await fetch(`/api/images/${image.id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ isFavorite: newStatus }),
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to update favorite status');
-      }
+      await api.images.setFavorite(image.id, newStatus);
     } catch (error) {
       console.error('Error toggling favorite:', error);
       // Revert on error
@@ -212,16 +191,7 @@ export default function BatchDetailPage() {
   }, [toggleGlobalTransparency]);
 
   const handlePromptUpdate = useCallback(async (promptId: string, newText: string) => {
-    const response = await fetch(`/api/batch-prompts/${promptId}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ promptText: newText }),
-    });
-
-    if (!response.ok) {
-      throw new Error('Failed to update prompt');
-    }
-
+    await api.batchPrompts.updateText(promptId, newText);
     await refetchBatch();
   }, [refetchBatch]);
 
@@ -229,22 +199,16 @@ export default function BatchDetailPage() {
     suggestion: string,
     referenceImageIds: string[]
   ): Promise<void> => {
-    const response = await fetch('/api/agents/adjust-batch-prompts', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        batchId: params.id,
-        suggestion,
-        promptStyle,
-        referenceImageIds,
-        aiConfig: toRequestConfig(),
-      })
+    await api.agents.adjustBatchPrompts({
+      batchId,
+      suggestion,
+      promptStyle,
+      referenceImageIds,
+      aiConfig: toRequestConfig(),
     });
-
-    if (!response.ok) throw new Error('Failed to adjust all prompts');
     await refetchBatch();
     toast.success('All prompts adjusted successfully');
-  }, [params.id, promptStyle, refetchBatch, toRequestConfig]);
+  }, [batchId, promptStyle, refetchBatch, toRequestConfig]);
 
   const handleAdjustPrompt = useCallback(async (
     promptId: string,
@@ -252,21 +216,13 @@ export default function BatchDetailPage() {
     currentText: string,
     referenceImageIds: string[]
   ): Promise<string> => {
-    const response = await fetch('/api/agents/adjust-prompt', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        basePrompt: currentText,
-        suggestion,
-        promptStyle,
-        referenceImageIds,
-        aiConfig: toRequestConfig(),
-      })
+    return api.agents.adjustPrompt({
+      basePrompt: currentText,
+      suggestion,
+      promptStyle,
+      referenceImageIds,
+      aiConfig: toRequestConfig(),
     });
-
-    if (!response.ok) throw new Error('Failed to adjust prompt');
-    const data = await response.json();
-    return data.promptText;
   }, [promptStyle, toRequestConfig]);
 
   // Memoized values
@@ -304,6 +260,7 @@ export default function BatchDetailPage() {
 
       {(batch.generations.length > 0 || images.length > 0) && (
         <ImageGallery
+          prompts={batch.batchPrompts}
           images={images}
           loading={loadingImages && images.length === 0}
           fetchingMore={fetchingMore}
