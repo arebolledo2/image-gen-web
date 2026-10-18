@@ -1,65 +1,29 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/db';
-import { batches } from '@/lib/db/schema';
-import { eq } from 'drizzle-orm';
+import { batchesService } from '@/lib/services';
+import { handleApiError, notFound } from '@/lib/api/errors';
 
-// GET /api/batches/[id] - Get a single batch
-export async function GET(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+type RouteContext = { params: Promise<{ id: string }> };
+
+// GET /api/batches/[id] - Get a single batch with prompts, generations and lineage
+export async function GET(_request: NextRequest, { params }: RouteContext) {
   try {
     const { id } = await params;
-
-    const batch = await db.query.batches.findFirst({
-      where: eq(batches.id, id),
-      with: {
-        parentBatch: true,
-        childBatches: true,
-        batchPrompts: {
-          orderBy: (batchPrompts, { asc }) => [asc(batchPrompts.order)],
-        },
-        generations: {
-          with: {
-            images: true,
-          },
-        },
-      },
-    });
-
-    if (!batch) {
-      return NextResponse.json(
-        { error: 'Batch not found' },
-        { status: 404 }
-      );
-    }
+    const batch = await batchesService.getBatchWithDetails(id);
+    if (!batch) throw notFound('Batch');
 
     return NextResponse.json({ batch });
   } catch (error) {
-    console.error('Error fetching batch:', error);
-    return NextResponse.json(
-      { error: 'Failed to fetch batch' },
-      { status: 500 }
-    );
+    return handleApiError(error, 'fetch batch');
   }
 }
 
-// DELETE /api/batches/[id] - Delete a batch
-export async function DELETE(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+// DELETE /api/batches/[id] - Delete a batch and everything generated from it
+export async function DELETE(_request: NextRequest, { params }: RouteContext) {
   try {
     const { id } = await params;
-
-    await db.delete(batches).where(eq(batches.id, id));
-
+    await batchesService.deleteBatch(id);
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error('Error deleting batch:', error);
-    return NextResponse.json(
-      { error: 'Failed to delete batch' },
-      { status: 500 }
-    );
+    return handleApiError(error, 'delete batch');
   }
 }

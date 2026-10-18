@@ -4,9 +4,10 @@
  */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { db } from '@/lib/db';
-import { batches, batchPrompts, generations, prompts, subjects, Batch, NewBatch, BatchPrompt, Generation } from '@/lib/db/schema';
+import { batches, batchPrompts, generations, images, prompts, subjects, Batch, NewBatch, BatchPrompt, Generation } from '@/lib/db/schema';
 import { eq, desc, inArray, asc, like, or, and, exists } from 'drizzle-orm';
 import { BaseService } from './base.service';
+import { ApiError } from '@/lib/api/errors';
 import type { BatchPromptOverrides, BatchDefaults } from '@/lib/types/common';
 import { batchExecutionService } from './batch-execution.service';
 import type { ImageProviderName } from '@/lib/providers/types';
@@ -364,7 +365,7 @@ export class BatchesService extends BaseService<typeof batches, Batch, NewBatch>
       });
 
       if (!parentBatch) {
-        throw new Error(`Parent batch ${parentBatchId} not found`);
+        throw new ApiError(404, `Parent batch ${parentBatchId} not found`);
       }
 
       // Merge parent defaults with new defaults
@@ -411,6 +412,62 @@ export class BatchesService extends BaseService<typeof batches, Batch, NewBatch>
         },
       });
     });
+  }
+
+  /**
+   * Get images from the parent batches of a batch (up to 5 ancestors).
+   *
+   * @param id - Batch ID
+   * @param limit - Maximum number of images to return
+   * @returns Lineage info, or undefined if the batch does not exist
+   */
+  async getLineageImages(id: string, limit = 20) {
+    const current = await db.query.batches.findFirst({
+      where: eq(batches.id, id),
+      columns: { parentBatchId: true },
+    });
+    if (!current) return undefined;
+    if (!current.parentBatchId) return { images: [], hasLineage: false as const };
+
+    const parentBatchIds: string[] = [];
+    let parentId: string | null = current.parentBatchId;
+    while (parentId && parentBatchIds.length < 5) {
+      parentBatchIds.push(parentId);
+      const parent: { parentBatchId: string | null } | undefined = await db.query.batches.findFirst({
+        where: eq(batches.id, parentId),
+        columns: { parentBatchId: true },
+      });
+      parentId = parent?.parentBatchId ?? null;
+    }
+
+    const imagesForBatch = (batchId: string, max: number) =>
+      db
+        .select({
+          id: images.id,
+          fileName: images.fileName,
+          filePath: images.filePath,
+          promptText: batchPrompts.promptText,
+          batchId: batches.id,
+          batchName: batches.name,
+          batchVersion: batches.version,
+        })
+        .from(images)
+        .innerJoin(generations, eq(images.generationId, generations.id))
+        .innerJoin(batches, eq(generations.batchId, batches.id))
+        .innerJoin(batchPrompts, eq(generations.batchPromptId, batchPrompts.id))
+        .where(eq(generations.batchId, batchId))
+        .orderBy(desc(images.createdAt))
+        .limit(max);
+
+    // The nearest parent gets the full limit, older ancestors share it
+    const [nearest, ...older] = parentBatchIds;
+    const perAncestor = Math.ceil(limit / parentBatchIds.length);
+    const results = await Promise.all([
+      imagesForBatch(nearest, limit),
+      ...older.map((batchId) => imagesForBatch(batchId, perAncestor)),
+    ]);
+
+    return { images: results.flat().slice(0, limit), hasLineage: true as const, parentBatchIds };
   }
 
   /**

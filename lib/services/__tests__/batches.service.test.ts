@@ -468,6 +468,34 @@ describe('BatchesService', () => {
     });
   });
 
+  describe('getLineageImages', () => {
+    it('returns undefined when the batch does not exist', async () => {
+      const { db } = await import('@/lib/db');
+      db.query.batches.findFirst = vi.fn().mockResolvedValue(undefined);
+
+      expect(await service.getLineageImages('missing')).toBeUndefined();
+    });
+
+    it('returns an empty result for a batch without a parent', async () => {
+      const { db } = await import('@/lib/db');
+      db.query.batches.findFirst = vi.fn().mockResolvedValue({ parentBatchId: null });
+
+      expect(await service.getLineageImages('root')).toEqual({ images: [], hasLineage: false });
+    });
+  });
+
+  describe('createBatchVersion', () => {
+    it('throws a 404 ApiError when the parent is missing', async () => {
+      const { db } = await import('@/lib/db');
+      db.transaction = vi.fn((cb) => cb({ query: { batches: { findFirst: vi.fn().mockResolvedValue(undefined) } } }));
+
+      await expect(service.createBatchVersion('nope', {})).rejects.toMatchObject({
+        status: 404,
+        message: 'Parent batch nope not found',
+      });
+    });
+  });
+
   describe('countBatches', () => {
     it('should return total count of batches', async () => {
       const { db } = await import('@/lib/db');

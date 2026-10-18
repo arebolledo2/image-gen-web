@@ -1,97 +1,63 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/db';
-import { styles } from '@/lib/db/schema';
-import { eq } from 'drizzle-orm';
+import { z } from 'zod';
+import { stylesService } from '@/lib/services';
+import { handleApiError, notFound, parseBody } from '@/lib/api/errors';
 
-// GET /api/styles/[id] - Get a single style
-export async function GET(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+type RouteContext = { params: Promise<{ id: string }> };
+
+const updateStyleSchema = z.object({
+  name: z.string().optional(),
+  description: z.string().nullable().optional(),
+  palette: z
+    .object({
+      primary: z.array(z.string()),
+      accent: z.array(z.string()),
+      background: z.string(),
+    })
+    .optional(),
+  renderingCues: z
+    .object({
+      materials: z.array(z.string()),
+      effects: z.array(z.string()),
+      finish: z.string(),
+    })
+    .optional(),
+});
+
+// GET /api/styles/[id] - Get a single style with its lineage
+export async function GET(_request: NextRequest, { params }: RouteContext) {
   try {
     const { id } = await params;
-
-    const style = await db.query.styles.findFirst({
-      where: eq(styles.id, id),
-      with: {
-        parentStyle: true,
-        childStyles: true,
-      },
-    });
-
-    if (!style) {
-      return NextResponse.json(
-        { error: 'Style not found' },
-        { status: 404 }
-      );
-    }
+    const style = await stylesService.getStyleWithLineage(id);
+    if (!style) throw notFound('Style');
 
     return NextResponse.json({ style });
   } catch (error) {
-    console.error('Error fetching style:', error);
-    return NextResponse.json(
-      { error: 'Failed to fetch style' },
-      { status: 500 }
-    );
+    return handleApiError(error, 'fetch style');
   }
 }
 
 // PATCH /api/styles/[id] - Update a style
-export async function PATCH(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function PATCH(request: NextRequest, { params }: RouteContext) {
   try {
     const { id } = await params;
-    const body = await request.json();
-    const { name, description, palette, renderingCues } = body;
+    const data = await parseBody(request, updateStyleSchema);
+    const style = await stylesService.updateStyle(id, data);
+    if (!style) throw notFound('Style');
 
-    // Build update object with only provided fields
-    const updateData: Record<string, string | string[]> = {};
-    if (name !== undefined) updateData.name = name;
-    if (description !== undefined) updateData.description = description;
-    if (palette !== undefined) updateData.palette = palette;
-    if (renderingCues !== undefined) updateData.renderingCues = renderingCues;
-
-    const [updatedStyle] = await db
-      .update(styles)
-      .set(updateData)
-      .where(eq(styles.id, id))
-      .returning();
-
-    if (!updatedStyle) {
-      return NextResponse.json(
-        { error: 'Style not found' },
-        { status: 404 }
-      );
-    }
-
-    return NextResponse.json({ style: updatedStyle });
+    return NextResponse.json({ style });
   } catch (error) {
-    console.error('Error updating style:', error);
-    return NextResponse.json(
-      { error: 'Failed to update style' },
-      { status: 500 }
-    );
+    return handleApiError(error, 'update style');
   }
 }
 
-// DELETE /api/styles/[id] - Delete a style
-export async function DELETE(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+// DELETE /api/styles/[id] - Delete a single style version
+export async function DELETE(_request: NextRequest, { params }: RouteContext) {
   try {
     const { id } = await params;
-
-    await db.delete(styles).where(eq(styles.id, id));
-
+    await stylesService.delete(id);
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error('Error deleting style:', error);
-    return NextResponse.json(
-      { error: 'Failed to delete style' },
-      { status: 500 }
-    );
+    return handleApiError(error, 'delete style');
   }
 }

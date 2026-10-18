@@ -2,6 +2,7 @@ import { db } from '@/lib/db';
 import { styles, Style, NewStyle, generations, images } from '@/lib/db/schema';
 import { desc, eq } from 'drizzle-orm';
 import { BaseService } from './base.service';
+import { ApiError } from '@/lib/api/errors';
 
 /**
  * Service for managing art styles with versioning support.
@@ -216,7 +217,7 @@ export class StylesService extends BaseService<typeof styles, Style, NewStyle> {
     // Get parent style to inherit values and increment version
     const parentStyle = await this.findById(parentStyleId);
     if (!parentStyle) {
-      throw new Error(`Parent style ${parentStyleId} not found`);
+      throw new ApiError(404, `Parent style ${parentStyleId} not found`);
     }
 
     // Create new version with incremented version number
@@ -239,9 +240,11 @@ export class StylesService extends BaseService<typeof styles, Style, NewStyle> {
    */
   async updateStyle(
     id: string,
-    data: { description?: string }
+    data: Partial<Pick<NewStyle, 'name' | 'description' | 'palette' | 'renderingCues'>>
   ): Promise<Style | undefined> {
-    return this.update(id, { description: data.description });
+    // Leave fields that were not provided untouched
+    const changes = Object.fromEntries(Object.entries(data).filter(([, value]) => value !== undefined));
+    return this.update(id, changes);
   }
 
   /**
