@@ -1,9 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/db';
-import { imageEdits } from '@/lib/db/schema';
-import { eq } from 'drizzle-orm';
-import path from 'path';
-import fs from 'fs/promises';
+import { imagesService } from '@/lib/services';
+import { readImage } from '@/lib/storage/local-storage';
+import { handleApiError, notFound } from '@/lib/api/errors';
 
 export async function GET(
   request: NextRequest,
@@ -11,39 +9,22 @@ export async function GET(
 ) {
   try {
     const { id } = await params;
-    const { searchParams } = new URL(request.url);
-    const version = searchParams.get('version'); // 'transparent' or null
+    const version = new URL(request.url).searchParams.get('version'); // 'transparent' or null
 
-    const edit = await db.query.imageEdits.findFirst({
-      where: eq(imageEdits.id, id),
-    });
+    const edit = await imagesService.getImageEdit(id);
+    if (!edit) throw notFound('Edit');
 
-    if (!edit) {
-      return NextResponse.json({ error: 'Edit not found' }, { status: 404 });
-    }
-
-    // Choose file path based on version
     const filePath = version === 'transparent' && edit.transparentEditPath
       ? edit.transparentEditPath
       : edit.editedFilePath;
 
-    const absolutePath = path.isAbsolute(filePath)
-      ? filePath
-      : path.join(/* turbopackIgnore: true */ process.cwd(), filePath);
-
-    const fileBuffer = await fs.readFile(absolutePath);
-
-    return new NextResponse(fileBuffer, {
+    return new NextResponse(await readImage(filePath) as unknown as BodyInit, {
       headers: {
         'Content-Type': 'image/png',
         'Cache-Control': 'no-store, must-revalidate',
       },
     });
   } catch (error) {
-    console.error('Error serving image edit file:', error);
-    return NextResponse.json(
-      { error: 'Failed to serve file' },
-      { status: 500 }
-    );
+    return handleApiError(error, 'serve file');
   }
 }

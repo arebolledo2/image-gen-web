@@ -4,8 +4,8 @@
  */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { db } from '@/lib/db';
-import { images, squishAnimations, imageEdits, Image, NewImage, SquishAnimation, ImageEdit, generations, batchPrompts, prompts } from '@/lib/db/schema';
-import { eq, desc, inArray, exists, and } from 'drizzle-orm';
+import { images, squishAnimations, imageEdits, Image, NewImage, SquishAnimation, ImageEdit, generations, batches, batchPrompts, prompts, subjects } from '@/lib/db/schema';
+import { eq, desc, inArray, exists, and, or, ilike, isNotNull, type SQL } from 'drizzle-orm';
 import { BaseService } from './base.service';
 import { badRequest, notFound } from '@/lib/api/errors';
 
@@ -108,6 +108,133 @@ export class ImagesService extends BaseService<typeof images, Image, NewImage> {
   }
 
   /**
+   * List images across batches with optional filters (newest first)
+   *
+   * @param filters - Filters and pagination
+   * @returns Images with their generation, batch and batch prompt
+   */
+  async listImages(filters: {
+    batchId?: string;
+    favoritesOnly?: boolean;
+    transparentOnly?: boolean;
+    /** Matches batch name or prompt text */
+    search?: string;
+    /** Matches the category of the prompt's subject */
+    categoryId?: string;
+    limit: number;
+    offset: number;
+  }) {
+    const { batchId, favoritesOnly, transparentOnly, search, categoryId, limit, offset } = filters;
+    const conditions: SQL[] = [];
+
+    if (favoritesOnly) conditions.push(eq(images.isFavorite, true));
+    if (transparentOnly) conditions.push(isNotNull(images.transparentFilePath));
+
+    if (batchId) {
+      conditions.push(exists(
+        db.select().from(generations).where(and(eq(generations.id, images.generationId), eq(generations.batchId, batchId)))
+      ));
+    }
+
+    if (search) {
+      const pattern = `%${search}%`;
+      conditions.push(exists(
+        db.select()
+          .from(generations)
+          .innerJoin(batches, eq(generations.batchId, batches.id))
+          .innerJoin(batchPrompts, eq(generations.batchPromptId, batchPrompts.id))
+          .where(and(
+            eq(generations.id, images.generationId),
+            or(ilike(batches.name, pattern), ilike(batchPrompts.promptText, pattern))
+          ))
+      ));
+    }
+
+    // generations → batchPrompts → prompts → subjects
+    if (categoryId) {
+      conditions.push(exists(
+        db.select()
+          .from(generations)
+          .innerJoin(batchPrompts, eq(generations.batchPromptId, batchPrompts.id))
+          .innerJoin(prompts, eq(batchPrompts.promptId, prompts.id))
+          .innerJoin(subjects, eq(prompts.subjectId, subjects.id))
+          .where(and(eq(generations.id, images.generationId), eq(subjects.categoryId, categoryId)))
+      ));
+    }
+
+    return db.query.images.findMany({
+      where: conditions.length > 0 ? and(...conditions) : undefined,
+      orderBy: [desc(images.createdAt)],
+      limit,
+      offset,
+      with: {
+        generation: {
+          with: {
+            batch: true,
+            batchPrompt: true,
+          },
+        },
+      },
+    });
+  }
+
+  /**
+   * Get an image with the batch, style, subject and guidance that produced it
+   */
+  async getImageWithProvenance(id: string) {
+    return db.query.images.findFirst({
+      where: eq(images.id, id),
+      with: {
+        generation: {
+          with: {
+            batch: true,
+            batchPrompt: {
+              with: {
+                prompt: {
+                  with: {
+                    style: true,
+                    subject: true,
+                    promptGuidance: {
+                      with: {
+                        guidance: true,
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    });
+  }
+
+  /**
+   * Get an image with the style and subject of its prompt (used to give AI calls context)
+   */
+  async getImageWithPromptContext(id: string) {
+    return db.query.images.findFirst({
+      where: eq(images.id, id),
+      with: {
+        generation: {
+          with: {
+            batchPrompt: {
+              with: {
+                prompt: {
+                  with: {
+                    style: true,
+                    subject: true,
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    });
+  }
+
+  /**
    * Get all favorite images
    *
    * @param limit - Optional limit
@@ -203,6 +330,7 @@ export class ImagesService extends BaseService<typeof images, Image, NewImage> {
       frameHeight?: number;
       duration?: number;
       gridSize?: number;
+      [key: string]: unknown;
     };
   }): Promise<SquishAnimation> {
     const [animation] = await db

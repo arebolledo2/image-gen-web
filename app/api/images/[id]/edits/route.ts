@@ -1,104 +1,42 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/db';
-import { images, imageEdits } from '@/lib/db/schema';
-import { eq } from 'drizzle-orm';
-import path from 'path';
-import fs from 'fs/promises';
+import { imagesService } from '@/lib/services';
+import { deleteStoredFileQuietly } from '@/lib/storage/local-storage';
+import { ApiError, handleApiError, notFound } from '@/lib/api/errors';
 
-// GET endpoint to list all edits for an image
-export async function GET(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+type RouteContext = { params: Promise<{ id: string }> };
+
+// GET - list all edits for an image
+export async function GET(_request: NextRequest, { params }: RouteContext) {
   try {
     const { id } = await params;
+    const image = await imagesService.findById(id);
+    if (!image) throw notFound('Image');
 
-    const imageRecord = await db.query.images.findFirst({
-      where: eq(images.id, id),
-      with: {
-        imageEdits: true,
-      },
-    });
-
-    if (!imageRecord) {
-      return NextResponse.json({ error: 'Image not found' }, { status: 404 });
-    }
-
-    return NextResponse.json({
-      edits: imageRecord.imageEdits || [],
-    });
+    const edits = await imagesService.getImageEditsByImage(id);
+    return NextResponse.json({ edits });
   } catch (error) {
-    console.error('Error fetching image edits:', error);
-    return NextResponse.json(
-      { error: 'Failed to fetch image edits' },
-      { status: 500 }
-    );
+    return handleApiError(error, 'fetch image edits');
   }
 }
 
-// DELETE endpoint to remove an image edit
-export async function DELETE(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+// DELETE - remove an image edit and its files (?editId=...)
+export async function DELETE(request: NextRequest, { params }: RouteContext) {
   try {
     const { id } = await params;
-    const { searchParams } = new URL(request.url);
-    const editId = searchParams.get('editId');
+    const editId = new URL(request.url).searchParams.get('editId');
+    if (!editId) throw new ApiError(400, 'Edit ID required');
 
-    if (!editId) {
-      return NextResponse.json({ error: 'Edit ID required' }, { status: 400 });
-    }
+    const edit = await imagesService.getImageEdit(editId);
+    if (!edit) throw notFound('Edit');
+    if (edit.imageId !== id) throw new ApiError(403, 'Edit does not belong to this image');
 
-    // Get edit record to delete file
-    const edit = await db.query.imageEdits.findFirst({
-      where: eq(imageEdits.id, editId),
-    });
+    // Continue with database deletion even if file deletion fails
+    await deleteStoredFileQuietly(edit.editedFilePath);
+    if (edit.transparentEditPath) await deleteStoredFileQuietly(edit.transparentEditPath);
 
-    if (!edit) {
-      return NextResponse.json({ error: 'Edit not found' }, { status: 404 });
-    }
-
-    // Verify edit belongs to this image
-    if (edit.imageId !== id) {
-      return NextResponse.json({ error: 'Edit does not belong to this image' }, { status: 403 });
-    }
-
-    // Delete edit file
-    const absolutePath = path.isAbsolute(edit.editedFilePath)
-      ? edit.editedFilePath
-      : path.join(/* turbopackIgnore: true */ process.cwd(), edit.editedFilePath);
-
-    try {
-      await fs.unlink(absolutePath);
-    } catch (error) {
-      console.error('Error deleting edit file:', error);
-      // Continue with database deletion even if file deletion fails
-    }
-
-    // Delete transparent edit file if it exists
-    if (edit.transparentEditPath) {
-      const absoluteTransparentPath = path.isAbsolute(edit.transparentEditPath)
-        ? edit.transparentEditPath
-        : path.join(/* turbopackIgnore: true */ process.cwd(), edit.transparentEditPath);
-
-      try {
-        await fs.unlink(absoluteTransparentPath);
-      } catch (error) {
-        console.error('Error deleting transparent edit file:', error);
-        // Continue with database deletion even if file deletion fails
-      }
-    }
-
-    // Delete from database
-    await db.delete(imageEdits).where(eq(imageEdits.id, editId));
-
+    await imagesService.deleteImageEdit(editId);
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error('Error deleting image edit:', error);
-    return NextResponse.json(
-      { error: 'Failed to delete image edit' },
-      { status: 500 }
-    );
+    return handleApiError(error, 'delete image edit');
   }
 }

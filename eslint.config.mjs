@@ -10,17 +10,8 @@ const LEGACY_DB_ROUTES = [
   "app/api/agents/create-prompt/route.ts",
   "app/api/audio-batch-prompts/[[]id[]]/route.ts",
   "app/api/batch-prompts/[[]id[]]/route.ts",
-  "app/api/image-edits/[[]id[]]/file/route.ts",
-  "app/api/images/[[]id[]]/ai-animation/route.ts",
-  "app/api/images/[[]id[]]/ai-edit/route.ts",
-  "app/api/images/[[]id[]]/edits/route.ts",
-  "app/api/images/[[]id[]]/file/route.ts",
-  "app/api/images/[[]id[]]/route.ts",
-  "app/api/images/[[]id[]]/suggest-animation/route.ts",
-  "app/api/images/route.ts",
   "app/api/prompts/[[]id[]]/route.ts",
   "app/api/prompts/route.ts",
-  "app/api/squish-animations/[[]id[]]/file/route.ts",
   "app/api/subjects/[[]id[]]/version/route.ts",
 ];
 

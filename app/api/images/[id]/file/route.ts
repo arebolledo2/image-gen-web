@@ -1,9 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/db';
-import { images } from '@/lib/db/schema';
-import { eq } from 'drizzle-orm';
-import { readImage } from '@/lib/storage/local-storage';
 import path from 'path';
+import { imagesService } from '@/lib/services';
+import { readImage } from '@/lib/storage/local-storage';
+import { handleApiError, notFound } from '@/lib/api/errors';
 
 export async function GET(
   request: NextRequest,
@@ -12,18 +11,10 @@ export async function GET(
   try {
     const { id } = await params;
     const { searchParams } = new URL(request.url);
-    const version = searchParams.get('version'); // 'original' or 'transparent'
+    const version = searchParams.get('version'); // 'original', 'transparent' or 'flipped'
 
-    const image = await db.query.images.findFirst({
-      where: eq(images.id, id),
-    });
-
-    if (!image) {
-      return NextResponse.json(
-        { error: 'Image not found' },
-        { status: 404 }
-      );
-    }
+    const image = await imagesService.findById(id);
+    if (!image) throw notFound('Image');
 
     let filePath = image.filePath;
     if (version === 'transparent' && image.transparentFilePath) {
@@ -32,9 +23,7 @@ export async function GET(
       filePath = image.flippedFilePath;
     }
 
-    // Handle thumbnail request
-    const size = searchParams.get('size');
-    if (size === 'thumbnail') {
+    if (searchParams.get('size') === 'thumbnail') {
       const { getThumbnail } = await import('@/lib/storage/thumbnail');
       filePath = await getThumbnail(filePath, 512);
     }
@@ -45,14 +34,10 @@ export async function GET(
       headers: {
         'Content-Type': 'image/png', // Thumbnails and transparent versions are PNG
         'Content-Disposition': `inline; filename="${path.basename(filePath)}"`,
-        'Cache-Control': 'public, max-age=31536000, immutable', // Cache images for a long time
+        'Cache-Control': 'public, max-age=31536000, immutable',
       },
     });
   } catch (error) {
-    console.error('Error serving image:', error);
-    return NextResponse.json(
-      { error: 'Failed to serve image' },
-      { status: 500 }
-    );
+    return handleApiError(error, 'serve image');
   }
 }

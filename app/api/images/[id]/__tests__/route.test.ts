@@ -9,29 +9,13 @@ vi.mock('next/server', () => ({
   },
 }));
 
-vi.mock('@/lib/db', () => ({
-  db: {
-    query: {
-      images: {
-        findFirst: vi.fn(),
-      },
-    },
-    update: vi.fn().mockReturnThis(),
-    set: vi.fn().mockReturnThis(),
-    where: vi.fn().mockReturnThis(),
-    returning: vi.fn(),
+vi.mock('@/lib/services', () => ({
+  imagesService: {
+    getImageWithProvenance: vi.fn(),
   },
 }));
 
-vi.mock('@/lib/db/schema', () => ({
-  images: { id: 'images.id' },
-}));
-
-vi.mock('drizzle-orm', () => ({
-  eq: vi.fn((a, b) => ({ eq: [a, b] })),
-}));
-
-import { db } from '@/lib/db';
+import { imagesService } from '@/lib/services';
 import { GET } from '../route';
 
 const makeParams = (id: string) => ({ params: Promise.resolve({ id }) });
@@ -42,7 +26,7 @@ describe('GET /api/images/[id]', () => {
   });
 
   it('returns style, subject, and guidance metadata when prompt exists', async () => {
-    vi.mocked(db.query.images.findFirst).mockResolvedValue({
+    vi.mocked(imagesService.getImageWithProvenance).mockResolvedValue({
       id: 'img-1',
       filePath: '/tmp/a.png',
       fileName: 'a.png',
@@ -81,7 +65,7 @@ describe('GET /api/images/[id]', () => {
   });
 
   it('returns an empty guidance array when prompt has no guidance', async () => {
-    vi.mocked(db.query.images.findFirst).mockResolvedValue({
+    vi.mocked(imagesService.getImageWithProvenance).mockResolvedValue({
       id: 'img-2',
       filePath: '/tmp/b.png',
       fileName: 'b.png',
@@ -110,7 +94,7 @@ describe('GET /api/images/[id]', () => {
   });
 
   it('returns prompt as null for ad-hoc batch prompts', async () => {
-    vi.mocked(db.query.images.findFirst).mockResolvedValue({
+    vi.mocked(imagesService.getImageWithProvenance).mockResolvedValue({
       id: 'img-3',
       filePath: '/tmp/c.png',
       fileName: 'c.png',
@@ -135,7 +119,7 @@ describe('GET /api/images/[id]', () => {
   });
 
   it('returns 404 when image is not found', async () => {
-    vi.mocked(db.query.images.findFirst).mockResolvedValue(undefined);
+    vi.mocked(imagesService.getImageWithProvenance).mockResolvedValue(undefined);
 
     const response = await GET({} as any, makeParams('missing'));
     expect(response.status).toBe(404);
@@ -143,10 +127,10 @@ describe('GET /api/images/[id]', () => {
   });
 
   it('returns 500 when database query throws', async () => {
-    vi.mocked(db.query.images.findFirst).mockRejectedValue(new Error('db down'));
+    vi.mocked(imagesService.getImageWithProvenance).mockRejectedValue(new Error('db down'));
 
     const response = await GET({} as any, makeParams('img-4'));
     expect(response.status).toBe(500);
-    expect((response as any).body).toEqual({ error: 'Failed to fetch image' });
+    expect((response as any).body).toEqual({ error: 'Failed to fetch image', details: 'db down' });
   });
 });

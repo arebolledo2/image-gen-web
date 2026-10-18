@@ -99,6 +99,18 @@ export async function deleteImage(filePath: string): Promise<void> {
 }
 
 /**
+ * Delete a stored file, logging instead of throwing if it cannot be removed
+ * (so database cleanup can continue).
+ */
+export async function deleteStoredFileQuietly(filePath: string): Promise<void> {
+  try {
+    await fs.unlink(resolveStoragePath(filePath));
+  } catch (error) {
+    console.error(`Error deleting file ${filePath}:`, error);
+  }
+}
+
+/**
  * Get file statistics for an image.
  *
  * @param filePath - Absolute or relative path to image file
