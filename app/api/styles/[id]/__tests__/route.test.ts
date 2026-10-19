@@ -1,119 +1,97 @@
-/**
- * API Route Tests: /api/styles/[id]
- *
- * Tests database integration for the styles detail route (GET/PATCH/DELETE).
- * Note: NextResponse doesn't work properly in vitest, so we test
- * database calls directly (same pattern as export-routes.test.ts).
- */
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-vi.mock('@/lib/db', () => {
-  const mockDb = {
-    query: {
-      styles: {
-        findFirst: vi.fn(),
-      },
-    },
-    update: vi.fn().mockReturnThis(),
-    delete: vi.fn().mockReturnThis(),
-    set: vi.fn().mockReturnThis(),
-    where: vi.fn().mockReturnThis(),
-    returning: vi.fn(),
-  };
-  return { db: mockDb };
-});
-
-vi.mock('@/lib/db/schema', () => ({
-  styles: { id: 'styles.id' },
+vi.mock('next/server', () => ({
+  NextResponse: {
+    json: (body: unknown, init?: { status?: number }) => ({ status: init?.status ?? 200, body }),
+  },
 }));
 
-vi.mock('drizzle-orm', () => ({
-  eq: vi.fn((a, b) => ({ eq: [a, b] })),
+vi.mock('@/lib/services', () => ({
+  stylesService: {
+    getStyleWithLineage: vi.fn(),
+    updateStyle: vi.fn(),
+    delete: vi.fn(),
+  },
 }));
 
-import { db } from '@/lib/db';
-import { styles } from '@/lib/db/schema';
+import { stylesService } from '@/lib/services';
+import { DELETE, GET, PATCH } from '../route';
 
-describe('GET /api/styles/[id] - db integration', () => {
+const context = (id: string) => ({ params: Promise.resolve({ id }) });
+const jsonRequest = (body: unknown) => new Request('http://localhost/api/styles/style-1', {
+  method: 'PATCH',
+  body: JSON.stringify(body),
+}) as never;
+
+describe('/api/styles/[id]', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.spyOn(console, 'error').mockImplementation(() => {});
   });
 
-  it('should find a style by ID', async () => {
-    const mockStyle = {
-      id: 'style-1',
-      name: 'Pixel Art',
-      version: 1,
-      parentStyleId: null,
-      isFavorite: false,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      palette: { primary: [], accent: [], background: '' },
-      renderingCues: { materials: [], effects: [], finish: '' },
-      description: null,
-      parentStyle: null,
-      childStyles: [],
-    };
-    vi.mocked(db.query.styles.findFirst).mockResolvedValue(mockStyle as any);
+  describe('GET', () => {
+    it('returns the style with its lineage', async () => {
+      vi.mocked(stylesService.getStyleWithLineage).mockResolvedValue({ id: 'style-1', name: 'Pixel Art' } as never);
 
-    const result = await db.query.styles.findFirst({
-      where: { eq: ['styles.id', 'style-1'] } as any,
-      with: { parentStyle: true, childStyles: true } as any,
+      const response = (await GET({} as never, context('style-1'))) as unknown as { status: number; body: unknown };
+
+      expect(response.status).toBe(200);
+      expect(response.body).toEqual({ style: { id: 'style-1', name: 'Pixel Art' } });
     });
 
-    expect(result).toEqual(mockStyle);
-    expect(db.query.styles.findFirst).toHaveBeenCalled();
+    it('returns 404 for an unknown style', async () => {
+      vi.mocked(stylesService.getStyleWithLineage).mockResolvedValue(undefined);
+
+      const response = (await GET({} as never, context('missing'))) as unknown as { status: number; body: unknown };
+
+      expect(response.status).toBe(404);
+      expect(response.body).toEqual({ error: 'Style not found' });
+    });
   });
 
-  it('should return undefined for nonexistent style', async () => {
-    vi.mocked(db.query.styles.findFirst).mockResolvedValue(undefined);
+  describe('PATCH', () => {
+    it('passes validated fields to the service', async () => {
+      vi.mocked(stylesService.updateStyle).mockResolvedValue({ id: 'style-1', name: 'New' } as never);
 
-    const result = await db.query.styles.findFirst({
-      where: { eq: ['styles.id', 'nonexistent'] } as any,
+      const response = (await PATCH(jsonRequest({ name: 'New' }), context('style-1'))) as unknown as { status: number };
+
+      expect(response.status).toBe(200);
+      expect(stylesService.updateStyle).toHaveBeenCalledWith('style-1', { name: 'New' });
     });
 
-    expect(result).toBeUndefined();
-  });
-});
+    it('rejects an incomplete palette with 400 and does not call the service', async () => {
+      const response = (await PATCH(jsonRequest({ palette: { primary: [] } }), context('style-1'))) as unknown as {
+        status: number;
+      };
 
-describe('PATCH /api/styles/[id] - db integration', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    vi.mocked(db.update).mockReturnThis();
-    vi.mocked((db as any).set).mockReturnThis();
-    vi.mocked((db as any).where).mockReturnThis();
-  });
+      expect(response.status).toBe(400);
+      expect(stylesService.updateStyle).not.toHaveBeenCalled();
+    });
 
-  it('should update style fields', async () => {
-    const updatedStyle = { id: 'style-1', name: 'Updated Name', version: 1 };
-    vi.mocked((db as any).returning).mockResolvedValue([updatedStyle as any]);
+    it('returns 404 when the style does not exist', async () => {
+      vi.mocked(stylesService.updateStyle).mockResolvedValue(undefined);
 
-    const result = await (db.update(styles) as any).set({ name: 'Updated Name' }).where({}).returning();
+      const response = (await PATCH(jsonRequest({ name: 'x' }), context('missing'))) as unknown as { status: number };
 
-    expect(result).toEqual([updatedStyle]);
-    expect(db.update).toHaveBeenCalled();
+      expect(response.status).toBe(404);
+    });
   });
 
-  it('should return empty array for nonexistent style', async () => {
-    vi.mocked((db as any).returning).mockResolvedValue([]);
+  describe('DELETE', () => {
+    it('deletes the style version', async () => {
+      const response = (await DELETE({} as never, context('style-1'))) as unknown as { status: number; body: unknown };
 
-    const result = await (db.update(styles) as any).set({ name: 'New' }).where({} as any).returning();
+      expect(stylesService.delete).toHaveBeenCalledWith('style-1');
+      expect(response.body).toEqual({ success: true });
+    });
 
-    expect(result).toEqual([]);
-  });
-});
+    it('reports a 500 without leaking internals when the service fails', async () => {
+      vi.mocked(stylesService.delete).mockRejectedValue(new Error('fk violation'));
 
-describe('DELETE /api/styles/[id] - db integration', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    vi.mocked(db.delete).mockReturnThis();
-    vi.mocked((db as any).where).mockResolvedValue(undefined);
-  });
+      const response = (await DELETE({} as never, context('style-1'))) as unknown as { status: number; body: unknown };
 
-  it('should delete via db chain', async () => {
-    await (db.delete(styles) as any).where({} as any);
-
-    expect(db.delete).toHaveBeenCalled();
-    expect((db as any).where).toHaveBeenCalled();
+      expect(response.status).toBe(500);
+      expect(response.body).toMatchObject({ error: 'Failed to delete style' });
+    });
   });
 });
