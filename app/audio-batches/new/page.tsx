@@ -13,6 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Loader2, Plus, X, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { useAIModelSettings } from "@/components/providers/ai-model-settings-provider";
+import { api, agentErrorMessage, errorMessage } from "@/lib/api-client";
 
 interface AudioPrompt {
   promptText: string;
@@ -64,20 +65,13 @@ export default function NewAudioBatchPage() {
 
     setGeneratingIndex(index);
     try {
-      const response = await fetch('/api/agents/create-audio-prompt', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ concept, aiConfig: toRequestConfig() }),
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        if (data.prompt) {
-          updatePrompt(index, data.prompt);
-        }
+      const prompt = await api.agents.createAudioPrompt(concept, toRequestConfig());
+      if (prompt) {
+        updatePrompt(index, prompt);
       }
     } catch (error) {
       console.error('Error with AI assist:', error);
+      toast.error(agentErrorMessage(error, 'AI assist failed'));
     } finally {
       setGeneratingIndex(null);
     }
@@ -99,34 +93,24 @@ export default function NewAudioBatchPage() {
 
     setLoading(true);
     try {
-      const response = await fetch('/api/audio-batches', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name,
-          description,
-          provider,
-          defaults: {
-            duration: useAutoDuration ? 0 : defaultDuration,
-            count: defaultCount,
-            temperature: defaultTemperature,
-            topK: 250,
-            cfgCoef: 3.0,
-          },
-          prompts: validPrompts,
-        }),
+      const created = await api.audioBatches.create({
+        name,
+        description,
+        provider,
+        defaults: {
+          duration: useAutoDuration ? 0 : defaultDuration,
+          count: defaultCount,
+          temperature: defaultTemperature,
+          topK: 250,
+          cfgCoef: 3.0,
+        },
+        prompts: validPrompts,
       });
-
-      if (!response.ok) {
-        throw new Error('Failed to create audio batch');
-      }
-
-      const data = await response.json();
       toast.success('Audio batch created successfully!');
-      router.push(`/audio-batches/${data.audioBatch.id}`);
+      router.push(`/audio-batches/${created.id}`);
     } catch (error) {
       console.error('Error creating audio batch:', error);
-      toast.error('Failed to create audio batch');
+      toast.error(errorMessage(error, 'Failed to create audio batch'));
     } finally {
       setLoading(false);
     }

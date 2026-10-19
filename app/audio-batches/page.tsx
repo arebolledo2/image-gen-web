@@ -6,25 +6,11 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Plus, Loader2, Music } from "lucide-react";
-
-interface AudioBatch {
-  id: string;
-  name: string;
-  description: string | null;
-  status: string;
-  provider: 'audiocraft';
-  createdAt: string;
-  audioBatchPrompts: unknown[];
-  audioGenerations: {
-    audioFiles: {
-      id: string;
-      fileName: string;
-    }[];
-  }[];
-}
+import { api } from "@/lib/api-client";
+import type { ApiAudioBatchSummary } from "@/lib/types/api";
 
 export default function AudioBatchesPage() {
-  const [audioBatches, setAudioBatches] = useState<AudioBatch[]>([]);
+  const [audioBatches, setAudioBatches] = useState<ApiAudioBatchSummary[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -32,9 +18,8 @@ export default function AudioBatchesPage() {
 
     async function load() {
       try {
-        const response = await fetch('/api/audio-batches');
-        const data = await response.json();
-        if (!cancelled) setAudioBatches(data.audioBatches || []);
+        const data = await api.audioBatches.list();
+        if (!cancelled) setAudioBatches(data);
       } catch (error) {
         console.error('Error fetching audio batches:', error);
       } finally {

@@ -17,6 +17,7 @@ import { Slider } from "@/components/ui/slider";
 import { Switch } from "@/components/ui/switch";
 import { Settings, Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import { api, errorMessage } from "@/lib/api-client";
 
 type AudioProvider = 'audiocraft' | 'elevenlabs';
 
@@ -28,7 +29,7 @@ interface AudioBatchSettingsDialogProps {
             duration?: number;
             count?: number;
             temperature?: number;
-        };
+        } | null;
     };
     onSettingsUpdated: () => void;
 }
@@ -54,29 +55,21 @@ export function AudioBatchSettingsDialog({
     const handleSave = async () => {
         setSaving(true);
         try {
-            const response = await fetch(`/api/audio-batches/${batchId}/settings`, {
-                method: 'PATCH',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    provider,
-                    defaults: {
-                        duration: useAutoDuration ? 0 : duration,
-                        count,
-                        temperature,
-                    },
-                }),
+            await api.audioBatches.updateSettings(batchId, {
+                provider,
+                defaults: {
+                    duration: useAutoDuration ? 0 : duration,
+                    count,
+                    temperature,
+                },
             });
-
-            if (!response.ok) {
-                throw new Error('Failed to update settings');
-            }
 
             toast.success('Settings updated!');
             setOpen(false);
             onSettingsUpdated();
         } catch (error) {
             console.error('Error updating settings:', error);
-            toast.error('Failed to update settings');
+            toast.error(errorMessage(error, 'Failed to update settings'));
         } finally {
             setSaving(false);
         }

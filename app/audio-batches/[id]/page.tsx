@@ -13,6 +13,7 @@ import { AIAssistButton } from "@/components/agents/ai-assist-button";
 import { AudioBatchSettingsDialog } from "@/components/batch/audio-batch-settings-dialog";
 import { useAudioBatchData } from "@/hooks/use-audio-batch-data";
 import { useAIModelSettings } from "@/components/providers/ai-model-settings-provider";
+import { api, errorMessage } from "@/lib/api-client";
 
 export default function AudioBatchDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const resolvedParams = use(params);
@@ -33,17 +34,13 @@ export default function AudioBatchDetailPage({ params }: { params: Promise<{ id:
 
     setExecuting(true);
     try {
-      const response = await fetch(`/api/audio-batches/${batch.id}/execute`, {
-        method: 'POST',
-      });
-
-      if (!response.ok) throw new Error('Failed to execute batch');
+      await api.audioBatches.execute(batch.id);
 
       toast.success('Audio batch queued for execution!');
       refetchBatch();
     } catch (error) {
       console.error('Error executing batch:', error);
-      toast.error('Failed to execute batch');
+      toast.error(errorMessage(error, 'Failed to execute batch'));
     } finally {
       setExecuting(false);
     }
@@ -54,18 +51,12 @@ export default function AudioBatchDetailPage({ params }: { params: Promise<{ id:
 
     setCreatingVersion(true);
     try {
-      const response = await fetch(`/api/audio-batches/${batch.id}/version`, {
-        method: 'POST',
-      });
-
-      if (!response.ok) throw new Error('Failed to create version');
-
-      const data = await response.json();
+      const created = await api.audioBatches.createVersion(batch.id);
       toast.success('New version created!');
-      router.push(`/audio-batches/${data.audioBatch.id}`);
+      router.push(`/audio-batches/${created.id}`);
     } catch (error) {
       console.error('Error creating version:', error);
-      toast.error('Failed to create version');
+      toast.error(errorMessage(error, 'Failed to create version'));
     } finally {
       setCreatingVersion(false);
     }
@@ -77,16 +68,12 @@ export default function AudioBatchDetailPage({ params }: { params: Promise<{ id:
 
     setDeleting(true);
     try {
-      const response = await fetch(`/api/audio-batches/${batch.id}`, {
-        method: 'DELETE',
-      });
-
-      if (!response.ok) throw new Error('Failed to delete batch');
+      await api.audioBatches.remove(batch.id);
 
       router.push('/audio-batches');
     } catch (error) {
       console.error('Error deleting batch:', error);
-      toast.error('Failed to delete batch');
+      toast.error(errorMessage(error, 'Failed to delete batch'));
       setDeleting(false);
     }
   };
@@ -99,20 +86,14 @@ export default function AudioBatchDetailPage({ params }: { params: Promise<{ id:
   const handleSavePrompt = async (promptId: string) => {
     setSavingPrompt(true);
     try {
-      const response = await fetch(`/api/audio-batch-prompts/${promptId}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ promptText: editPromptText }),
-      });
-
-      if (!response.ok) throw new Error('Failed to update prompt');
+      await api.audioBatchPrompts.updateText(promptId, editPromptText);
 
       setEditingPromptId(null);
       toast.success('Prompt updated');
       refetchBatch();
     } catch (error) {
       console.error('Error updating prompt:', error);
-      toast.error('Failed to update prompt');
+      toast.error(errorMessage(error, 'Failed to update prompt'));
     } finally {
       setSavingPrompt(false);
     }
@@ -123,21 +104,14 @@ export default function AudioBatchDetailPage({ params }: { params: Promise<{ id:
     suggestion: string,
     currentText: string
   ): Promise<string> => {
-    const response = await fetch('/api/agents/adjust-prompt', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        basePrompt: currentText,
-        suggestion,
-        promptStyle: "audio", // Specific style for audio
-        aiConfig: toRequestConfig(),
-      })
+    const promptText = await api.agents.adjustPrompt({
+      basePrompt: currentText,
+      suggestion,
+      promptStyle: "audio", // Specific style for audio
+      aiConfig: toRequestConfig(),
     });
-
-    if (!response.ok) throw new Error('Failed to adjust prompt');
-    const data = await response.json();
-    setEditPromptText(data.promptText);
-    return data.promptText;
+    setEditPromptText(promptText);
+    return promptText;
   }, [toRequestConfig]);
 
   const getStatusColor = (status: string) => {
@@ -255,18 +229,16 @@ export default function AudioBatchDetailPage({ params }: { params: Promise<{ id:
             <div className="flex justify-between">
               <span className="text-muted-foreground">Duration:</span>
               <span>
-                {batch.defaults.duration === 0 || batch.defaults.duration === null || batch.defaults.duration === undefined
-                  ? 'Auto'
-                  : `${batch.defaults.duration}s`}
+                {!batch.defaults?.duration ? 'Auto' : `${batch.defaults.duration}s`}
               </span>
             </div>
             <div className="flex justify-between">
               <span className="text-muted-foreground">Count:</span>
-              <span>{batch.defaults.count || 1}</span>
+              <span>{batch.defaults?.count || 1}</span>
             </div>
             <div className="flex justify-between">
               <span className="text-muted-foreground">Temperature:</span>
-              <span>{batch.defaults.temperature?.toFixed(1) || '1.0'}</span>
+              <span>{batch.defaults?.temperature?.toFixed(1) || '1.0'}</span>
             </div>
           </CardContent>
         </Card>
@@ -398,7 +370,7 @@ export default function AudioBatchDetailPage({ params }: { params: Promise<{ id:
             {audioFiles.slice(0, 5).map((file) => (
               <div key={file.id} className="flex items-center justify-between p-2 bg-muted rounded">
                 <span className="text-sm truncate flex-1">{file.fileName}</span>
-                <span className="text-xs text-muted-foreground">{(file.duration / 1000).toFixed(1)}s</span>
+                <span className="text-xs text-muted-foreground">{((file.duration ?? 0) / 1000).toFixed(1)}s</span>
               </div>
             ))}
             {audioFiles.length > 5 && (

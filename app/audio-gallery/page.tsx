@@ -11,29 +11,14 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Loader2, Download, Heart, Search, Music, Play, Pause, Copy, Check } from "lucide-react";
-
-interface AudioFileWithDetails {
-  id: string;
-  fileName: string;
-  filePath: string;
-  duration: number; // milliseconds
-  isFavorite: boolean;
-  audioGeneration?: {
-    audioBatch: {
-      id: string;
-      name: string;
-    };
-    audioBatchPrompt?: {
-      promptText: string;
-    } | null;
-  } | null;
-}
+import { api, errorMessage } from "@/lib/api-client";
+import type { ApiAudioFileListItem } from "@/lib/types/api";
 
 export default function AudioGalleryPage() {
   const searchParams = useSearchParams();
   const batchId = searchParams.get('batchId');
 
-  const [audioFiles, setAudioFiles] = useState<AudioFileWithDetails[]>([]);
+  const [audioFiles, setAudioFiles] = useState<ApiAudioFileListItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [favoritesOnly, setFavoritesOnly] = useState(false);
   const [search, setSearch] = useState("");
@@ -52,18 +37,7 @@ export default function AudioGalleryPage() {
   const fetchAudioFiles = useCallback(async () => {
     setLoading(true);
     try {
-      const url = new URL('/api/audio', window.location.origin);
-      url.searchParams.append('favorites', favoritesOnly.toString());
-      if (debouncedSearch) {
-        url.searchParams.append('search', debouncedSearch);
-      }
-      if (batchId) {
-        url.searchParams.append('batchId', batchId);
-      }
-
-      const response = await fetch(url.toString());
-      const data = await response.json();
-      setAudioFiles(data.audioFiles || []);
+      setAudioFiles(await api.audio.list({ batchId, favoritesOnly, search: debouncedSearch }));
     } catch (error) {
       console.error('Error fetching audio files:', error);
     } finally {
@@ -76,31 +50,25 @@ export default function AudioGalleryPage() {
     fetchAudioFiles();
   }, [fetchAudioFiles]);
 
-  const toggleFavorite = async (audioFile: AudioFileWithDetails) => {
+  const toggleFavorite = async (audioFile: ApiAudioFileListItem) => {
     try {
-      const response = await fetch(`/api/audio/${audioFile.id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ isFavorite: !audioFile.isFavorite }),
-      });
-
-      if (!response.ok) throw new Error('Failed to update favorite');
+      const updated = await api.audio.setFavorite(audioFile.id, !audioFile.isFavorite);
 
       // Update local state
       setAudioFiles(prev =>
         prev.map(file =>
           file.id === audioFile.id
-            ? { ...file, isFavorite: !file.isFavorite }
+            ? { ...file, isFavorite: updated.isFavorite }
             : file
         )
       );
     } catch (error) {
       console.error('Error toggling favorite:', error);
-      toast.error('Failed to update favorite');
+      toast.error(errorMessage(error, 'Failed to update favorite'));
     }
   };
 
-  const handleDownload = (audioFile: AudioFileWithDetails) => {
+  const handleDownload = (audioFile: ApiAudioFileListItem) => {
     const link = document.createElement('a');
     link.href = `/api/audio/${audioFile.id}/file?download=true`;
     link.download = audioFile.fileName;
@@ -109,15 +77,15 @@ export default function AudioGalleryPage() {
     document.body.removeChild(link);
   };
 
-  const handleCopyFileName = (audioFile: AudioFileWithDetails) => {
+  const handleCopyFileName = (audioFile: ApiAudioFileListItem) => {
     navigator.clipboard.writeText(audioFile.fileName);
     setCopiedId(audioFile.id);
     toast.success("Filename copied to clipboard");
     setTimeout(() => setCopiedId(null), 2000);
   };
 
-  const formatDuration = (ms: number) => {
-    const seconds = ms / 1000;
+  const formatDuration = (ms: number | null) => {
+    const seconds = (ms ?? 0) / 1000;
     return `${seconds.toFixed(1)}s`;
   };
 

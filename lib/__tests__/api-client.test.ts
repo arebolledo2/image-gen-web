@@ -173,3 +173,38 @@ describe('errorMessage', () => {
     expect(errorMessage('weird', 'Failed to save')).toBe('Failed to save');
   });
 });
+
+describe('audio', () => {
+  it('lists audio files with the favorites and batch filters the route expects', async () => {
+    const fetchMock = mockFetch({ audioFiles: [{ id: 'a1' }] });
+    const files = await api.audio.list({ batchId: 'b1', favoritesOnly: true, search: '' });
+
+    expect(files).toEqual([{ id: 'a1' }]);
+    expect(fetchMock.mock.calls[0][0]).toBe('/api/audio?batchId=b1&favorites=true');
+  });
+
+  it('omits batchId when it is null', async () => {
+    const fetchMock = mockFetch({ audioFiles: [] });
+    await api.audio.list({ batchId: null, favoritesOnly: false, search: 'boom' });
+
+    expect(fetchMock.mock.calls[0][0]).toBe('/api/audio?favorites=false&search=boom');
+  });
+
+  it('unwraps the audioBatch envelope on create and version', async () => {
+    mockFetch({ audioBatch: { id: 'ab1' } });
+    expect(await api.audioBatches.createVersion('ab0')).toEqual({ id: 'ab1' });
+
+    const fetchMock = mockFetch({ audioBatch: { id: 'ab2' } });
+    await api.audioBatches.create({ name: 'n', provider: 'elevenlabs', defaults: {}, prompts: [{ promptText: 'x' }] });
+    expect(fetchMock.mock.calls[0][1]).toMatchObject({ method: 'POST' });
+  });
+
+  it('surfaces the draft-only error from prompt edits', async () => {
+    mockFetch({ error: 'Cannot edit prompts for non-draft audio batches' }, { status: 400 });
+
+    await expect(api.audioBatchPrompts.updateText('p1', 'x')).rejects.toMatchObject({
+      message: 'Cannot edit prompts for non-draft audio batches',
+      status: 400,
+    });
+  });
+});

@@ -2,38 +2,21 @@
 
 /**
  * Hook for fetching and managing audio batch data.
- * Note: Uses `any` for dynamic batch data from API.
  */
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState, useEffect, useCallback } from "react";
-
-interface AudioBatch {
-    id: string;
-    name: string;
-    version: number;
-    description: string | null;
-    status: string;
-    provider: string;
-    createdAt: string;
-    completedAt: string | null;
-    defaults: any;
-    audioBatchPrompts: any[];
-    audioGenerations?: any[];
-    parentAudioBatch?: { id: string; name: string } | null;
-    childAudioBatches?: { id: string; name: string; version: number }[];
-}
+import { api } from "@/lib/api-client";
+import type { ApiAudioBatchDetail } from "@/lib/types/api";
 
 export function useAudioBatchData(batchId: string | string[] | undefined) {
-    const [batch, setBatch] = useState<AudioBatch | null>(null);
+    const [batch, setBatch] = useState<ApiAudioBatchDetail | null>(null);
     const [loading, setLoading] = useState(true);
 
-    const requestBatch = useCallback(async (): Promise<{ ok: true; batch: AudioBatch | null } | { ok: false } | null> => {
-        if (!batchId) return null;
+    const requestBatch = useCallback(async (): Promise<{ ok: true; batch: ApiAudioBatchDetail | null } | { ok: false } | null> => {
+        const id = Array.isArray(batchId) ? batchId[0] : batchId;
+        if (!id) return null;
 
         try {
-            const response = await fetch(`/api/audio-batches/${batchId}`);
-            const data = await response.json();
-            return { ok: true, batch: data.audioBatch };
+            return { ok: true, batch: await api.audioBatches.get(id) };
         } catch (error) {
             console.error('Error fetching audiobatch:', error);
             return { ok: false };

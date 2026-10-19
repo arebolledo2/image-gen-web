@@ -10,6 +10,12 @@
  */
 import type { AIRequestConfigInput } from '@/lib/ai/config';
 import type {
+  ApiAudioBatchDefaults,
+  ApiAudioBatchDetail,
+  ApiAudioBatchSummary,
+  ApiAudioFile,
+  ApiAudioFileListItem,
+  ApiAudioProvider,
   ApiBatch,
   ApiBatchDetail,
   ApiBatchSummary,
@@ -239,6 +245,42 @@ export const api = {
       request<{ success: true }>(`/api/batch-prompts/${id}`, { method: 'PATCH', body: { promptText } }),
   },
 
+  audioBatches: {
+    list: async () => (await request<{ audioBatches: ApiAudioBatchSummary[] }>('/api/audio-batches')).audioBatches,
+    get: async (id: string) => (await request<{ audioBatch: ApiAudioBatchDetail }>(`/api/audio-batches/${id}`)).audioBatch,
+    create: async (data: {
+      name: string;
+      description?: string;
+      provider: ApiAudioProvider;
+      defaults: ApiAudioBatchDefaults;
+      prompts: { promptText: string; overrides?: ApiAudioBatchDefaults }[];
+    }) => (await request<{ audioBatch: { id: string } }>('/api/audio-batches', { method: 'POST', body: data })).audioBatch,
+    remove: (id: string) => request<{ success: true }>(`/api/audio-batches/${id}`, { method: 'DELETE' }),
+    execute: (id: string) => request<unknown>(`/api/audio-batches/${id}/execute`, { method: 'POST' }),
+    createVersion: async (id: string) =>
+      (await request<{ audioBatch: { id: string } }>(`/api/audio-batches/${id}/version`, { method: 'POST' })).audioBatch,
+    updateSettings: (id: string, data: { provider: ApiAudioProvider; defaults: ApiAudioBatchDefaults }) =>
+      request<unknown>(`/api/audio-batches/${id}/settings`, { method: 'PATCH', body: data }),
+  },
+
+  audioBatchPrompts: {
+    updateText: (id: string, promptText: string) =>
+      request<{ success: true }>(`/api/audio-batch-prompts/${id}`, { method: 'PATCH', body: { promptText } }),
+  },
+
+  audio: {
+    list: async (filters: { batchId?: string | null; favoritesOnly?: boolean; search?: string } = {}) =>
+      (await request<{ audioFiles: ApiAudioFileListItem[] }>('/api/audio', {
+        query: {
+          batchId: filters.batchId ?? undefined,
+          favorites: filters.favoritesOnly,
+          search: filters.search || undefined,
+        },
+      })).audioFiles,
+    setFavorite: async (id: string, isFavorite: boolean) =>
+      (await request<{ audioFile: ApiAudioFile }>(`/api/audio/${id}`, { method: 'PATCH', body: { isFavorite } })).audioFile,
+  },
+
   images: {
     list: (filters: {
       batchId?: string;
@@ -308,6 +350,8 @@ export const api = {
       })).style,
     editStyle: async (data: { currentStyle: AiStyleDraft; userRequest: string; aiConfig: AiConfig }) =>
       (await request<{ style: AiStyleDraft }>('/api/agents/edit-style', { method: 'POST', body: data })).style,
+    createAudioPrompt: async (concept: string, aiConfig: AiConfig) =>
+      (await request<{ prompt: string }>('/api/agents/create-audio-prompt', { method: 'POST', body: { concept, aiConfig } })).prompt,
     createBatchMetadata: (promptText: string, aiConfig: AiConfig) =>
       request<{ name: string; description: string }>('/api/agents/create-batch-metadata', {
         method: 'POST',

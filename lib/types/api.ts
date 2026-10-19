@@ -8,6 +8,10 @@
  * Type-only imports: nothing from the schema (or drizzle) ends up in the client bundle.
  */
 import type {
+  AudioBatch,
+  AudioBatchPrompt,
+  AudioFile,
+  AudioGeneration,
   Batch,
   BatchPrompt,
   ComposerLayout,
@@ -225,3 +229,37 @@ export type ApiTransparencyResult =
 // -----------------------------------------------------------------------------
 
 export type ApiComposerLayout = Serialized<ComposerLayout>;
+
+// -----------------------------------------------------------------------------
+// Audio
+// -----------------------------------------------------------------------------
+
+export type ApiAudioProvider = AudioBatch['provider'];
+export type ApiAudioBatchDefaults = NonNullable<AudioBatch['defaults']>;
+export type ApiAudioBatchPrompt = Serialized<AudioBatchPrompt>;
+export type ApiAudioFile = Serialized<AudioFile>;
+export type ApiAudioGeneration = Serialized<AudioGeneration> & { audioFiles: ApiAudioFile[] };
+
+/** GET /api/audio-batches (items) */
+export type ApiAudioBatchSummary = Serialized<AudioBatch> & {
+  audioBatchPrompts: ApiAudioBatchPrompt[];
+  audioGenerations: ApiAudioGeneration[];
+};
+
+/** GET /api/audio-batches/[id] */
+export type ApiAudioBatchDetail = Serialized<AudioBatch> & {
+  parentAudioBatch: Serialized<AudioBatch> | null;
+  childAudioBatches: Serialized<AudioBatch>[];
+  audioBatchPrompts: ApiAudioBatchPrompt[];
+  audioGenerations: ApiAudioGeneration[];
+};
+
+/** GET /api/audio (items) */
+export type ApiAudioFileListItem = ApiAudioFile & {
+  audioGeneration:
+    | (Serialized<AudioGeneration> & {
+        audioBatch: Serialized<AudioBatch>;
+        audioBatchPrompt: ApiAudioBatchPrompt | null;
+      })
+    | null;
+};
