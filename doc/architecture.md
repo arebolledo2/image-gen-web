@@ -5,7 +5,7 @@
 ```
 Next.js 16 (App Router)
 ├── PostgreSQL (Drizzle ORM)
-├── Vercel AI SDK 6 (Google Gemini)
+├── Vercel AI SDK 7 (Google Gemini)
 ├── Inngest (Job Queue)
 ├── Tailwind CSS + shadcn/ui
 └── Vitest (Testing)
@@ -15,7 +15,7 @@ Next.js 16 (App Router)
 
 ### Database-First Approach
 
-All data is persisted in PostgreSQL with Drizzle ORM. The schema — 15 tables, 6 enums, and full relations — is defined in `lib/db/schema.ts` as the single source of truth.
+All data is persisted in PostgreSQL with Drizzle ORM. The schema — 17 tables, 6 enums, and full relations — is defined in `lib/db/schema.ts` as the single source of truth.
 
 ### Service Layer Architecture
 
@@ -61,7 +61,7 @@ Pluggable providers for both image generation (Gemini, Gemini3, ComfyUI) and aud
                          │ fetch / server actions
 ┌────────────────────────▼────────────────────────────────┐
 │                  API Routes (app/api/)                   │
-│        18 route groups · validates input · JSON out      │
+│        19 route groups · validates input · JSON out      │
 └──┬──────────────┬──────────────┬───────────────────┬────┘
    │              │              │                   │
    ▼              ▼              ▼                   ▼
@@ -80,7 +80,7 @@ Pluggable providers for both image generation (Gemini, Gemini3, ComfyUI) and aud
 
 ```
 app/
-├── api/                    # REST API routes (18 route groups)
+├── api/                    # REST API routes (19 route groups)
 │   ├── agents/             # AI agent endpoints (9)
 │   ├── audio/              # Audio file access
 │   ├── audio-batch-prompts/# Audio prompt editing
@@ -139,7 +139,7 @@ lib/
 │   ├── model.ts            # AI model factory (Gemini 3.1 Flash, 2.5 Flash)
 │   └── image-generation.ts # Image generation utilities
 ├── db/
-│   ├── schema.ts           # All 15 tables, 6 enums, relations
+│   ├── schema.ts           # All 17 tables, 6 enums, relations
 │   └── index.ts            # Database connection
 ├── providers/
 │   ├── types.ts            # ImageProvider interface

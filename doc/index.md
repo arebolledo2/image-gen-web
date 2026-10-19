@@ -7,7 +7,7 @@
 | Framework         | Next.js 16 (App Router)                    |
 | Language          | TypeScript (strict)                        |
 | Database          | PostgreSQL + Drizzle ORM                   |
-| AI Integration    | Vercel AI SDK 6 + Google Gemini + Ollama (local LLM, default model qwen3.5:9b-q8_0)           |
+| AI Integration    | Vercel AI SDK 7 + Google Gemini + Ollama (local LLM, default model qwen3.5:9b-q8_0)           |
 | Job Queue         | Inngest                                    |
 | Styling           | Tailwind CSS + shadcn/ui                   |
 | Testing           | Vitest                                     |
@@ -28,7 +28,7 @@ The platform ships with **10 built-in AI agents** that assist with style creatio
 | Document                              | Description                                                        | When to use                                        |
 | ------------------------------------- | ------------------------------------------------------------------ | -------------------------------------------------- |
 | [architecture.md](architecture.md)    | System architecture, tech stack, key patterns, file structure      | Understanding overall design and code organization  |
-| [database.md](database.md)            | Schema (15 tables, 6 enums), relations, type exports, migrations   | Modifying tables, adding columns, writing queries   |
+| [database.md](database.md)            | Schema (17 tables, 6 enums), relations, type exports, migrations   | Modifying tables, adding columns, writing queries   |
 | [services.md](services.md)            | Service layer (10 services), transactions, versioning, patterns    | Adding business logic, understanding data flow      |
 | [ai-agents.md](ai-agents.md)         | 10 AI agents with multi-provider support (Gemini/Ollama), model config, tools, chat agent (ToolLoopAgent)      | Creating or modifying AI agents and tools           |
 [... 5 more lines ...]

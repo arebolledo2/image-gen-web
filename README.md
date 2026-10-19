@@ -81,10 +81,10 @@ Comprehensive documentation lives in [`doc/`](./doc/index.md):
 |----------|-------------|
 | [index.md](./doc/index.md) | Overview, quick reference, navigation |
 | [architecture.md](./doc/architecture.md) | System architecture, tech stack, file structure |
-| [database.md](./doc/database.md) | Schema (15 tables, 6 enums), relations, migrations |
+| [database.md](./doc/database.md) | Schema (17 tables, 6 enums), relations, migrations |
 | [services.md](./doc/services.md) | Service layer (10 services), transactions, versioning |
 | [ai-agents.md](./doc/ai-agents.md) | AI agents, model config, tools, chat agent |
-| [api-reference.md](./doc/api-reference.md) | Complete REST API reference (18 route groups) |
+| [api-reference.md](./doc/api-reference.md) | Complete REST API reference (19 route groups) |
 | [queue.md](./doc/queue.md) | Inngest job queue, retry config |
 | [storage.md](./doc/storage.md) | Image storage, thumbnails, ZIP export |
 | [providers.md](./doc/providers.md) | Image & audio generation providers |

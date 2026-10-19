@@ -165,4 +165,9 @@ return await db.transaction(async (tx) => {
 | Importing `db` in `app/api/` files | All DB access must go through services |
 | Skipping services for "simple" queries | Even simple queries should use services for consistency and future-proofing |
 
-Direct `db` access is legacy and should only exist inside service implementations.
+Direct `db` access should only exist inside service implementations. ESLint enforces this: the
+`no-restricted-imports` rule in `eslint.config.mjs` rejects `@/lib/db` imports under `app/api/` (tests excluded).
+
+Services throw `ApiError` (`notFound`, `badRequest` from `lib/api/errors.ts`) for expected failures such
+as a missing record or editing a non-draft batch; routes pass them to `handleApiError`, which turns them
+into the matching HTTP status.

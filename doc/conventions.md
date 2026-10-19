@@ -5,53 +5,66 @@ Code patterns, coding conventions, and common development recipes.
 ## TypeScript Conventions
 
 - **Strict type checking** — explicit types for function parameters and returns
-- **Zod** for runtime validation in API routes
+- **Zod** for runtime validation in API routes (`parseBody`, see below)
+- **Shared API types** in `lib/types/api.ts` — derived from the DB schema, never redeclared in pages
 - Prefer `const` over `let`
 - Use `async/await` for asynchronous operations
 - `'use client'` directive only for interactive React components
 
 ## API Route Pattern (Service-Based)
 
+Routes validate with Zod, call a service, and funnel every failure through `handleApiError`
+(`lib/api/errors.ts`). Services signal expected failures by throwing `ApiError` (`notFound`,
+`badRequest`), which becomes the response status and `{ error }` body. Anything else is a 500 with
+`{ error: 'Failed to <context>', details }` and never a stack trace.
+
 ```typescript
-// app/api/styles/route.ts
+// app/api/styles/[id]/route.ts
 import { NextRequest, NextResponse } from 'next/server'
+import { z } from 'zod'
 import { stylesService } from '@/lib/services'
+import { handleApiError, notFound, parseBody } from '@/lib/api/errors'
 
-export async function GET() {
+const updateStyleSchema = z.object({ name: z.string().optional() })
+
+export async function PATCH(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const styles = await stylesService.getLatestStyles()
-    return NextResponse.json({ styles })
+    const { id } = await params
+    const data = await parseBody(request, updateStyleSchema) // 400 on invalid input
+    const style = await stylesService.updateStyle(id, data)
+    if (!style) throw notFound('Style') // 404
+    return NextResponse.json({ style })
   } catch (error) {
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Failed to fetch' },
-      { status: 500 }
-    )
-  }
-}
-
-export async function POST(request: NextRequest) {
-  try {
-    const body = await request.json()
-    if (!body.name || !body.palette || !body.renderingCues) {
-      return NextResponse.json(
-        { error: 'Name, palette, and renderingCues are required' },
-        { status: 400 }
-      )
-    }
-
-    const style = body.parentStyleId
-      ? await stylesService.createStyleVersion(body.parentStyleId, body)
-      : await stylesService.createStyle(body)
-
-    return NextResponse.json({ style }, { status: 201 })
-  } catch (error) {
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Failed to create' },
-      { status: 500 }
-    )
+    return handleApiError(error, 'update style')
   }
 }
 ```
+
+AI agent routes (`app/api/agents/*`) use `parseAgentBody` (adds the optional `aiConfig`) and
+`buildAgentErrorResponse`, which reports model failures (e.g. a missing Ollama model) with a
+remediation hint and passes `ApiError`s through unchanged. Image processing and AI calls live in
+`lib/image-processing` and `lib/ai`, not in the route.
+
+## Calling the API from the Client
+
+Pages, components and hooks use the typed client in `lib/api-client.ts` instead of raw `fetch`.
+Failures throw `ApiClientError` carrying the server's message and status.
+
+```typescript
+import { api, errorMessage } from '@/lib/api-client'
+import type { ApiStyle } from '@/lib/types/api'
+
+const [styles, setStyles] = useState<ApiStyle[]>([])
+
+try {
+  setStyles(await api.styles.list({ favoritesOnly: true }))
+} catch (error) {
+  toast.error(errorMessage(error, 'Failed to load styles'))
+}
+```
+
+To add an endpoint, add a method to the matching resource in `api` and, if it returns a new
+shape, a type to `lib/types/api.ts` (use `Serialized<SchemaType>`; JSON turns dates into strings).
 
 ## Service Layer Pattern
 
@@ -198,25 +211,23 @@ const stats = await imagesService.getImageStatistics(batchId)
 ### Using AI Agents
 
 ```typescript
-const response = await fetch('/api/agents/compose-prompt', {
-  method: 'POST',
-  body: JSON.stringify({
-    styleId: 'uuid',
-    subjectId: 'uuid',
-    guidanceIds: ['uuid1', 'uuid2']
-  })
+const { promptText, promptId } = await api.agents.composePrompt({
+  styleId: 'uuid',
+  subjectId: 'uuid',
+  guidanceIds: ['uuid1', 'uuid2'],
+  aiConfig: toRequestConfig(), // from useAIModelSettings()
 })
-const { promptText } = await response.json()
 ```
 
 ### Adding a New API Endpoint
 
 1. Add service method in appropriate service (`lib/services/`)
 2. Create route handler in `app/api/[resource]/route.ts`
-3. Validate input
-4. Call service method
-5. Return JSON response
-6. Add tests
+3. Validate input with a Zod schema and `parseBody`
+4. Call the service method; throw `notFound` / `badRequest` for expected failures
+5. Return JSON and wrap the handler in `try/catch` → `handleApiError`
+6. Add a method to `lib/api-client.ts` (and a type to `lib/types/api.ts` if needed)
+7. Add tests
 
 ## File Naming
 

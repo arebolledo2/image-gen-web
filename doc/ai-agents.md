@@ -2,7 +2,7 @@
 
 ## Overview
 
-The image-gen-web platform uses **Vercel AI SDK 6** with configurable AI models for agentic workflows. The system supports **Google Gemini** (cloud), **OpenAI** (cloud), and **Ollama** (local) providers.
+The image-gen-web platform uses **Vercel AI SDK 7** with configurable AI models for agentic workflows. The system supports **Google Gemini** (cloud), **OpenAI** (cloud), and **Ollama** (local) providers.
 
 - Agent functions: modular files under `lib/ai/agents/`
 - Agent tools: `lib/ai/tools/`
@@ -100,7 +100,7 @@ All defined in `lib/ai/agents/` with modular files.
 
 ### Chat Agent (`lib/agent.ts`)
 
-10. **Game Asset Workflow Agent** (`imageAgent`) — `ToolLoopAgent` using Vercel AI SDK 6
+10. **Game Asset Workflow Agent** (`imageAgent`) — `ToolLoopAgent` using Vercel AI SDK 7
     - Endpoint: `POST /api/chat` (maxDuration: 30s)
     - Uses `createAgentUIStreamResponse` for streaming
     - 14 tools total (5 inline + 9 imported)
