@@ -8,7 +8,7 @@ import { audioBatches, audioBatchPrompts, audioGenerations, AudioBatch, NewAudio
 import { eq, desc, inArray } from 'drizzle-orm';
 import { BaseService } from './base.service';
 import { queueAudioBatchExecution } from '@/lib/queue/audio-batch-queue';
-import { notFound } from '@/lib/api/errors';
+import { badRequest, notFound } from '@/lib/api/errors';
 import type { AudioBatchPromptOverrides, AudioBatchDefaults } from '@/lib/types/common';
 
 /**
@@ -445,6 +445,25 @@ export class AudioBatchesService extends BaseService<typeof audioBatches, AudioB
 
       return true;
     });
+  }
+
+  /**
+   * Replace the text of one prompt in a draft audio batch.
+   *
+   * @throws ApiError 404 when the prompt does not exist, 400 when its batch is not a draft
+   */
+  async updateDraftPromptText(promptId: string, promptText: string): Promise<void> {
+    const existing = await db.query.audioBatchPrompts.findFirst({
+      where: eq(audioBatchPrompts.id, promptId),
+      with: { audioBatch: true },
+    });
+
+    if (!existing) throw notFound('Audio batch prompt');
+    if (existing.audioBatch.status !== 'draft') {
+      throw badRequest('Cannot edit prompts for non-draft audio batches');
+    }
+
+    await db.update(audioBatchPrompts).set({ promptText }).where(eq(audioBatchPrompts.id, promptId));
   }
 }
 

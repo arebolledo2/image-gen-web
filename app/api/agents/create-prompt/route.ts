@@ -1,11 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from "zod";
 import { createPromptAgent } from '@/lib/ai/agents';
-import { db } from '@/lib/db';
-import { styles } from '@/lib/db/schema';
-import { eq } from 'drizzle-orm';
 import { getChatModelForConfig, resolveAIRequestConfig } from "@/lib/ai/model";
-import { parseBodyWithAIConfig } from "@/lib/ai/request-config";
+import { parseAgentBody } from "@/lib/ai/request-config";
+import { stylesService } from '@/lib/services';
 import { buildAgentErrorResponse } from "../utils";
 
 const createPromptRequestShape = {
@@ -20,40 +18,21 @@ export async function POST(request: NextRequest) {
   let aiConfig = resolveAIRequestConfig();
 
   try {
-    const parsed = parseBodyWithAIConfig(await request.json(), createPromptRequestShape);
-    if (!parsed.success) {
-      return NextResponse.json({ error: parsed.error }, { status: 400 });
-    }
+    const { assetType, styleId, description, isTransparent, aiConfig: resolvedConfig } =
+      await parseAgentBody(request, createPromptRequestShape);
+    aiConfig = resolvedConfig;
 
-    const { assetType, styleId, description, isTransparent } = parsed.data;
-    aiConfig = parsed.data.aiConfig;
-
-    // Get style details if provided
-    let styleName: string | undefined;
-    let styleKeywords: string[] | undefined;
-
-    if (styleId) {
-      const style = await db.query.styles.findFirst({
-        where: eq(styles.id, styleId),
-      });
-
-      if (style) {
-        styleName = style.name;
-        // Extract keywords from rendering cues
-        styleKeywords = [
-          ...style.renderingCues.materials,
-          ...style.renderingCues.effects,
-          style.renderingCues.finish,
-        ];
-      }
-    }
+    // An unknown style is ignored rather than rejected: the prompt is still useful without it
+    const style = styleId ? await stylesService.findById(styleId) : undefined;
 
     const prompt = await createPromptAgent({
       assetType,
-      styleName,
-      styleKeywords,
+      styleName: style?.name,
+      styleKeywords: style
+        ? [...style.renderingCues.materials, ...style.renderingCues.effects, style.renderingCues.finish]
+        : undefined,
       description,
-      isTransparent: isTransparent !== undefined ? isTransparent : true,
+      isTransparent: isTransparent ?? true,
     }, getChatModelForConfig(aiConfig));
 
     return NextResponse.json({ prompt });

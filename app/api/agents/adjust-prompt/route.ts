@@ -1,11 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from "zod";
 import { adjustPromptAgent } from '@/lib/ai/agents';
-import { db } from '@/lib/db';
-import { images, generations, batchPrompts } from '@/lib/db/schema';
-import { eq, inArray } from 'drizzle-orm';
 import { getChatModelForConfig, resolveAIRequestConfig } from "@/lib/ai/model";
-import { parseBodyWithAIConfig } from "@/lib/ai/request-config";
+import { parseAgentBody } from "@/lib/ai/request-config";
+import { promptsService } from '@/lib/services';
 import { buildAgentErrorResponse } from "../utils";
 
 const adjustPromptRequestShape = {
@@ -20,33 +18,15 @@ export async function POST(request: NextRequest) {
   let aiConfig = resolveAIRequestConfig();
 
   try {
-    const parsed = parseBodyWithAIConfig(await request.json(), adjustPromptRequestShape);
-    if (!parsed.success) {
-      return NextResponse.json({ error: parsed.error }, { status: 400 });
-    }
+    const body = await parseAgentBody(request, adjustPromptRequestShape);
+    aiConfig = body.aiConfig;
 
-    const { basePrompt, suggestion, promptStyle, referenceImageIds } = parsed.data;
-    aiConfig = parsed.data.aiConfig;
-
-    // If reference images are provided, fetch their prompts
-    let referencePrompts: string[] = [];
-    if (referenceImageIds && referenceImageIds.length > 0) {
-      const imageData = await db
-        .select({
-          promptText: batchPrompts.promptText,
-        })
-        .from(images)
-        .innerJoin(generations, eq(images.generationId, generations.id))
-        .innerJoin(batchPrompts, eq(generations.batchPromptId, batchPrompts.id))
-        .where(inArray(images.id, referenceImageIds));
-
-      referencePrompts = imageData.map((d) => d.promptText);
-    }
+    const referencePrompts = await promptsService.getReferencePromptTexts(body.referenceImageIds ?? []);
 
     const adjustedPrompt = await adjustPromptAgent(
-      basePrompt,
-      suggestion,
-      promptStyle ?? 'terse',
+      body.basePrompt,
+      body.suggestion,
+      body.promptStyle ?? 'terse',
       referencePrompts.length > 0 ? referencePrompts : undefined,
       getChatModelForConfig(aiConfig),
     );

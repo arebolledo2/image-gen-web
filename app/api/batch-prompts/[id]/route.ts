@@ -1,7 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/db';
-import { batchPrompts } from '@/lib/db/schema';
-import { eq } from 'drizzle-orm';
+import { z } from 'zod';
+import { batchesService } from '@/lib/services';
+import { handleApiError, parseBody } from '@/lib/api/errors';
+
+const updatePromptSchema = z.object({
+  promptText: z.string({ error: 'Prompt text is required' }).trim().min(1, 'Prompt text is required'),
+});
 
 // PATCH /api/batch-prompts/[id] - Update a batch prompt
 export async function PATCH(
@@ -10,47 +14,11 @@ export async function PATCH(
 ) {
   try {
     const { id } = await params;
-    const { promptText } = await request.json();
-
-    if (!promptText) {
-      return NextResponse.json(
-        { error: 'Prompt text is required' },
-        { status: 400 }
-      );
-    }
-
-    // Check if the prompt exists and its batch is in draft status
-    const existingPrompt = await db.query.batchPrompts.findFirst({
-      where: eq(batchPrompts.id, id),
-      with: {
-        batch: true,
-      },
-    });
-
-    if (!existingPrompt) {
-      return NextResponse.json(
-        { error: 'Prompt not found' },
-        { status: 404 }
-      );
-    }
-
-    if (existingPrompt.batch.status !== 'draft') {
-      return NextResponse.json(
-        { error: 'Cannot edit prompts for non-draft batches' },
-        { status: 400 }
-      );
-    }
-
-    await db.update(batchPrompts)
-      .set({ promptText })
-      .where(eq(batchPrompts.id, id));
+    const { promptText } = await parseBody(request, updatePromptSchema);
+    await batchesService.updateDraftPromptText(id, promptText);
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error('Error updating batch prompt:', error);
-    return NextResponse.json(
-      { error: 'Failed to update batch prompt' },
-      { status: 500 }
-    );
+    return handleApiError(error, 'update batch prompt');
   }
 }

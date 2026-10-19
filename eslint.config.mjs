@@ -2,18 +2,6 @@ import { defineConfig, globalIgnores } from "eslint/config";
 import nextVitals from "eslint-config-next/core-web-vitals";
 import nextTs from "eslint-config-next/typescript";
 
-// Routes that still import the db directly. Migrate them to lib/services and remove them from this list.
-const LEGACY_DB_ROUTES = [
-  "app/api/agents/adjust-batch-prompts/route.ts",
-  "app/api/agents/adjust-prompt/route.ts",
-  "app/api/agents/compose-prompt/route.ts",
-  "app/api/agents/create-prompt/route.ts",
-  "app/api/audio-batch-prompts/[[]id[]]/route.ts",
-  "app/api/batch-prompts/[[]id[]]/route.ts",
-  "app/api/prompts/route.ts",
-  "app/api/subjects/[[]id[]]/version/route.ts",
-];
-
 const eslintConfig = defineConfig([
   ...nextVitals,
   ...nextTs,
@@ -50,11 +38,6 @@ const eslintConfig = defineConfig([
         },
       ],
     },
-  },
-  // Legacy routes not yet migrated to services. Remove entries as they are migrated.
-  {
-    files: LEGACY_DB_ROUTES,
-    rules: { "no-restricted-imports": "off" },
   },
   // Allow 'as any' in test files for mocking
   {

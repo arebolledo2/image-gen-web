@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import type { AIModelSelection } from "@/lib/ai/config";
+import { ApiError, handleApiError } from "@/lib/api/errors";
 
 const OLLAMA_MODEL_NOT_FOUND_CODE = "OLLAMA_MODEL_NOT_FOUND";
 
@@ -83,6 +84,11 @@ export function buildAgentErrorResponse(
   chatSelection: AIModelSelection,
   fallbackMessage: string,
 ) {
+  // Validation and lookup failures from the service layer are not model failures
+  if (error instanceof ApiError) {
+    return handleApiError(error, fallbackMessage);
+  }
+
   if (chatSelection.provider === "ollama" && isOllamaModelNotFoundError(error)) {
     return NextResponse.json(
       {

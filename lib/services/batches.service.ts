@@ -7,7 +7,7 @@ import { db } from '@/lib/db';
 import { batches, batchPrompts, generations, images, prompts, subjects, Batch, NewBatch, BatchPrompt, Generation } from '@/lib/db/schema';
 import { eq, desc, inArray, asc, like, or, and, exists } from 'drizzle-orm';
 import { BaseService } from './base.service';
-import { ApiError } from '@/lib/api/errors';
+import { ApiError, badRequest, notFound } from '@/lib/api/errors';
 import type { BatchPromptOverrides, BatchDefaults } from '@/lib/types/common';
 import { batchExecutionService } from './batch-execution.service';
 import type { ImageProviderName } from '@/lib/providers/types';
@@ -614,6 +614,56 @@ export class BatchesService extends BaseService<typeof batches, Batch, NewBatch>
           },
         },
       },
+    });
+  }
+
+  /**
+   * Replace the text of one prompt in a draft batch.
+   *
+   * @throws ApiError 404 when the prompt does not exist, 400 when its batch is not a draft
+   */
+  async updateDraftPromptText(promptId: string, promptText: string): Promise<void> {
+    const existing = await db.query.batchPrompts.findFirst({
+      where: eq(batchPrompts.id, promptId),
+      with: { batch: true },
+    });
+
+    if (!existing) throw notFound('Prompt');
+    if (existing.batch.status !== 'draft') {
+      throw badRequest('Cannot edit prompts for non-draft batches');
+    }
+
+    await db.update(batchPrompts).set({ promptText }).where(eq(batchPrompts.id, promptId));
+  }
+
+  /**
+   * Prompts of a draft batch, for bulk rewriting.
+   *
+   * @throws ApiError 404 when the batch does not exist, 400 when it is not a draft or has no prompts
+   */
+  async getDraftBatchPrompts(batchId: string): Promise<{ id: string; promptText: string }[]> {
+    const [batch] = await db.select({ status: batches.status }).from(batches).where(eq(batches.id, batchId));
+
+    if (!batch) throw notFound('Batch');
+    if (batch.status !== 'draft') throw badRequest('Can only adjust prompts on draft batches');
+
+    const batchPromptRows = await db
+      .select({ id: batchPrompts.id, promptText: batchPrompts.promptText })
+      .from(batchPrompts)
+      .where(eq(batchPrompts.batchId, batchId));
+
+    if (batchPromptRows.length === 0) throw badRequest('No prompts found in batch');
+    return batchPromptRows;
+  }
+
+  /**
+   * Persist rewritten prompt texts in one transaction so a failure never leaves a half-adjusted batch.
+   */
+  async saveAdjustedPrompts(updates: { id: string; promptText: string }[]): Promise<void> {
+    await this.transaction(async (tx) => {
+      for (const { id, promptText } of updates) {
+        await tx.update(batchPrompts).set({ promptText }).where(eq(batchPrompts.id, id));
+      }
     });
   }
 }

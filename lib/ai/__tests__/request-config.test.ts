@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
-import { parseBodyWithAIConfig } from "../request-config";
+import { parseAgentBody, parseBodyWithAIConfig } from "../request-config";
 
 describe("parseBodyWithAIConfig", () => {
   it("merges defaults when aiConfig is omitted", () => {
@@ -89,5 +89,22 @@ describe("parseBodyWithAIConfig", () => {
     if (!parsed.success) {
       expect(parsed.error.toLowerCase()).toContain("invalid");
     }
+  });
+});
+
+describe("parseAgentBody", () => {
+  const makeRequest = (body: unknown) => new Request("http://localhost/api", { method: "POST", body: JSON.stringify(body) });
+
+  it("returns the parsed fields with a resolved aiConfig", async () => {
+    const body = await parseAgentBody(makeRequest({ concept: "turret" }), { concept: z.string() });
+
+    expect(body.concept).toBe("turret");
+    expect(body.aiConfig.chat.provider).toBeDefined();
+  });
+
+  it("throws a 400 ApiError with the first validation message", async () => {
+    await expect(
+      parseAgentBody(makeRequest({}), { concept: z.string().min(1, "concept is required") }),
+    ).rejects.toMatchObject({ status: 400 });
   });
 });

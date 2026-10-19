@@ -4,9 +4,13 @@
  */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { db } from '@/lib/db';
-import { prompts, promptGuidance, Prompt, NewPrompt } from '@/lib/db/schema';
+import {
+  prompts, promptGuidance, subjects, styles, guidance, images, generations, batchPrompts,
+  Prompt, NewPrompt,
+} from '@/lib/db/schema';
 import { eq, desc, inArray, and } from 'drizzle-orm';
 import { BaseService } from './base.service';
+import { notFound } from '@/lib/api/errors';
 
 /**
  * Prompts combine a style, subject, and optional guidance modifiers
@@ -263,6 +267,78 @@ export class PromptsService extends BaseService<typeof prompts, Prompt, NewPromp
 
       return (result as any).rowCount > 0;
     });
+  }
+
+  /**
+   * Load the subject, optional style and guidance a prompt is composed from.
+   *
+   * @throws ApiError 404 when the subject or style does not exist
+   */
+  async loadCompositionInputs(ids: { subjectId: string; styleId?: string | null; guidanceIds?: string[] }) {
+    const [subject] = await db.select().from(subjects).where(eq(subjects.id, ids.subjectId));
+    if (!subject) throw notFound('Subject');
+
+    let style = null;
+    if (ids.styleId) {
+      [style] = await db.select().from(styles).where(eq(styles.id, ids.styleId));
+      if (!style) throw notFound('Style');
+    }
+
+    const guidanceRows = ids.guidanceIds && ids.guidanceIds.length > 0
+      ? await db.select().from(guidance).where(inArray(guidance.id, ids.guidanceIds))
+      : [];
+
+    return { subject, style, guidance: guidanceRows };
+  }
+
+  /**
+   * Save an AI-composed prompt and link its guidance.
+   *
+   * `styleId` may be null when a prompt is composed without a style; the column is declared
+   * not-null in the schema, so that case keeps relying on the database default behaviour.
+   */
+  async saveComposedPrompt(data: {
+    name: string;
+    styleId: string | null;
+    subjectId: string;
+    promptText: string;
+    guidanceIds?: string[];
+  }): Promise<Prompt> {
+    return this.transaction(async (tx) => {
+      const [prompt] = await tx
+        .insert(prompts)
+        .values({
+          name: data.name,
+          styleId: data.styleId as string,
+          subjectId: data.subjectId,
+          promptText: data.promptText,
+        })
+        .returning();
+
+      if (data.guidanceIds && data.guidanceIds.length > 0) {
+        await tx.insert(promptGuidance).values(
+          data.guidanceIds.map(guidanceId => ({ promptId: prompt.id, guidanceId }))
+        );
+      }
+
+      return prompt;
+    });
+  }
+
+  /**
+   * Prompt texts of the batch prompts that generated the given images, used as AI reference.
+   */
+  async getReferencePromptTexts(imageIds: string[]): Promise<string[]> {
+    if (imageIds.length === 0) return [];
+
+    const rows = await db
+      .select({ promptText: batchPrompts.promptText })
+      .from(images)
+      .innerJoin(generations, eq(images.generationId, generations.id))
+      .innerJoin(batchPrompts, eq(generations.batchPromptId, batchPrompts.id))
+      .where(inArray(images.id, imageIds));
+
+    return rows.map(row => row.promptText);
   }
 }
 

@@ -1,109 +1,43 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/db';
-import { prompts, promptGuidance, styles, subjects } from '@/lib/db/schema';
-import { desc, eq } from 'drizzle-orm';
-import { composeConstructedPromptAgent } from '@/lib/ai/agents';
+import { z } from 'zod';
+import { promptsService } from '@/lib/services';
+import { composePromptFromIds } from '@/lib/ai/prompt-composition';
 import { getChatModelForConfig, resolveAIRequestConfig } from '@/lib/ai/model';
+import { handleApiError, parseBody } from '@/lib/api/errors';
+
+const REQUIRED = 'Name, styleId, and subjectId are required';
+
+const createPromptSchema = z.object({
+  name: z.string({ error: REQUIRED }).trim().min(1, REQUIRED),
+  styleId: z.string({ error: REQUIRED }).min(1, REQUIRED),
+  subjectId: z.string({ error: REQUIRED }).min(1, REQUIRED),
+  guidanceIds: z.array(z.string()).optional(),
+  promptStyle: z.enum(['terse', 'verbose']).optional(),
+});
 
 // GET /api/prompts - List all prompts
 export async function GET() {
   try {
-    const allPrompts = await db.query.prompts.findMany({
-      orderBy: [desc(prompts.createdAt)],
-      with: {
-        style: true,
-        subject: true,
-        promptGuidance: {
-          with: {
-            guidance: true
-          }
-        }
-      },
-    });
-
-    return NextResponse.json({ prompts: allPrompts });
+    const prompts = await promptsService.getAllPromptsWithRelations();
+    return NextResponse.json({ prompts });
   } catch (error) {
-    console.error('Error fetching prompts:', error);
-    return NextResponse.json(
-      { error: 'Failed to fetch prompts' },
-      { status: 500 }
-    );
+    return handleApiError(error, 'fetch prompts');
   }
 }
 
-// POST /api/prompts - Create a new prompt
+// POST /api/prompts - Compose a prompt with the AI and save it
 export async function POST(request: NextRequest) {
-  const aiConfig = resolveAIRequestConfig();
-
   try {
-    const body = await request.json();
-    const { name, styleId, subjectId, guidanceIds, promptStyle } = body;
+    const { name, styleId, subjectId, guidanceIds, promptStyle } = await parseBody(request, createPromptSchema);
 
-    // Validate required fields
-    if (!name || !styleId || !subjectId) {
-      return NextResponse.json(
-        { error: 'Name, styleId, and subjectId are required' },
-        { status: 400 }
-      );
-    }
-
-    // Fetch data for AI composition
-    const [style] = await db.select().from(styles).where(eq(styles.id, styleId));
-    const [subject] = await db.select().from(subjects).where(eq(subjects.id, subjectId));
-    
-    if (!style || !subject) {
-        return NextResponse.json({ error: 'Style or Subject not found' }, { status: 404 });
-    }
-
-    const selectedGuidance = guidanceIds && guidanceIds.length > 0
-        ? await db.query.guidance.findMany({
-            where: (guidance, { inArray }) => inArray(guidance.id, guidanceIds)
-          })
-        : [];
-
-    // Compose prompt using AI agent
-    const promptText = await composeConstructedPromptAgent({
-        subject: {
-            name: subject.name,
-            description: subject.description,
-            isTransparent: subject.isTransparent
-        },
-        style: {
-            name: style.name,
-            description: style.description,
-            palette: style.palette,
-            renderingCues: style.renderingCues
-        },
-        guidance: selectedGuidance.map(g => ({
-            name: g.name,
-            description: g.description
-        })),
-        promptStyle
-    }, getChatModelForConfig(aiConfig));
-
-    // Create prompt
-    const [prompt] = await db.insert(prompts).values({
-      name,
-      styleId,
-      subjectId,
-      promptText,
-    }).returning();
-
-    // Create prompt guidance relations
-    if (guidanceIds && guidanceIds.length > 0) {
-        const guidanceData = guidanceIds.map((gId: string) => ({
-            promptId: prompt.id,
-            guidanceId: gId,
-        }));
-        await db.insert(promptGuidance).values(guidanceData);
-    }
+    const { promptText } = await composePromptFromIds(
+      { subjectId, styleId, guidanceIds, promptStyle },
+      getChatModelForConfig(resolveAIRequestConfig()),
+    );
+    const prompt = await promptsService.saveComposedPrompt({ name, styleId, subjectId, promptText, guidanceIds });
 
     return NextResponse.json({ prompt }, { status: 201 });
   } catch (error) {
-    console.error('Error creating prompt:', error);
-    return NextResponse.json(
-      { error: 'Failed to create prompt' },
-      { status: 500 }
-    );
+    return handleApiError(error, 'create prompt');
   }
 }
