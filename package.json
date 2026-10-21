@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "concurrently \"npm run dev:next\" \"npm run dev:inngest\" \"npm run dev:audio\"",
     "dev:core": "concurrently \"npm run dev:next\" \"npm run dev:inngest\"",
-    "dev:next": "next dev",
+    "dev:next": "next dev -H 127.0.0.1",
     "dev:inngest": "npx inngest-cli@latest dev",
     "dev:audio": "cd ../audio-gen && launch.bat",
     "dev:devtools": "npx @ai-sdk/devtools",

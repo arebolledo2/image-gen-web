@@ -1,4 +1,4 @@
-import { google } from "@ai-sdk/google";
+import { google } from "./google-client";
 import { openai } from "@ai-sdk/openai";
 import { devToolsMiddleware } from "@ai-sdk/devtools";
 import { createOllama } from "ollama-ai-provider-v2";

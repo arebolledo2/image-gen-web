@@ -1,5 +1,5 @@
 import path from 'path';
-import { google } from '@ai-sdk/google';
+import { google } from './google-client';
 import { generateText } from 'ai';
 import { Jimp } from 'jimp';
 import { editOpenAIImage, OPENAI_IMAGE_MODEL } from '@/lib/providers/openai/openai-image-client';

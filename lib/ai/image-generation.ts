@@ -1,4 +1,4 @@
-import { google } from '@ai-sdk/google';
+import { google } from './google-client';
 import { generateText } from 'ai';
 import { db } from '@/lib/db';
 import { generations, images, batches } from '@/lib/db/schema';

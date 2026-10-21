@@ -34,7 +34,7 @@ Required in `.env.local`:
 ```bash
 DATABASE_URL="postgresql://user:pass@localhost:5432/image_gen_web"
 OPENAI_API_KEY="your_openai_api_key"       # Required for default GPT Image 2 generation
-GEMINI_API_KEY="your_gemini_api_key"
+GEMINI_API_KEY="your_gemini_api_key"            # Google Gemini (chat, agents, image edits)
 ```
 
 Optional:

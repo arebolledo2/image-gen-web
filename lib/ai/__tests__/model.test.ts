@@ -7,7 +7,7 @@ const createOllamaMock = vi.fn(() => ollamaModelMock);
 const wrapLanguageModelMock = vi.fn(({ model }) => model);
 
 vi.mock("@ai-sdk/google", () => ({
-  google: googleMock,
+  createGoogleGenerativeAI: () => googleMock,
 }));
 
 vi.mock("@ai-sdk/openai", () => ({

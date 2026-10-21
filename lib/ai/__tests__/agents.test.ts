@@ -19,7 +19,7 @@ vi.mock('ai', () => ({
 
 // Mock Google AI SDK
 vi.mock('@ai-sdk/google', () => ({
-  google: vi.fn((model) => ({ model })),
+  createGoogleGenerativeAI: vi.fn(() => vi.fn((model) => ({ model }))),
 }));
 
 // Mock AI SDK DevTools
