@@ -4,6 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "concurrently \"npm run dev:next\" \"npm run dev:inngest\" \"npm run dev:audio\"",
+    "dev:core": "concurrently \"npm run dev:next\" \"npm run dev:inngest\"",
     "dev:next": "next dev",
     "dev:inngest": "npx inngest-cli@latest dev",
     "dev:audio": "cd ../audio-gen && launch.bat",

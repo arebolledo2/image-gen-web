@@ -71,7 +71,9 @@ The application follows a modern serverless-ready architecture:
     ```bash
     npm run dev
     ```
-    This starts both the Next.js app and the Inngest dev server.
+    This starts the Next.js app, the Inngest dev server, and the optional `audio-gen` Python server.
+    If you don't have `audio-gen` (it lives outside this repo), run `npm run dev:core` instead to start only
+    Next.js and Inngest. Audio features will be unavailable.
 
 ## 📚 Documentation
 
@@ -94,6 +96,7 @@ Comprehensive documentation lives in [`doc/`](./doc/index.md):
 ## 📜 Available Scripts
 
 - `npm run dev`: Starts Next.js, Inngest, and audio-gen in development mode.
+- `npm run dev:core`: Starts Next.js and Inngest only (no audio-gen).
 - `npm run build`: Builds the application for production.
 - `npm run db:push`: Syncs the database schema with your Drizzle definitions.
 - `npm run db:studio`: Opens a GUI for exploring your database.
@@ -101,6 +104,12 @@ Comprehensive documentation lives in [`doc/`](./doc/index.md):
 
 See [doc/development.md](./doc/development.md) for the full list of 18 npm scripts.
 
+## ⚠️ Scope and limitations
+
+- **Local, single-user tool.** There is no authentication on the `/api/*` routes. Run it on your own machine and do not expose it to the internet.
+- **Part of a larger workspace.** It was built alongside a game ([turret-game](https://github.com/arebolledo2/turret-game)) and two companion projects: `image-gen` (Python/ComfyUI scripts) and `audio-gen` (Python audio server). They are not required for the core app, but the default `OUTPUT_DIR` (`../image-gen/outputs`) points at the former, so set `OUTPUT_DIR` to any writable folder.
+- **Bring your own keys.** Generation calls the OpenAI, OpenRouter and Gemini APIs and costs real money; ComfyUI is optional and self-hosted.
+
 ## 📄 License
 
-This project is private and intended for internal use.
+[MIT](./LICENSE)
